@@ -288,6 +288,7 @@ class ListenTogetherManager
                 oldConnection?.onSkipPrevious = null
                 oldConnection?.onSkipNext = null
                 oldConnection?.onRestartSong = null
+                oldConnection?.allowInternalSync = false
 
                 playerConnection = connection
 
@@ -757,6 +758,8 @@ class ListenTogetherManager
             lastRole = RoomRole.NONE
             lastSyncActionTime = 0L // Reset sync debouncing
             ++currentTrackGeneration // Increment to invalidate any pending track-change coroutines
+            // CRITICAL: Reset allowInternalSync to prevent stuck state from preventing host sync
+            playerConnection?.allowInternalSync = false
         }
 
         private fun updateGuestMuteState() {
@@ -1353,20 +1356,23 @@ class ListenTogetherManager
                     if (playerConnection !== connection) return@launch
                     isSyncing = true
                     connection.allowInternalSync = true
-                    if (queue != null && queue.isNotEmpty()) {
-                        val mediaItems = queue.map { it.toMediaMetadata().toMediaItem() }
-                        player.setMediaItems(mediaItems)
-                    } else {
-                        player.clearMediaItems()
-                    }
-                    connection.pause()
                     try {
-                        connection.service.queueTitle = queueTitle
-                    } catch (e: Exception) {
-                        Timber.tag(TAG).e(e, "Failed to set queue title for empty state")
+                        if (queue != null && queue.isNotEmpty()) {
+                            val mediaItems = queue.map { it.toMediaMetadata().toMediaItem() }
+                            player.setMediaItems(mediaItems)
+                        } else {
+                            player.clearMediaItems()
+                        }
+                        connection.pause()
+                        try {
+                            connection.service.queueTitle = queueTitle
+                        } catch (e: Exception) {
+                            Timber.tag(TAG).e(e, "Failed to set queue title for empty state")
+                        }
+                    } finally {
+                        connection.allowInternalSync = false
+                        isSyncing = false
                     }
-                    connection.allowInternalSync = false
-                    isSyncing = false
                 }
                 return
             }
