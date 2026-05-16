@@ -115,7 +115,7 @@ object ComposeToImage {
                     if (coverArtBitmap != null) {
                         try {
                             // Create a scaled down version for blurring (performance)
-                            val scaledBitmap = Bitmap.createScaledBitmap(coverArtBitmap, imageWidth / 10, imageHeight / 10, true)
+                            val scaledBitmap = coverArtBitmap.scale(imageWidth / 10, imageHeight / 10)
                             val blurredBitmap = fastBlur(scaledBitmap, 1f, 20) // Radius 20 on small image is large blur
 
                             if (blurredBitmap != null) {
@@ -206,10 +206,9 @@ object ComposeToImage {
                         isAntiAlias = true
                     }
 
-                canvas.save()
-                canvas.clipPath(path)
-                canvas.drawBitmap(it, null, rect, null)
-                canvas.restore()
+                canvas.withClip(path) {
+                    drawBitmap(it, null, rect, null)
+                }
                 canvas.drawRoundRect(rect, coverCornerRadius, coverCornerRadius, coverBorderPaint)
             }
 
@@ -373,10 +372,9 @@ object ComposeToImage {
                     lyricsTop
                 }
 
-            canvas.save()
-            canvas.translate(padding, lyricsY)
-            lyricsLayout.draw(canvas)
-            canvas.restore()
+            canvas.withTranslation(padding, lyricsY) {
+                lyricsLayout.draw(this)
+            }
 
             return@withContext bitmap
         }
@@ -399,7 +397,7 @@ object ComposeToImage {
 
         if (width <= 0 || height <= 0) return null
 
-        val bitmap = Bitmap.createScaledBitmap(sentBitmap, width, height, false)
+        val bitmap = sentBitmap.scale(width, height, false)
         val w = bitmap.width
         val h = bitmap.height
         val pix = IntArray(w * h)

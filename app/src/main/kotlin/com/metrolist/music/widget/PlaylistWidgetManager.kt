@@ -541,7 +541,7 @@ class PlaylistWidgetManager @Inject constructor(
         val xOffset = (bitmap.width - size) / 2
         val yOffset = (bitmap.height - size) / 2
         val squareBitmap = Bitmap.createBitmap(bitmap, xOffset, yOffset, size, size)
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(size, size)
         val canvas = Canvas(output)
         val paint = Paint().apply {
             isAntiAlias = true
@@ -564,7 +564,7 @@ class PlaylistWidgetManager @Inject constructor(
         fallbackArtworkCache[cacheKey]?.let { return it }
 
         val size = 300
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         val background = Paint().apply {
             isAntiAlias = true
@@ -595,7 +595,7 @@ class PlaylistWidgetManager @Inject constructor(
 
         val drawable = context.packageManager.getApplicationIcon(context.packageName)
         val size = 300
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, size, size)
         drawable.draw(canvas)

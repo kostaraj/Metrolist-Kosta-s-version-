@@ -225,7 +225,7 @@ class MetrolistWidgetManager @Inject constructor(
         val yOffset = (bitmap.height - size) / 2
         val squareBitmap = Bitmap.createBitmap(bitmap, xOffset, yOffset, size, size)
 
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(size, size)
         val canvas = Canvas(output)
         val paint = Paint().apply {
             isAntiAlias = true
@@ -251,7 +251,7 @@ class MetrolistWidgetManager @Inject constructor(
         val squareBitmap = Bitmap.createBitmap(bitmap, xOffset, yOffset, size, size)
         
         // Create circular output
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(size, size)
         val canvas = Canvas(output)
         val paint = Paint().apply {
             isAntiAlias = true
@@ -362,7 +362,7 @@ class MetrolistWidgetManager @Inject constructor(
         // Get the launcher icon and make it circular
         val drawable = context.packageManager.getApplicationIcon(context.packageName)
         val size = 300
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, size, size)
         drawable.draw(canvas)
@@ -373,7 +373,7 @@ class MetrolistWidgetManager @Inject constructor(
         // Get the launcher icon and make it rounded
         val drawable = context.packageManager.getApplicationIcon(context.packageName)
         val size = 300
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         drawable.setBounds(0, 0, size, size)
         drawable.draw(canvas)

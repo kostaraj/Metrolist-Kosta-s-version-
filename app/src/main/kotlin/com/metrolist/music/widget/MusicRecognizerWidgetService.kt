@@ -212,21 +212,21 @@ class MusicRecognizerWidgetService : Service() {
                             .apply()
                     }
                     else -> {
-                        prefs.edit()
-                            .putInt(PREF_STATE, STATE_IDLE)
-                            .putString(PREF_COVER_ART_PATH, "")
-                            .putInt(PREF_PULSE_FRAME, 0)
-                            .apply()
+                        prefs.edit {
+                                putInt(PREF_STATE, STATE_IDLE)
+                                .putString(PREF_COVER_ART_PATH, "")
+                                .putInt(PREF_PULSE_FRAME, 0)
+                            }
                     }
                 }
             } catch (e: Exception) {
                 pulseJob?.cancel()
-                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-                    .putInt(PREF_STATE, STATE_ERROR)
-                    .putString(PREF_ERROR_MESSAGE, e.message ?: getString(R.string.widget_recognizer_error))
-                    .putString(PREF_COVER_ART_PATH, "")
-                    .putInt(PREF_PULSE_FRAME, 0)
-                    .apply()
+                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+                        putInt(PREF_STATE, STATE_ERROR)
+                        .putString(PREF_ERROR_MESSAGE, e.message ?: getString(R.string.widget_recognizer_error))
+                        .putString(PREF_COVER_ART_PATH, "")
+                        .putInt(PREF_PULSE_FRAME, 0)
+                    }
             } finally {
                 updateAllWidgets()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -265,7 +265,7 @@ class MusicRecognizerWidgetService : Service() {
         val xOff = (bitmap.width - size) / 2
         val yOff = (bitmap.height - size) / 2
         val square = Bitmap.createBitmap(bitmap, xOff, yOff, size, size)
-        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val output = createBitmap(size, size)
         val canvas = Canvas(output)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
             shader = BitmapShader(square, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
@@ -289,12 +289,12 @@ class MusicRecognizerWidgetService : Service() {
 
     private fun saveState(state: Int) {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit().putInt(PREF_STATE, state).apply()
+            .edit {putInt(PREF_STATE, state)}
     }
 
     private fun savePulseFrame(frame: Int) {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit().putInt(PREF_PULSE_FRAME, frame).apply()
+            .edit {putInt(PREF_PULSE_FRAME, frame)}
     }
 
     private fun updateAllWidgets() {
