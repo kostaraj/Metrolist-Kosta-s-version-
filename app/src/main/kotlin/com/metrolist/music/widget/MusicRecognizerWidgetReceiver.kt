@@ -74,14 +74,15 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
             ACTION_START_RECOGNITION -> handleStartRecognition(context)
             ACTION_UPDATE_WIDGET -> updateAllWidgets(context, AppWidgetManager.getInstance(context))
             ACTION_RESET_STATE -> {
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-                        putInt(PREF_STATE, STATE_IDLE)
-                        .putString(PREF_SONG_TITLE, "")
-                        .putString(PREF_ARTIST_NAME, "")
-                        .putString(PREF_ERROR_MESSAGE, "")
-                        .putString(PREF_COVER_ART_PATH, "")
-                        .putInt(PREF_PULSE_FRAME, 0)
-                    }
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putInt(PREF_STATE, STATE_IDLE)
+                    .putString(PREF_SONG_TITLE, "")
+                    .putString(PREF_ARTIST_NAME, "")
+                    .putString(PREF_ERROR_MESSAGE, "")
+                    .putString(PREF_COVER_ART_PATH, "")
+                    .putInt(PREF_PULSE_FRAME, 0)
+                    .apply()
                 File(context.cacheDir, ALBUM_ART_CACHE_FILE).delete()
                 updateAllWidgets(context, AppWidgetManager.getInstance(context))
             }
@@ -106,7 +107,7 @@ class MusicRecognizerWidgetReceiver : AppWidgetProvider() {
 
         // Showing a result/error → clear it before starting a new search
         if (currentState == STATE_SUCCESS || currentState == STATE_NO_MATCH || currentState == STATE_ERROR) {
-            prefs.edit {putInt(PREF_STATE, STATE_IDLE)}
+            prefs.edit().putInt(PREF_STATE, STATE_IDLE).apply()
         }
 
         // No mic permission → open the app so the user can grant it

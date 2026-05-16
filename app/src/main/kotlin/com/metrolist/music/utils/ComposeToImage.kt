@@ -115,7 +115,7 @@ object ComposeToImage {
                     if (coverArtBitmap != null) {
                         try {
                             // Create a scaled down version for blurring (performance)
-                            val scaledBitmap = coverArtBitmap.scale(imageWidth / 10, imageHeight / 10)
+                            val scaledBitmap = Bitmap.createScaledBitmap(coverArtBitmap, imageWidth / 10, imageHeight / 10, true)
                             val blurredBitmap = fastBlur(scaledBitmap, 1f, 20) // Radius 20 on small image is large blur
 
                             if (blurredBitmap != null) {
@@ -397,7 +397,7 @@ object ComposeToImage {
 
         if (width <= 0 || height <= 0) return null
 
-        val bitmap = sentBitmap.scale(width, height, false)
+        val bitmap = Bitmap.createScaledBitmap(sentBitmap, width, height, false)
         val w = bitmap.width
         val h = bitmap.height
         val pix = IntArray(w * h)

@@ -265,8 +265,8 @@ fun AboutScreen(
         
                 Column {
                     val metrolistName = stringResource(R.string.metrolist)
-                        .lowercase(LocalLocale.current.platformLocale)
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(LocalLocale.current.platformLocale) else it.toString() }
+                        .lowercase(Locale.getDefault())
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
                     Text(
                         text = metrolistName,
