@@ -155,6 +155,9 @@ object YTPlayerUtils {
         var streamExpiresInSeconds: Int? = null
         var streamPlayerResponse: PlayerResponse? = null
         val retryMainPlayerResponse: PlayerResponse? = if (usedAgeRestrictedClient != null) mainPlayerResponse else null
+        var mainClientStreamUrl: String? = null
+        var mainClientFormat: PlayerResponse.StreamingData.Format? = null
+        var mainClientStreamExpiresInSeconds: Int? = null
 
         // Check current status
         val currentStatus = mainPlayerResponse.playabilityStatus.status
@@ -309,6 +312,12 @@ object YTPlayerUtils {
 
                 Timber.tag(logTag).d("Stream expires in: $streamExpiresInSeconds seconds")
 
+                if (clientIndex == -1) {
+                    mainClientStreamUrl = streamUrl
+                    mainClientFormat = format
+                    mainClientStreamExpiresInSeconds = streamExpiresInSeconds
+                }
+
                 if (clientIndex == STREAM_FALLBACK_CLIENTS.size - 1) {
                     /** skip [validateStatus] for last client */
                     Timber.tag(logTag).d("Using last fallback client without validation: ${STREAM_FALLBACK_CLIENTS[clientIndex].clientName}")
@@ -329,6 +338,17 @@ object YTPlayerUtils {
             } else {
                 Timber.tag(logTag).d("Player response status not OK: ${streamPlayerResponse?.playabilityStatus?.status}, reason: ${streamPlayerResponse?.playabilityStatus?.reason}")
             }
+        }
+
+        // If all fallback clients failed (returned LOGIN_REQUIRED or other errors)
+        // but MAIN_CLIENT had a valid stream URL, use it without validation.
+        // This is critical for explicit/restricted content where only WEB_REMIX works.
+        if (streamUrl == null && mainClientStreamUrl != null && mainClientFormat != null) {
+            Timber.tag(TAG).i("Using MAIN_CLIENT stream URL (all fallback clients unavailable for restricted content)")
+            streamUrl = mainClientStreamUrl
+            format = mainClientFormat
+            streamExpiresInSeconds = mainClientStreamExpiresInSeconds
+            streamPlayerResponse = mainPlayerResponse
         }
 
         if (streamPlayerResponse == null) {
@@ -408,7 +428,15 @@ object YTPlayerUtils {
 
         val adaptiveFormats = playerResponse.streamingData?.adaptiveFormats ?: return null
 
-        val audioCapableFormats = adaptiveFormats.filter { it.isAudio }
+        val audioCapableFormats = adaptiveFormats.filter { it.isAudio }.ifEmpty {
+            // For explicit/restricted content, WEB_REMIX may not return audio-only adaptive formats.
+            // Fall back to combined video+audio formats from the 'formats' array.
+            val combinedFormats = playerResponse.streamingData?.formats
+            if (combinedFormats != null) {
+                Timber.tag(logTag).d("No audio-only adaptive formats; falling back to ${combinedFormats.size} combined formats (itags: ${combinedFormats.joinToString { it.itag.toString() }})")
+            }
+            combinedFormats ?: emptyList()
+        }
         if (audioCapableFormats.isEmpty()) return null
 
         val maxBitrate = audioCapableFormats.maxOfOrNull { it.bitrate } ?: return null

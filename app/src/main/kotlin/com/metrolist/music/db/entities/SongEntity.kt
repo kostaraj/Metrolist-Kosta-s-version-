@@ -14,6 +14,8 @@ import com.metrolist.innertube.YouTube
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.time.LocalDateTime
 
 @Immutable
@@ -65,6 +67,10 @@ data class SongEntity(
     @ColumnInfo(name = "isCached", defaultValue = "0")
     val isCached: Boolean = false,
 ) {
+    companion object {
+        private val librarySyncSemaphore = Semaphore(3)
+    }
+
     fun localToggleLike() =
         copy(
             liked = !liked,
@@ -90,9 +96,11 @@ data class SongEntity(
         ).also {
             if (syncToYouTube) {
                 CoroutineScope(Dispatchers.IO).launch {
-                    // Use the new reliable method that fetches fresh tokens
-                    val addToLibrary = inLibrary == null
-                    YouTube.toggleSongLibrary(id, addToLibrary)
+                    librarySyncSemaphore.withPermit {
+                        // Use the new reliable method that fetches fresh tokens
+                        val addToLibrary = inLibrary == null
+                        YouTube.toggleSongLibrary(id, addToLibrary)
+                    }
                 }
             }
         }
