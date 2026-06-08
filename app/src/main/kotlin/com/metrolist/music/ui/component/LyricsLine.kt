@@ -761,16 +761,15 @@ private fun WordLevelLyrics(
         val glowAlpha = (0.35f * impactFactor).coerceIn(0f, 0.4f)
         val baseGlowRadius = 12.dp.toPx() * impactFactor                                                                                                        
         
-        // Uzimamo levu ivicu i širinu trenutnog elementa iz njegovog layout-a
-        val letterLeft = letterLayouts[i].left
+        // Uzimamo širinu trenutnog elementa iz njegovog layout-a
         val currentWidth = letterLayouts[i].size.width.toFloat()
         
-        // Slider počinje od leve ivice slova i širi se udesno u zavisnosti od progresa (sungFactor)
-        val clipRight = letterLeft + (currentWidth * sungFactor)
+        // Pošto crtamo od 0f, klipujemo od 0f do trenutne širine pomnožene sa progresom
+        val clipRight = currentWidth * sungFactor
 
-        // Clip-ujemo tačno prostor iznad trenutnog slova kako slider napreduje
+        // Precizan clip koji se širi udesno od početka reči/slova kako slider napreduje
         clipRect(
-            left = letterLeft,
+            left = 0f,
             top = 0f,
             right = clipRight,
             bottom = size.height
@@ -783,13 +782,13 @@ private fun WordLevelLyrics(
                 
                 canvas.nativeCanvas.drawText(
                     letterLayouts[i].layoutInput.text.text, 
-                    0f, // Ako ti sjaj bude bežao, ovde stavi 'letterLeft' umesto '0f'
+                    0f, 
                     letterLayouts[i].firstBaseline, 
                     glowPaint
                 )
             }
         }
-    } 
+    }
 }
                         val baseAlpha = if (isWordSung || charLp > 0.99f) 1f else (focusedAlpha + (1f - focusedAlpha) * sungFactor)
                         drawText(letterLayouts[i], color = expressiveAccent.copy(alpha = if (wordIdx == -1) focusedAlpha else baseAlpha))
