@@ -49,6 +49,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Generisi fabricki debug keystore
+        run: |
+          mkdir -p /home/runner/.android
+          keytool -genkey -v -keystore /home/runner/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Build Debug APK
         run: ./gradlew --console=plain assemble${{ matrix.variantName }}Debug --warning-mode summary
         env:
