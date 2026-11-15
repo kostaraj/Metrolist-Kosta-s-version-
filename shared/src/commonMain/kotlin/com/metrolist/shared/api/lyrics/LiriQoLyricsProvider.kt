@@ -216,35 +216,66 @@ class LiriQoLyricsProvider(
                 } else {
                     emptyList()
                 }
-            var textSearchFrom = 0
-            val mlxWords =
-                validWords.mapIndexed { index, word ->
-                    val text = word.text.trimEnd()
-                    val matchStart = line.text.indexOf(text, textSearchFrom, ignoreCase = true)
-                    val matchEnd = if (matchStart >= 0) matchStart + text.length else textSearchFrom + text.length
-                    val nextWordStart =
-                        validWords.getOrNull(index + 1)?.text?.trimEnd()?.let { nextText ->
-                            line.text.indexOf(nextText, matchEnd.coerceIn(0, line.text.length), ignoreCase = true)
-                        } ?: -1
-                    val separatorRangeEnd = if (nextWordStart >= 0) nextWordStart else matchEnd.coerceIn(0, line.text.length)
-                    val lineHasSeparator =
-                        matchStart >= 0 &&
-                            line.text.substring(matchEnd.coerceIn(0, line.text.length), separatorRangeEnd).any(Char::isWhitespace)
-                    textSearchFrom = matchEnd.coerceAtMost(line.text.length)
-                    MlxWord(
-                        text = text,
-                        startMs = word.startMs,
-                        endMs = word.endMs,
-                        hasTrailingSpace = word.text.lastOrNull()?.isWhitespace() == true || lineHasSeparator,
-                    )
-                }.filter { it.text.isNotEmpty() }
+            val backgroundSource = BACKGROUND_PARENTHESIS.find(line.text)?.groupValues?.get(1).orEmpty()
+            val mainSource = BACKGROUND_PARENTHESIS.replace(line.text, " ").replace(WHITESPACE, " ").trim()
+            var inBackground = false
+            val mainTimedWords = mutableListOf<TimedWord>()
+            val backgroundTimedWords = mutableListOf<TimedWord>()
+            validWords.forEach { word ->
+                val opensBackground = word.text.contains('(')
+                val closesBackground = word.text.contains(')')
+                if (opensBackground) inBackground = true
+                val cleanText = word.text.replace("(", "").replace(")", "").trim()
+                if (cleanText.isNotEmpty()) {
+                    val cleaned = word.copy(text = cleanText)
+                    if (inBackground) backgroundTimedWords += cleaned else mainTimedWords += cleaned
+                }
+                if (closesBackground) inBackground = false
+            }
+            val mlxWords = buildMlxWords(mainTimedWords, mainSource)
+            val backgroundWords = buildMlxWords(backgroundTimedWords, backgroundSource)
+            val outputMainText = mainSource.ifBlank { line.text }
             if (mlxWords.isNotEmpty()) {
-                builder.line(startMs = line.startMs, endMs = endMs, words = mlxWords)
+                builder.line(
+                    startMs = line.startMs,
+                    endMs = endMs,
+                    words = mlxWords,
+                    backgroundWords = backgroundWords.takeIf { it.isNotEmpty() },
+                )
             } else {
-                builder.line(line.startMs, endMs, line.text)
+                builder.line(line.startMs, endMs, outputMainText)
             }
         }
         return builder.build()
+    }
+
+    /**
+     * Keeps each upstream timing marker, but derives spaces from the provider's original
+     * lyric text rather than assuming every timed fragment is a complete word.
+     */
+    private fun buildMlxWords(words: List<TimedWord>, sourceText: String): List<MlxWord> {
+        var searchFrom = 0
+        return words.mapIndexedNotNull { index, word ->
+            val text = word.text.trim()
+            if (text.isEmpty()) return@mapIndexedNotNull null
+            val matchStart = sourceText.indexOf(text, searchFrom, ignoreCase = true)
+            val matchEnd = if (matchStart >= 0) matchStart + text.length else searchFrom + text.length
+            val nextWordStart =
+                words.getOrNull(index + 1)?.text?.trim()?.let { nextText ->
+                    sourceText.indexOf(nextText, matchEnd.coerceIn(0, sourceText.length), ignoreCase = true)
+                } ?: -1
+            val separatorEnd = if (nextWordStart >= 0) nextWordStart else matchEnd.coerceIn(0, sourceText.length)
+            val hasSeparator =
+                matchStart >= 0 &&
+                    sourceText.substring(matchEnd.coerceIn(0, sourceText.length), separatorEnd).any(Char::isWhitespace)
+            searchFrom = matchEnd.coerceAtMost(sourceText.length)
+            MlxWord(
+                text = text,
+                startMs = word.startMs,
+                endMs = word.endMs,
+                hasTrailingSpace = hasSeparator,
+            )
+        }
     }
 
     private fun timingKind(mlx: String): LyricsTimingKind {
@@ -336,6 +367,8 @@ class LiriQoLyricsProvider(
     )
 
     private companion object {
+        val BACKGROUND_PARENTHESIS = Regex("\\(([^()]*)\\)")
+        val WHITESPACE = Regex("\\s+")
         const val BASE_URL = "https://api.liriqo-alfarrizi.my.id/v1"
         const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
         const val MAX_CACHED_QUERIES = 6
