@@ -21,7 +21,6 @@ class LyricsProviderSearchTest {
     fun legacyLiriQoSubproviderEntriesCollapseIntoOneSearchGroup() =
         runTest {
             val calls = mutableListOf<LyricsProvider>()
-            val pending = CompletableDeferred<Unit>()
             val search =
                 LyricsProviderSearch(this, "LYPRIO,LIRIQO_APPLE_MUSIC,LIRIQO_KUGOU,LIRIQO_QQ_MUSIC") { provider ->
                     calls += provider
@@ -37,7 +36,7 @@ class LyricsProviderSearchTest {
             val liriQoGroups = search.groups.value.filter { it.provider == LyricsProvider.LIRIQO }
             assertEquals(1, liriQoGroups.size)
             assertEquals(listOf(LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, search.groups.value.map { it.provider })
-            assertEquals(listOf(LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, calls)
+            assertEquals(listOf(LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, calls)
             assertEquals(11, liriQoGroups.single().results?.size)
             search.cancel()
         }
