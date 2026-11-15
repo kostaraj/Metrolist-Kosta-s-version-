@@ -286,10 +286,10 @@ android {
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
             signingConfig =
                 if (hasPersistentDebugSigning) {
-                signingConfigs["persistentDebug"]
-            } else {
-                signingConfigs.getByName("debug")
-            }
+                    signingConfigs["persistentDebug"]
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 
