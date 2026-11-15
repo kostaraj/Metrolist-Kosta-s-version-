@@ -144,8 +144,7 @@ class LiriQoLyricsProvider(
         metadata: JsonObject?,
     ): List<LyricsWithProvider> {
         val sourceId = track.string("provider") ?: return emptyList()
-        val upstream = track.string("upstreamProvider") ?: sourceName(sourceId)
-        val sourceLabel = "LiriQo ($upstream)"
+        val sourceLabel = "LIRIQO/${sourceSlug(sourceId)}"
         val timed = track["timed"] as? JsonArray
         val lines =
             timed?.mapNotNull { element ->
@@ -260,20 +259,20 @@ class LiriQoLyricsProvider(
             else -> null
         }
 
-    private fun sourceName(id: String): String =
+    private fun sourceSlug(id: String): String =
         when (id) {
-            "apple_music_liriqo" -> "Apple Music"
-            "musixmatch" -> "Musixmatch"
-            "unison_community" -> "Unison"
-            "netease" -> "NetEase Cloud Music"
-            "petitlyrics" -> "PetitLyrics"
-            "kugou_legato" -> "KuGou"
-            "kuwo" -> "Kuwo"
-            "migu" -> "Migu"
-            "qq_portato" -> "QQ Music"
-            "lrclib" -> "LRCLib"
-            "ytm_line" -> "YouTube Music"
-            else -> id
+            "apple_music_liriqo" -> "APPLE_MUSIC"
+            "musixmatch" -> "MUSIXMATCH"
+            "unison_community" -> "UNISON"
+            "netease" -> "NETEASE"
+            "petitlyrics" -> "PETITLYRICS"
+            "kugou_legato" -> "KUGOU"
+            "kuwo" -> "KUWO"
+            "migu" -> "MIGU"
+            "qq_portato" -> "QQ_MUSIC"
+            "lrclib" -> "LRCLIB"
+            "ytm_line" -> "YOUTUBE_MUSIC"
+            else -> id.uppercase()
         }
 
     private fun JsonObject.wordsFor(lineId: Long): JsonArray? {
