@@ -105,4 +105,12 @@ class FullscreenArtworkBleedTest {
 
         assertContentEquals(full.copyOfRange(first * width, full.size), lower)
     }
+    @Test
+    fun videoTracksUseTheBlurredBackdropInsteadOfStretchedArtworkBleed() {
+        assertTrue(usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false, isVideoSong = false))
+        assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false, isVideoSong = true))
+        assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = true, canvasTall = false, isVideoSong = false))
+        assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = true, isVideoSong = false))
+    }
+
 }
