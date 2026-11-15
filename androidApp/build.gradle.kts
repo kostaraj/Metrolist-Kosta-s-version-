@@ -275,14 +275,17 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".benchmark"
+            signingConfig =
+                if (hasPersistentDebugSigning) {
+                    signingConfigs["persistentDebug"]
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             isDebuggable = false
             isProfileable = true
             matchingFallbacks += "release"
         }
         debug {
-            applicationIdSuffix = ".debug"
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
             signingConfig =
                 if (hasPersistentDebugSigning) {
