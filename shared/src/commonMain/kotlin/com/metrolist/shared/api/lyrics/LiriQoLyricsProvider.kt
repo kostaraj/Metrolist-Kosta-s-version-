@@ -212,7 +212,7 @@ class LiriQoLyricsProvider(
                 )
         lines.mapNotNull { it.agentId }.distinct().forEach { agentId ->
             val agent = (track["agents"] as? JsonObject)?.get(agentId) as? JsonObject
-            val type = agent?.string("type")?.let(AgentType::fromString) ?: AgentType.PERSON
+            val type = agent?.string("type")?.let { AgentType.fromString(it) } ?: AgentType.PERSON
             builder.agent(agentId, type, agent?.string("name"))
         }
         lines.forEachIndexed { index, line ->
