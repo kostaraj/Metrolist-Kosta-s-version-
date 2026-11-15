@@ -221,12 +221,22 @@ android {
     val storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
     val keyAliasName = System.getenv("KEY_ALIAS") ?: ""
     val keyPasswordVal = System.getenv("KEY_PASSWORD") ?: ""
+    val debugKeystorePath = System.getenv("DEBUG_KEYSTORE_PATH") ?: ""
+    val debugStorePassword = System.getenv("DEBUG_KEYSTORE_PASSWORD") ?: ""
+    val debugKeyAlias = System.getenv("DEBUG_KEY_ALIAS") ?: ""
+    val debugKeyPassword = System.getenv("DEBUG_KEY_PASSWORD") ?: ""
 
     val hasReleaseSigning =
         keystorePath.isNotBlank() &&
             storePassword.isNotBlank() &&
             keyAliasName.isNotBlank() &&
             keyPasswordVal.isNotBlank()
+
+    val hasPersistentDebugSigning =
+        debugKeystorePath.isNotBlank() &&
+            debugStorePassword.isNotBlank() &&
+            debugKeyAlias.isNotBlank() &&
+            debugKeyPassword.isNotBlank()
 
     if (hasReleaseSigning) {
         signingConfigs {
@@ -237,6 +247,17 @@ android {
         releaseConfig.storePassword = storePassword
         releaseConfig.keyAlias = keyAliasName
         releaseConfig.keyPassword = keyPasswordVal
+    }
+
+    if (hasPersistentDebugSigning) {
+        signingConfigs {
+            create("persistentDebug")
+        }
+        val debugConfig = signingConfigs["persistentDebug"]
+        debugConfig.storeFile = File(debugKeystorePath)
+        debugConfig.storePassword = debugStorePassword
+        debugConfig.keyAlias = debugKeyAlias
+        debugConfig.keyPassword = debugKeyPassword
     }
 
     buildTypes {
@@ -263,6 +284,11 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
+            signingConfig = if (hasPersistentDebugSigning) {
+                signingConfigs["persistentDebug"]
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
