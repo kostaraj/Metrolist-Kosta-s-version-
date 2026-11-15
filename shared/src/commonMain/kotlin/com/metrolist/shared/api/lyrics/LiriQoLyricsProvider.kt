@@ -5,9 +5,14 @@
 
 package com.metrolist.shared.api.lyrics
 
+import com.metrolist.shared.model.LyricsProvider
+import com.metrolist.shared.model.LyricsTimingKind
+import com.metrolist.shared.model.LyricsWithProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -19,35 +24,31 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 
 /**
- * LiriQo aggregates native word-synced sources (including KuGou KRC and QQ Music QRC)
- * and exposes their timestamps as normalized absolute milliseconds.
+ * One shared LiriQo request backs all eleven independently configurable source entries.
+ * Each upstream track can produce every format actually present in the response.
  */
 class LiriQoLyricsProvider(
     private val httpClient: HttpClient,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
+    private val requestMutex = Mutex()
+    private val responseCache = linkedMapOf<String, String>()
 
-    suspend fun getLyrics(
+    suspend fun getLyricsResults(
         title: String,
         artist: String,
         duration: Long?,
         album: String? = null,
-    ): String? {
-        if (title.isBlank()) return null
+        provider: LyricsProvider,
+    ): List<LyricsWithProvider> {
+        val sourceId = sourceId(provider) ?: return emptyList()
+        if (title.isBlank()) return emptyList()
 
-        val response =
-            httpClient
-                .prepareGet("$BASE_URL/lyrics") {
-                    expectMissingLyrics()
-                    parameter("title", title)
-                    if (artist.isNotBlank()) parameter("artist", artist)
-                    duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
-                    album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
-                }.readLyricsText(MAX_RESPONSE_BYTES) ?: return null
+        val response = responseFor(title, artist, duration, album) ?: return emptyList()
+        val root = runCatching { json.parseToJsonElement(response).jsonObject }.getOrNull() ?: return emptyList()
+        if (root["error"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) return emptyList()
 
-        val root = json.parseToJsonElement(response).jsonObject
-        if (root["error"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) return null
-
+        val metadata = root["metadata"] as? JsonObject
         val primary = root["primary"] as? JsonObject
         val tracks = root["tracks"] as? JsonArray
         val candidates =
@@ -55,50 +56,68 @@ class LiriQoLyricsProvider(
                 primary?.let(::add)
                 tracks?.forEach { (it as? JsonObject)?.let(::add) }
             }.distinctBy { track ->
-                track["provider"]?.jsonPrimitive?.contentOrNull.orEmpty() to
-                    track["timed"]?.toString().orEmpty()
+                listOf(
+                    track.string("provider").orEmpty(),
+                    track.string("syncLevel").orEmpty(),
+                    track["timed"]?.toString().orEmpty(),
+                    track.string("plain").orEmpty(),
+                ).joinToString("|")
             }
 
-        val parsed =
-            candidates.mapNotNull { track ->
-                parseTrack(track, title, artist, root["metadata"] as? JsonObject)
-            }
-
-        // Prefer verified native word timestamps over line-only results, regardless
-        // of the API's primary selection. Keep the API's order as the tie-breaker.
-        return parsed.maxByOrNull { it.syncQuality }?.mlx
-            ?: candidates.firstNotNullOfOrNull { track ->
-                track["lrc"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let {
-                    lrcToMlx(it, title, artist, source = "LiriQo")
+        return candidates
+            .filter { it.string("provider") == sourceId }
+            .flatMap { track -> parseTrackVariants(track, title, artist, metadata) }
+            .distinctBy { it.lyrics to it.provider }
+            .sortedByDescending { result ->
+                when (timingKind(result.lyrics)) {
+                    LyricsTimingKind.WORD_SYNCED -> 3
+                    LyricsTimingKind.LINE_SYNCED -> 2
+                    LyricsTimingKind.UNSYNCED -> 1
                 }
             }
     }
 
-    private fun parseTrack(
+    private suspend fun responseFor(
+        title: String,
+        artist: String,
+        duration: Long?,
+        album: String?,
+    ): String? {
+        val key = listOf(title.trim(), artist.trim(), duration?.toString().orEmpty(), album.orEmpty()).joinToString("\u0000")
+        return requestMutex.withLock {
+            responseCache[key]?.let { return@withLock it }
+            val response =
+                httpClient
+                    .prepareGet("$BASE_URL/lyrics") {
+                        expectMissingLyrics()
+                        parameter("title", title)
+                        if (artist.isNotBlank()) parameter("artist", artist)
+                        duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
+                        album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
+                        parameter("full", "1")
+                    }.readLyricsText(MAX_RESPONSE_BYTES) ?: return@withLock null
+
+            // Keep only a small number of recent song lookups; all providers share each response.
+            responseCache[key] = response
+            while (responseCache.size > MAX_CACHED_QUERIES) {
+                responseCache.remove(responseCache.keys.first())
+            }
+            response
+        }
+    }
+
+    private fun parseTrackVariants(
         track: JsonObject,
         requestedTitle: String,
         requestedArtist: String,
         metadata: JsonObject?,
-    ): ParsedTrack? {
-        val providerId = track.string("provider")
-        val upstream = track.string("upstreamProvider")
-        val source = upstream?.let { "LiriQo ($it)" } ?: providerId?.let { "LiriQo ($it)" } ?: "LiriQo"
+    ): List<LyricsWithProvider> {
+        val sourceId = track.string("provider") ?: return emptyList()
+        val upstream = track.string("upstreamProvider") ?: sourceName(sourceId)
+        val sourceLabel = "LiriQo ($upstream)"
         val timed = track["timed"] as? JsonArray
-        if (timed.isNullOrEmpty()) {
-            val plain = track.string("plain")?.takeIf { it.isNotBlank() } ?: return null
-            val builder =
-                MlxBuilder()
-                    .meta(source)
-                    .song(
-                        title = metadata?.string("title") ?: requestedTitle,
-                        artist = metadata?.string("artist") ?: requestedArtist,
-                    )
-            plain.lineSequence().filter { it.isNotBlank() }.forEach { builder.unsyncedLine(it.trim()) }
-            return ParsedTrack(builder.build(), 0)
-        }
-
         val lines =
-            timed.mapNotNull { element ->
+            timed?.mapNotNull { element ->
                 val line = element as? JsonObject ?: return@mapNotNull null
                 val start = line.long("start")?.takeIf { it >= 0L } ?: return@mapNotNull null
                 val end = line.long("end")?.takeIf { it > start }
@@ -106,20 +125,51 @@ class LiriQoLyricsProvider(
                 val id = line.long("id")?.takeIf { it >= 0L } ?: 0L
                 val words = line["words"] as? JsonArray ?: track.wordsFor(id)
                 TimedLine(start, end, text, words?.mapNotNull(::parseWord).orEmpty())
-            }.sortedBy { it.startMs }
+            }?.sortedBy { it.startMs }.orEmpty()
 
-        if (lines.isEmpty()) return null
+        val results = mutableListOf<LyricsWithProvider>()
+        if (lines.isNotEmpty()) {
+            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = false)
+            results += LyricsWithProvider(lineLyrics, sourceLabel)
 
+            if (lines.any { it.words.isNotEmpty() }) {
+                val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = true)
+                if (wordLyrics != lineLyrics) results += LyricsWithProvider(wordLyrics, sourceLabel)
+            }
+        }
+
+        val plain = track.string("plain")?.takeIf { it.isNotBlank() }
+        if (plain != null) {
+            val builder =
+                MlxBuilder()
+                    .meta(sourceLabel)
+                    .song(
+                        title = metadata?.string("title") ?: requestedTitle,
+                        artist = metadata?.string("artist") ?: requestedArtist,
+                        songwriters = track["songwriters"]?.stringArray()?.takeIf { it.isNotEmpty() },
+                    )
+            plain.lineSequence().filter { it.isNotBlank() }.forEach { builder.unsyncedLine(it.trim()) }
+            val plainLyrics = builder.build()
+            if (results.none { it.lyrics == plainLyrics }) results += LyricsWithProvider(plainLyrics, sourceLabel)
+        }
+        return results
+    }
+
+    private fun buildTimedLyrics(
+        lines: List<TimedLine>,
+        source: String,
+        requestedTitle: String,
+        requestedArtist: String,
+        metadata: JsonObject?,
+        includeWords: Boolean,
+    ): String {
         val builder =
             MlxBuilder()
                 .meta(source)
                 .song(
                     title = metadata?.string("title") ?: requestedTitle,
                     artist = metadata?.string("artist") ?: requestedArtist,
-                    songwriters = track["songwriters"]?.stringArray()?.takeIf { it.isNotEmpty() },
                 )
-
-        var hasWordTiming = false
         lines.forEachIndexed { index, line ->
             val inferredEnd =
                 lines.getOrNull(index + 1)?.startMs
@@ -127,32 +177,73 @@ class LiriQoLyricsProvider(
                     ?: line.startMs + 5_000L
             val endMs = line.endMs ?: inferredEnd.coerceAtLeast(line.startMs + 1L)
             val validWords =
-                line.words
-                    .filter { word ->
+                if (includeWords) {
+                    line.words.filter { word ->
                         word.startMs >= line.startMs && word.endMs > word.startMs && word.endMs <= endMs
-                    }
-                    .sortedBy { it.startMs }
-
+                    }.sortedBy { it.startMs }
+                } else {
+                    emptyList()
+                }
             val mlxWords =
                 validWords.map { word ->
-                    val trailingSpace = word.text.lastOrNull()?.isWhitespace() == true
                     MlxWord(
                         text = word.text.trimEnd(),
                         startMs = word.startMs,
                         endMs = word.endMs,
-                        hasTrailingSpace = trailingSpace,
+                        hasTrailingSpace = word.text.lastOrNull()?.isWhitespace() == true,
                     )
                 }.filter { it.text.isNotEmpty() }
             if (mlxWords.isNotEmpty()) {
-                hasWordTiming = true
                 builder.line(startMs = line.startMs, endMs = endMs, words = mlxWords)
             } else {
                 builder.line(line.startMs, endMs, line.text)
             }
         }
-
-        return ParsedTrack(builder.build(), if (hasWordTiming) 2 else 1)
+        return builder.build()
     }
+
+    private fun timingKind(mlx: String): LyricsTimingKind {
+        val document = runCatching { MlxParser.parse(mlx) }.getOrNull()
+        if (document == null || document.lines.isEmpty()) return LyricsTimingKind.UNSYNCED
+        if (document.lines.any { !it.words.isNullOrEmpty() }) return LyricsTimingKind.WORD_SYNCED
+        return if (document.lines.any { it.time > 0L || it.endTime != null }) {
+            LyricsTimingKind.LINE_SYNCED
+        } else {
+            LyricsTimingKind.UNSYNCED
+        }
+    }
+
+    private fun sourceId(provider: LyricsProvider): String? =
+        when (provider) {
+            LyricsProvider.LIRIQO_APPLE_MUSIC -> "apple_music_liriqo"
+            LyricsProvider.LIRIQO_MUSIXMATCH -> "musixmatch"
+            LyricsProvider.LIRIQO_UNISON -> "unison_community"
+            LyricsProvider.LIRIQO_NETEASE -> "netease"
+            LyricsProvider.LIRIQO_PETITLYRICS -> "petitlyrics"
+            LyricsProvider.LIRIQO_KUGOU -> "kugou_legato"
+            LyricsProvider.LIRIQO_KUWO -> "kuwo"
+            LyricsProvider.LIRIQO_MIGU -> "migu"
+            LyricsProvider.LIRIQO_QQ_MUSIC -> "qq_portato"
+            LyricsProvider.LIRIQO_LRCLIB -> "lrclib"
+            LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "ytm_line"
+            else -> null
+        }
+
+    private fun sourceName(id: String): String =
+        when (id) {
+            "apple_music_liriqo" -> "Apple Music"
+            "musixmatch" -> "Musixmatch"
+            "unison_community" -> "Unison"
+            "netease" -> "NetEase Cloud Music"
+            "petitlyrics" -> "PetitLyrics"
+            "kugou_legato" -> "KuGou"
+            "kuwo" -> "Kuwo"
+            "migu" -> "Migu"
+            "qq_portato" -> "QQ Music"
+            "lrclib" -> "LRCLib"
+            "ytm_line" -> "YouTube Music"
+            else -> id
+        }
 
     private fun JsonObject.wordsFor(lineId: Long): JsonArray? {
         val words = this["words"] ?: return null
@@ -171,14 +262,15 @@ class LiriQoLyricsProvider(
         return TimedWord(text, start, end)
     }
 
-    private fun JsonObject.string(key: String): String? =
-        this[key]?.jsonPrimitive?.contentOrNull
+    private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 
-    private fun JsonObject.long(key: String): Long? =
-        this[key]?.jsonPrimitive?.longOrNull
+    private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
 
     private fun JsonElement.stringArray(): List<String> =
         (this as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+
+    private fun JsonObject.stringArray(key: String): List<String> =
+        (this[key] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
 
     private data class TimedLine(
         val startMs: Long,
@@ -193,13 +285,9 @@ class LiriQoLyricsProvider(
         val endMs: Long,
     )
 
-    private data class ParsedTrack(
-        val mlx: String,
-        val syncQuality: Int,
-    )
-
     private companion object {
         const val BASE_URL = "https://api.liriqo-alfarrizi.my.id/v1"
         const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+        const val MAX_CACHED_QUERIES = 6
     }
 }
