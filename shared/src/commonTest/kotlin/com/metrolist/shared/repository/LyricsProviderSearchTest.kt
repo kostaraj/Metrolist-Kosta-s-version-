@@ -18,6 +18,31 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class LyricsProviderSearchTest {
     @Test
+    fun legacyLiriQoSubproviderEntriesCollapseIntoOneSearchGroup() =
+        runTest {
+            val calls = mutableListOf<LyricsProvider>()
+            val pending = CompletableDeferred<Unit>()
+            val search =
+                LyricsProviderSearch(this, "LYPRIO,LIRIQO_APPLE_MUSIC,LIRIQO_KUGOU,LIRIQO_QQ_MUSIC") { provider ->
+                    calls += provider
+                    if (provider == LyricsProvider.LIRIQO) {
+                        LyricsProvider.liriQoProviders.map {
+                            LyricsProviderResult(it, it.name, "Lyrics", LyricsTimingKind.LINE_SYNCED)
+                        }
+                    } else {
+                        emptyList()
+                    }
+                }
+            runCurrent()
+            val liriQoGroups = search.groups.value.filter { it.provider == LyricsProvider.LIRIQO }
+            assertEquals(1, liriQoGroups.size)
+            assertEquals(listOf(LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, search.groups.value.map { it.provider })
+            assertEquals(listOf(LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, calls)
+            assertEquals(11, liriQoGroups.single().results?.size)
+            search.cancel()
+        }
+
+    @Test
     fun searchesAllProvidersInParallelOnOpenIncludingDisabledOnes() =
         runTest {
             val calls = mutableListOf<LyricsProvider>()
