@@ -1714,7 +1714,7 @@ fun PlayerScreen(
                                                     if (showVideoSurface) {
                                                         platform.MusicVideoSurface(
                                                             cornerRadius = 0.dp,
-                                                            fillContainer = true,
+                                                            fillContainer = false,
                                                             showControls = true,
                                                             useSurfaceView = false,
                                                             onFullscreenClick = onToggleFullscreen,
