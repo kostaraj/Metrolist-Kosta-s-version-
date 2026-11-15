@@ -238,7 +238,7 @@ internal fun PlayerBlurredArtworkBackground(
     val lyricsBackgroundBlurRadiusPx = with(density) { 180.dp.toPx() }
     BlurredArtworkBackground(
         url = thumbnailUrl,
-        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.97f),
+        modifier = Modifier.fillMaxSize(),
         blurRadiusPx = if (isLyricsVisible) lyricsBackgroundBlurRadiusPx else playerBackgroundBlurRadiusPx,
         scrimAlpha = 0.3f,
         lyricsGradient = isLyricsVisible,
