@@ -34,6 +34,25 @@ class LiriQoLyricsProvider(
     private val requestMutex = Mutex()
     private val responseCache = linkedMapOf<String, String>()
 
+    suspend fun getLyrics(
+        title: String,
+        artist: String,
+        duration: Long?,
+        album: String? = null,
+    ): String? {
+        val results = mutableListOf<LyricsWithProvider>()
+        for (provider in LIRIQO_PROVIDERS) {
+            results += getLyricsResults(title, artist, duration, album, provider)
+        }
+        return results.maxByOrNull { result ->
+            when (timingKind(result.lyrics)) {
+                LyricsTimingKind.WORD_SYNCED -> 3
+                LyricsTimingKind.LINE_SYNCED -> 2
+                LyricsTimingKind.UNSYNCED -> 1
+            }
+        }?.lyrics
+    }
+
     suspend fun getLyricsResults(
         title: String,
         artist: String,
@@ -286,6 +305,19 @@ class LiriQoLyricsProvider(
     )
 
     private companion object {
+        val LIRIQO_PROVIDERS = listOf(
+            LyricsProvider.LIRIQO_APPLE_MUSIC,
+            LyricsProvider.LIRIQO_MUSIXMATCH,
+            LyricsProvider.LIRIQO_UNISON,
+            LyricsProvider.LIRIQO_NETEASE,
+            LyricsProvider.LIRIQO_PETITLYRICS,
+            LyricsProvider.LIRIQO_KUGOU,
+            LyricsProvider.LIRIQO_KUWO,
+            LyricsProvider.LIRIQO_MIGU,
+            LyricsProvider.LIRIQO_QQ_MUSIC,
+            LyricsProvider.LIRIQO_LRCLIB,
+            LyricsProvider.LIRIQO_YOUTUBE_MUSIC,
+        )
         const val BASE_URL = "https://api.liriqo-alfarrizi.my.id/v1"
         const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
         const val MAX_CACHED_QUERIES = 6
