@@ -12,8 +12,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -25,7 +23,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
@@ -115,19 +112,15 @@ class LiriQoLyricsProvider(
             }
             val response =
                 try {
-                    withTimeout(10.seconds) {
-                        httpClient
-                            .prepareGet("$BASE_URL/lyrics") {
-                                expectMissingLyrics()
-                                parameter("title", title)
-                                if (artist.isNotBlank()) parameter("artist", artist)
-                                duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
-                                album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
-                                parameter("full", "1")
-                            }.readLyricsText(MAX_RESPONSE_BYTES)
-                    }
-                } catch (_: TimeoutCancellationException) {
-                    null
+                    httpClient
+                        .prepareGet("$BASE_URL/lyrics") {
+                            expectMissingLyrics()
+                            parameter("title", title)
+                            if (artist.isNotBlank()) parameter("artist", artist)
+                            duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
+                            album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
+                            parameter("full", "1")
+                        }.readLyricsText(MAX_RESPONSE_BYTES)
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
