@@ -662,7 +662,7 @@ class LyricsEditorTest {
                 v1=person,Singer One
                 v2=person,Singer Two
                 [lyrics]
-                [00:01.000~00:03.000|v1]<00:01.000>Main<00:02.000> [bg:<00:01.500>Hey<00:02.500>]
+                [00:01.000~00:03.000|v1]<00:01.000>Main [bg:<00:01.500>Hey<00:02.500>]
                 """.trimIndent(),
             )
 
