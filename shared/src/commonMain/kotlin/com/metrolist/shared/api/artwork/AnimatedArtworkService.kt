@@ -566,126 +566,113 @@ class AnimatedArtworkService internal constructor(
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
-        fun matchingAlbums(): List<Long> {
-            if (cleanAlbum != null && !isVariantTitle) {
-                val albumMatches =
-                    allResults
-                        .filter { (r, _) ->
-                            matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, true))
-                        }.filter { (r, _) ->
-                            val collectionName = r.collectionName
-                            collectionName != null &&
-                                (
-                                    stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
-                                        stripReleaseSuffixes(cleanAlbum) == cleanTitle
-                                ) &&
-                                albumNamesMatch(collectionName, cleanAlbum, strict = albumIsVariant)
-                        }
-                if (albumMatches.isNotEmpty()) {
-                    val exactAlbumMatches =
-                        albumMatches.filter {
-                            it.first.collectionName
-                                ?.let(::normalizeAlbum)
-                                ?.let(::stripArtworkEditionSuffix) == cleanAlbum
-                        }
-                    val candidates = exactAlbumMatches.ifEmpty { albumMatches }
-                    YtLogger.d(TAG, "Resolved animated artwork via album match (${candidates.size} candidates)")
-                    return candidates.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
+        fun titleMatches(): List<AniTunesSearchResult> =
+            allResults
+                .map { it.first }
+                .filter { result ->
+                    matchesArtist(result, cleanArtist) &&
+                        matchesTitle(result, cleanTitle, title) &&
+                        (explicit == null || matchesExplicit(result, explicit, cleanAlbum != null)) &&
+                        result.collectionId != null
                 }
-            }
+                .distinctBy { it.trackId }
 
-            return emptyList()
+        fun matchingAlbums(): List<Long> {
+            if (cleanAlbum == null || isVariantTitle) return emptyList()
+            val albumMatches =
+                allResults
+                    .map { it.first }
+                    .filter { result ->
+                        matchesArtist(result, cleanArtist) &&
+                            (explicit == null || matchesExplicit(result, explicit, true)) &&
+                            result.collectionId != null &&
+                            result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                    }
+            if (albumMatches.isEmpty()) return emptyList()
+            val exactAlbumMatches =
+                albumMatches.filter {
+                    it.collectionName
+                        ?.let(::normalizeAlbum)
+                        ?.let(::stripArtworkEditionSuffix) == cleanAlbum
+                }
+            val candidates = exactAlbumMatches.ifEmpty { albumMatches }
+            YtLogger.d(TAG, "Resolved animated artwork via album fallback (${candidates.size} candidates)")
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
-        if (cleanAlbum != null) {
-            val albumQuery = "$artist $cleanAlbum"
-            YtLogger.d(TAG, "Searching iTunes by album")
-            fetchSearchResults(albumQuery, seen).forEach { r ->
-                allResults.add(r to "album")
-            }
-        }
-
-        matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
-
+        // Search by the song first. A valid artist + track match is sufficient;
+        // album metadata is only used to rank matching releases, never to veto the song.
         val titleQuery = "$artist $cleanTitle"
-        YtLogger.d(TAG, "Searching iTunes for animated artwork")
-        fetchSearchResults(titleQuery, seen).forEach { r ->
-            allResults.add(r to "title")
+        YtLogger.d(TAG, "Searching iTunes by song title")
+        fetchSearchResults(titleQuery, seen).forEach { allResults.add(it to "title") }
+
+        var matchedTracks = titleMatches()
+        if (matchedTracks.isNotEmpty()) {
+            val albumPreferred =
+                if (cleanAlbum == null) {
+                    emptyList()
+                } else {
+                    matchedTracks.filter { result ->
+                        result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                    }
+                }
+            val candidates = albumPreferred.ifEmpty { matchedTracks }
+            YtLogger.d(
+                TAG,
+                "Resolved animated artwork via song title (${candidates.size} candidates; album preference=${albumPreferred.isNotEmpty()})",
+            )
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
-        val hasGoodMatch =
-            allResults.any { (r, _) ->
-                matchesArtist(r, cleanArtist) && matchesTitle(r, cleanTitle, title) &&
-                    (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
-            }
-        if (!hasGoodMatch || allResults.size < 5) {
+        // Only search by album if the song-title query did not yield a usable track.
+        if (cleanAlbum != null) {
+            YtLogger.d(TAG, "Song title did not match; falling back to iTunes album search")
+            fetchSearchResults("$artist $cleanAlbum", seen).forEach { allResults.add(it to "album") }
+        }
+
+        if (allResults.size < 5) {
             val artistId = resolveArtistId(cleanArtist)
             if (artistId != null) {
                 YtLogger.d(TAG, "Looking up additional artist results")
-                fetchArtistResults(artistId, seen).forEach { r ->
-                    if (matchesArtist(r, cleanArtist)) {
-                        allResults.add(r to "artist_lookup")
-                    }
+                fetchArtistResults(artistId, seen).forEach { result ->
+                    if (matchesArtist(result, cleanArtist)) allResults.add(result to "artist_lookup")
                 }
             }
         }
 
-        if (allResults.isEmpty()) {
-            YtLogger.d(TAG, "No iTunes animated artwork results")
-            return emptyList()
+        matchedTracks = titleMatches()
+        if (matchedTracks.isNotEmpty()) {
+            val albumPreferred =
+                if (cleanAlbum == null) emptyList()
+                else matchedTracks.filter { result ->
+                    result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                }
+            val candidates = albumPreferred.ifEmpty { matchedTracks }
+            YtLogger.d(TAG, "Resolved animated artwork via song title after fallback (${candidates.size} candidates)")
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
         val artistMatches =
-            allResults.filter { (r, _) ->
-                matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
+            allResults.map { it.first }.filter { result ->
+                matchesArtist(result, cleanArtist) &&
+                    (explicit == null || matchesExplicit(result, explicit, cleanAlbum != null))
             }
         YtLogger.d(TAG, "Total results: ${allResults.size}, artist matches: ${artistMatches.size}")
-        val candidateAlbums = artistMatches.mapNotNull { it.first.collectionName }.distinct().take(12)
-        YtLogger.d(TAG, "iTunes artist-match albums: ${candidateAlbums.joinToString(" | ")}")
-        val albumMatchDiagnostics =
-            artistMatches.joinToString(" | ") { (result, source) ->
-                val collectionName = result.collectionName
-                val albumMatch =
-                    cleanAlbum?.let { target ->
-                        collectionName?.let { albumNamesMatch(it, target, strict = albumIsVariant) } == true
+        YtLogger.d(
+            TAG,
+            "iTunes album fallback candidates: " +
+                artistMatches.joinToString(" | ") { result ->
+                    val albumMatch = cleanAlbum?.let { target ->
+                        result.collectionName?.let { albumNamesMatch(it, target, strict = albumIsVariant) } == true
                     } ?: false
-                val albumEligible =
-                    collectionName != null &&
-                        (
-                            stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
-                                (cleanAlbum != null && stripReleaseSuffixes(cleanAlbum) == cleanTitle)
-                        ) &&
-                        albumMatch
-                "${result.trackName} / ${collectionName.orEmpty()} [source=$source, albumMatch=$albumMatch, eligible=$albumEligible]"
-            }
-        YtLogger.d(TAG, "iTunes album candidate checks: $albumMatchDiagnostics")
+                    "${result.trackName} / ${result.collectionName.orEmpty()} [albumMatch=$albumMatch]"
+                },
+        )
 
-        matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
+        val albumFallback = matchingAlbums()
+        if (albumFallback.isNotEmpty()) return albumFallback
 
-        val titleMatches =
-            artistMatches.filter { (r, _) ->
-                if (isVariantTitle) {
-                    r.trackName.trim().replace(smartQuotePattern, "'").equals(
-                        title.trim().replace(smartQuotePattern, "'"),
-                        ignoreCase = true,
-                    )
-                } else {
-                    matchesTitle(r, cleanTitle, title)
-                }
-            }
-        val selfTitledTitle =
-            if (isVariantTitle) {
-                title.trim().replace(smartQuotePattern, "'").lowercase()
-            } else {
-                cleanTitle
-            }
-        val selfTitledMatches = titleMatches.filter { (r, _) -> isSelfTitledRelease(r, selfTitledTitle) }
-        if (selfTitledMatches.isNotEmpty() && (cleanAlbum == null || isVariantTitle)) {
-            YtLogger.d(TAG, "Resolved animated artwork via title match (${selfTitledMatches.size} candidates)")
-            return selfTitledMatches.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
-        }
-
-        YtLogger.d(TAG, "No animated artwork match (${artistMatches.size} candidate matches)")
+        YtLogger.d(TAG, "No animated artwork match (${artistMatches.size} artist candidates)")
         return emptyList()
     }
 
