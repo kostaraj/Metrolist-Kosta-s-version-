@@ -47,6 +47,7 @@ class LyricsClient(
     private val lrcredLyricsProvider = LrcredLyricsProvider(httpClient)
     private val simpMusicProvider = SimpMusicLyricsProvider(httpClient)
     private val kuGouLyricsProvider = KuGouLyricsProvider(httpClient)
+    private val liriQoLyricsProvider = LiriQoLyricsProvider(httpClient)
     private val paxsenixLyricsProvider = PaxsenixLyricsProvider(httpClient)
     private val youtubeLyricsProvider = YouTubeLyricsProvider(youtubeLyricsApi)
     private val youtubeSubtitleLyricsProvider = YouTubeSubtitleLyricsProvider(youtubeLyricsApi)
@@ -106,6 +107,10 @@ class LyricsClient(
 
             LyricsProvider.KUGOU -> {
                 result("KuGou") { kuGouLyricsProvider.getLyrics(title, artist, durationSec.toInt(), album) }
+            }
+
+            LyricsProvider.LIRIQO -> {
+                result("LiriQo") { liriQoLyricsProvider.getLyrics(title, artist, duration, album) }
             }
 
             LyricsProvider.PAXSENIX -> {
