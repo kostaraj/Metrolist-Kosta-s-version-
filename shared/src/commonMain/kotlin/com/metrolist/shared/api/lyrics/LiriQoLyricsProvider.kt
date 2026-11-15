@@ -28,7 +28,7 @@ import kotlin.time.TimeSource
 
 /**
  * One shared LiriQo request backs all eleven independently configurable source entries.
- * Each upstream track can produce every format actually present in the response.
+ * Each upstream track returns only its best available sync format.
  */
 class LiriQoLyricsProvider(
     private val httpClient: HttpClient,
@@ -87,8 +87,9 @@ class LiriQoLyricsProvider(
             }
 
         return candidates
+            .asSequence()
             .filter { it.string("provider") == sourceId }
-            .flatMap { track -> parseTrackVariants(track, title, artist, metadata) }
+            .flatMap { track -> parseTrackVariants(track, title, artist, metadata).asSequence() }
             .distinctBy { it.lyrics to it.provider }
             .sortedByDescending { result ->
                 when (timingKind(result.lyrics)) {
@@ -96,7 +97,7 @@ class LiriQoLyricsProvider(
                     LyricsTimingKind.LINE_SYNCED -> 2
                     LyricsTimingKind.UNSYNCED -> 1
                 }
-            }
+            }.take(1).toList()
     }
 
     private suspend fun responseFor(
@@ -156,15 +157,16 @@ class LiriQoLyricsProvider(
                 TimedLine(start, end, text, words?.mapNotNull(::parseWord).orEmpty())
             }?.sortedBy { it.startMs }.orEmpty()
 
-        val results = mutableListOf<LyricsWithProvider>()
         if (lines.isNotEmpty()) {
-            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = false)
-            results += LyricsWithProvider(lineLyrics, sourceLabel)
-
             if (lines.any { it.words.isNotEmpty() }) {
                 val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = true)
-                if (wordLyrics != lineLyrics) results += LyricsWithProvider(wordLyrics, sourceLabel)
+                if (timingKind(wordLyrics) == LyricsTimingKind.WORD_SYNCED) {
+                    return listOf(LyricsWithProvider(wordLyrics, sourceLabel))
+                }
             }
+
+            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = false)
+            return listOf(LyricsWithProvider(lineLyrics, sourceLabel))
         }
 
         val plain = track.string("plain")?.takeIf { it.isNotBlank() }
@@ -179,9 +181,9 @@ class LiriQoLyricsProvider(
                     )
             plain.lineSequence().filter { it.isNotBlank() }.forEach { builder.unsyncedLine(it.trim()) }
             val plainLyrics = builder.build()
-            if (results.none { it.lyrics == plainLyrics }) results += LyricsWithProvider(plainLyrics, sourceLabel)
+            return listOf(LyricsWithProvider(plainLyrics, sourceLabel))
         }
-        return results
+        return emptyList()
     }
 
     private fun buildTimedLyrics(
