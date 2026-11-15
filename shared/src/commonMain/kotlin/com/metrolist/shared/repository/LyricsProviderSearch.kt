@@ -50,7 +50,7 @@ class LyricsProviderSearch(
                     try {
                         val results =
                             if (provider == LyricsProvider.LIRIQO) {
-                                LyricsProvider.liriQoProviders.flatMap { fetch(it) }
+                                LyricsProvider.liriQoProviders.flatMap { fetch(it) }.sortedByDescending { it.timingKind.ordinal }
                             } else {
                                 fetch(provider)
                             }
