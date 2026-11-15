@@ -32,7 +32,7 @@ class LiriQoLyricsProvider(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val requestMutex = Mutex()
-    private val responseCache = linkedMapOf<String, String>()
+    private val responseCache = linkedMapOf<String, String?>()
 
     suspend fun getLyrics(
         title: String,
@@ -104,7 +104,7 @@ class LiriQoLyricsProvider(
     ): String? {
         val key = listOf(title.trim(), artist.trim(), duration?.toString().orEmpty(), album.orEmpty()).joinToString("\u0000")
         return requestMutex.withLock {
-            responseCache[key]?.let { return@withLock it }
+            if (responseCache.containsKey(key)) return@withLock responseCache[key]
             val response =
                 httpClient
                     .prepareGet("$BASE_URL/lyrics") {
@@ -114,9 +114,9 @@ class LiriQoLyricsProvider(
                         duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
                         album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
                         parameter("full", "1")
-                    }.readLyricsText(MAX_RESPONSE_BYTES) ?: return@withLock null
+                    }.readLyricsText(MAX_RESPONSE_BYTES)
 
-            // Keep only a small number of recent song lookups; all providers share each response.
+            // Cache misses too, so all eleven providers still share a single failed lookup.
             responseCache[key] = response
             while (responseCache.size > MAX_CACHED_QUERIES) {
                 responseCache.remove(responseCache.keys.first())
