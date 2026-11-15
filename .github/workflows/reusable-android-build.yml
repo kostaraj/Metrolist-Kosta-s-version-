@@ -143,8 +143,7 @@ jobs:
           if [[ "$BUILD_VARIANT" == "release" ]]; then
             test -n "$LASTFM_API_KEY" || { echo "LASTFM_API_KEY is required for release builds" >&2; exit 1; }
             test -n "$LASTFM_SECRET" || { echo "LASTFM_SECRET is required for release builds" >&2; exit 1; }
-            test -n "$LYPRIO_BASE_URL" || { echo "LYPRIO_BASE_URL is required for release builds" >&2; exit 1; }
-            test -n "$LYPRIO_HMAC_KEY" || { echo "LYPRIO_HMAC_KEY is required for release builds" >&2; exit 1; }
+            # LYPRIO is optional; without a hosted endpoint it remains disabled.
           fi
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
