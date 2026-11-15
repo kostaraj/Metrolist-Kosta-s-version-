@@ -276,6 +276,17 @@ internal fun LyricsProviderOrderSetting() {
 private fun lyricsProviderLabel(provider: LyricsProvider): String =
     when (provider) {
         LyricsProvider.LYPRIO -> stringResource(Res.string.brand_lyprio)
+        LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music · LiriQo"
+        LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch · LiriQo"
+        LyricsProvider.LIRIQO_UNISON -> "Unison · LiriQo"
+        LyricsProvider.LIRIQO_NETEASE -> "NetEase Cloud Music · LiriQo"
+        LyricsProvider.LIRIQO_PETITLYRICS -> "PetitLyrics · LiriQo"
+        LyricsProvider.LIRIQO_KUGOU -> "KuGou · LiriQo"
+        LyricsProvider.LIRIQO_KUWO -> "Kuwo · LiriQo"
+        LyricsProvider.LIRIQO_MIGU -> "Migu · LiriQo"
+        LyricsProvider.LIRIQO_QQ_MUSIC -> "QQ Music · LiriQo"
+        LyricsProvider.LIRIQO_LRCLIB -> "LRCLib · LiriQo"
+        LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "YouTube Music · LiriQo"
         LyricsProvider.BETTERLYRICS -> stringResource(Res.string.brand_better_lyrics)
         LyricsProvider.LRCRED -> stringResource(Res.string.brand_lrcred)
         LyricsProvider.UNISON -> stringResource(Res.string.brand_unison)
@@ -287,18 +298,27 @@ private fun lyricsProviderLabel(provider: LyricsProvider): String =
 
 @Composable
 private fun lyricsProviderDescription(provider: LyricsProvider): String =
-    stringResource(
-        when (provider) {
-            LyricsProvider.LYPRIO -> Res.string.lyrics_provider_lyrics_plus_description
-            LyricsProvider.BETTERLYRICS -> Res.string.lyrics_provider_better_lyrics_description
-            LyricsProvider.LRCRED -> Res.string.lyrics_provider_lrcred_description
-            LyricsProvider.UNISON -> Res.string.lyrics_provider_unison_description
-            LyricsProvider.LRCLIB -> Res.string.lyrics_provider_lrclib_description
-            LyricsProvider.KUGOU -> Res.string.lyrics_provider_kugou_description
-            LyricsProvider.PAXSENIX -> Res.string.lyrics_provider_paxsenix_description
-            else -> Res.string.lyrics_provider_unknown_description
-        },
-    )
+    when (provider) {
+        LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music lyrics through LiriQo, including syllable, word, line and plain versions when available."
+        LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch rich-sync lyrics through LiriQo when the upstream service makes them available."
+        LyricsProvider.LIRIQO_UNISON -> "Community lyrics through LiriQo, with syllable, line or plain versions when available."
+        LyricsProvider.LIRIQO_NETEASE -> "NetEase lyrics through LiriQo, including native word timing and line or plain fallbacks."
+        LyricsProvider.LIRIQO_PETITLYRICS -> "PetitLyrics through LiriQo, including character-level timing and other available formats."
+        LyricsProvider.LIRIQO_KUGOU -> "KuGou KRC lyrics through LiriQo, with word-synced and line-synced versions when available."
+        LyricsProvider.LIRIQO_KUWO -> "Kuwo lyrics through LiriQo, including character-level, word, line and plain versions when available."
+        LyricsProvider.LIRIQO_MIGU -> "Migu lyrics through LiriQo, including character-level, word, line and plain versions when available."
+        LyricsProvider.LIRIQO_QQ_MUSIC -> "QQ Music QRC lyrics through LiriQo, with word-synced and line-synced versions when available."
+        LyricsProvider.LIRIQO_LRCLIB -> "LRCLib line-synced or plain lyrics through LiriQo."
+        LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "YouTube Music line-synced or plain lyrics through LiriQo."
+        LyricsProvider.LYPRIO -> stringResource(Res.string.lyrics_provider_lyrics_plus_description)
+        LyricsProvider.BETTERLYRICS -> stringResource(Res.string.lyrics_provider_better_lyrics_description)
+        LyricsProvider.LRCRED -> stringResource(Res.string.lyrics_provider_lrcred_description)
+        LyricsProvider.UNISON -> stringResource(Res.string.lyrics_provider_unison_description)
+        LyricsProvider.LRCLIB -> stringResource(Res.string.lyrics_provider_lrclib_description)
+        LyricsProvider.KUGOU -> stringResource(Res.string.lyrics_provider_kugou_description)
+        LyricsProvider.PAXSENIX -> stringResource(Res.string.lyrics_provider_paxsenix_description)
+        else -> stringResource(Res.string.lyrics_provider_unknown_description)
+    }
 
 @Composable
 internal fun lyricsAiProviderLabel(provider: String): String =
