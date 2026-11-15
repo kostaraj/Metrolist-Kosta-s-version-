@@ -57,7 +57,7 @@ class LiriQoLyricsProviderTest {
                 assertEquals(listOf("Hello", "world"), words.map { it.text })
                 assertEquals(listOf(1.0, 1.9), words.map { it.startTime })
                 assertEquals(listOf(1.8, 3.0), words.map { it.endTime })
-                assertTrue(document.meta.lyricSource.orEmpty().contains("KuGou"))
+                assertEquals("LIRIQO/KUGOU", document.meta.lyricSource)
             } finally {
                 client.close()
             }
@@ -154,8 +154,8 @@ class LiriQoLyricsProviderTest {
 
                 assertEquals(2, qq.size)
                 assertEquals(1, requests)
-                assertTrue(kugou.all { it.provider.contains("KuGou") })
-                assertTrue(qq.all { it.provider.contains("QQ Music") })
+                assertTrue(kugou.all { it.provider == "LIRIQO/KUGOU" })
+                assertTrue(qq.all { it.provider == "LIRIQO/QQ_MUSIC" })
             } finally {
                 client.close()
             }
