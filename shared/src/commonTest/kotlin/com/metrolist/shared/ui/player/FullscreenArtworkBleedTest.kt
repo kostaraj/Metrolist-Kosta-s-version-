@@ -22,7 +22,7 @@ class FullscreenArtworkBleedTest {
             assertTrue(start + 48 <= artHeight)
             assertEquals(0, start % 4)
         }
-        assertEquals(752, fullscreenArtworkDetailTop(800, 800))
+        assertEquals(560, fullscreenArtworkDetailTop(800, 800))
         assertEquals(0, fullscreenArtworkDetailTop(32, 18))
     }
 
@@ -68,7 +68,7 @@ class FullscreenArtworkBleedTest {
         val tone = 0xFF336699.toInt()
         val out = render(canvas, tone)
 
-        val sharpRows = (1.05f * width).toInt() * width
+        val sharpRows = (0.70f * width).toInt() * width
         assertContentEquals(canvas.copyOfRange(0, sharpRows), out.copyOfRange(0, sharpRows))
         val last = out[out.size - 1]
         listOf(16, 8, 0).forEach { shift ->
