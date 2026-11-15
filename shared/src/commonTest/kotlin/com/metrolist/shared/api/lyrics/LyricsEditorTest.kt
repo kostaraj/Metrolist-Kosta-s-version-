@@ -603,4 +603,50 @@ class LyricsEditorTest {
         assertEquals(0, editor.current.selectionEnd)
         assertTrue(editor.current.text.startsWith("[00:01.24] <00:01.24>Hello <00:02.14>world"))
     }
+
+    @Test
+    fun backgroundWordsAndSingerAgentsAreVisibleEditableAndPreserved() {
+        val editor =
+            LyricsEditor(
+                """
+                {
+                  "version": 2,
+                  "agents": {
+                    "v1": {"type": "person", "name": "Singer One"},
+                    "v2": {"type": "person", "name": "Singer Two"}
+                  },
+                  "lines": [{
+                    "startMs": 1000,
+                    "endMs": 3000,
+                    "text": "Main",
+                    "agent": "v1",
+                    "words": [{"text": "Main ", "startMs": 1000, "endMs": 2000}],
+                    "backgroundWords": [{"text": "Hey", "startMs": 1500, "endMs": 2500}]
+                  }]
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals("[00:01.00|v1] <00:01.00>Main  [bg:<00:01.50>Hey", editor.current.text.removeSuffix("]"))
+
+        editor.edit(
+            editor.current.text.replace("|v1", "|v2").replace("Main", "Lead").replace("Hey", "Yo"),
+            0,
+        )
+        assertTrue(editor.current.isValid)
+        val line = MlxJsonParser.parse(editor.current.json)!!.lines.single()
+        assertEquals("v2", line.agent)
+        assertEquals("Lead", line.text.trim())
+        assertEquals("Yo", line.words!!.single { it.isBackground }.text)
+        assertEquals(1.5, line.words!!.single { it.isBackground }.startTime)
+
+        editor.undo()
+        val restored = MlxJsonParser.parse(editor.current.json)!!.lines.single()
+        assertEquals("v1", restored.agent)
+        assertEquals("Hey", restored.words!!.single { it.isBackground }.text)
+        editor.redo()
+        val redone = MlxJsonParser.parse(editor.current.json)!!.lines.single()
+        assertEquals("v2", redone.agent)
+        assertEquals("Yo", redone.words!!.single { it.isBackground }.text)
+    }
 }
