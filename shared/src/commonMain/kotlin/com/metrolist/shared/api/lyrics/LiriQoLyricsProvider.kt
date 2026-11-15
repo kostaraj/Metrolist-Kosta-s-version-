@@ -234,7 +234,10 @@ class LiriQoLyricsProvider(
             // Parenthesized background vocals can overlap the main vocal. Do not toggle a
             // background state from "(" to ")": timed main-vocal words may occur between
             // two background words. Match the parenthesized phrase to timed words instead.
-            val backgroundIndexes = findBackgroundWordIndexes(validWords, backgroundSource)
+            val explicitBackgroundIndexes = validWords.indices.filter { validWords[it].isBackground }.toSet()
+            val backgroundIndexes =
+                explicitBackgroundIndexes.takeIf { it.isNotEmpty() }
+                    ?: findBackgroundWordIndexes(validWords, backgroundSource)
             val mainTimedWords = validWords.filterIndexed { index, _ -> index !in backgroundIndexes }
             val backgroundTimedWords = validWords.filterIndexed { index, _ -> index in backgroundIndexes }
                 .map { it.copy(text = it.text.replace("(", "").replace(")", "").trim()) }
@@ -365,7 +368,8 @@ class LiriQoLyricsProvider(
         val text = word.string("text")?.takeIf { it.isNotEmpty() } ?: return null
         val start = word.long("start")?.takeIf { it >= 0L } ?: return null
         val end = word.long("end")?.takeIf { it > start } ?: return null
-        return TimedWord(text, start, end)
+        val isBackground = word["isBackground"]?.jsonPrimitive?.contentOrNull?.equals("true", ignoreCase = true) == true
+        return TimedWord(text, start, end, isBackground)
     }
 
     private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
@@ -395,6 +399,7 @@ class LiriQoLyricsProvider(
         val text: String,
         val startMs: Long,
         val endMs: Long,
+        val isBackground: Boolean = false,
     )
 
     private companion object {
