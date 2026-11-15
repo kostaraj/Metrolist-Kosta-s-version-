@@ -199,6 +199,7 @@ jobs:
         env:
           BUILD_VARIANT: ${{ inputs.variant }}
           ASSEMBLE: ${{ inputs.assemble }}
+          RUN_VERIFICATION: ${{ inputs.run-verification }}
           VERIFICATION_ONLY: ${{ inputs.variant == 'debug' && !inputs.upload-artifact && inputs.staging-release-tag == '' }}
           KEYSTORE_PATH: ${{ steps.signing.outputs.keystore_path }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -226,22 +227,28 @@ jobs:
             # Keep lint tasks registered for verification; skip release analysis after debug lint passes.
             extra_args+=(-x :androidApp:lintVitalRelease)
           elif [[ "$BUILD_VARIANT" == "benchmark" ]]; then
-            tasks=(
-              ":androidApp:lintDebug"
-              ":androidApp:testDebugUnitTest"
-              ":shared:testAndroidHostTest"
-              ":androidApp:ktlintCheck"
-            )
+            tasks=()
+            if [[ "$RUN_VERIFICATION" == "true" ]]; then
+              tasks+=(
+                ":androidApp:lintDebug"
+                ":androidApp:testDebugUnitTest"
+                ":shared:testAndroidHostTest"
+                ":androidApp:ktlintCheck"
+              )
+            fi
             if [[ "$ASSEMBLE" == "true" ]]; then
               tasks+=(":androidApp:assembleBenchmark")
             fi
           else
-            tasks=(
-              ":androidApp:lintDebug"
-              ":androidApp:testDebugUnitTest"
-              ":shared:testAndroidHostTest"
-              ":androidApp:ktlintCheck"
-            )
+            tasks=()
+            if [[ "$RUN_VERIFICATION" == "true" ]]; then
+              tasks+=(
+                ":androidApp:lintDebug"
+                ":androidApp:testDebugUnitTest"
+                ":shared:testAndroidHostTest"
+                ":androidApp:ktlintCheck"
+              )
+            fi
             if [[ "$ASSEMBLE" == "true" ]]; then
               tasks+=(':androidApp:assembleDebug')
             fi
