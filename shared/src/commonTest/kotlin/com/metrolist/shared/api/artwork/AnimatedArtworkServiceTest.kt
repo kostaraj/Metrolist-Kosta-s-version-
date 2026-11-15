@@ -164,6 +164,34 @@ https://untrusted.example/video.m3u8
         }
 
     @Test
+    fun songTitleMatchTakesPriorityOverAlbumMismatch() =
+        runBlocking {
+            withFreshSettings {
+                val ampRequests = mutableListOf<String>()
+                val client = buildClient(songSearch(singleTrack), mapOf(SINGLE_ID to SINGLE_MP4), ampRequests)
+                val service = AnimatedArtworkService(client)
+
+                try {
+                    val result =
+                        service.fetchAnimatedCover(
+                            "Sharks",
+                            "Imagine Dragons",
+                            "An Album Name That Does Not Match",
+                        )
+                    assertEquals(SINGLE_MP4, result?.url)
+                    assertEquals(
+                        listOf("https://amp-api.music.apple.com/v1/catalog/us/albums/$SINGLE_ID"),
+                        ampRequests,
+                    )
+                } finally {
+                    service.dispose()
+                    service.clearCache()
+                    client.close()
+                }
+            }
+        }
+
+    @Test
     fun returnsAndCachesTheTallClipBesideTheSquareClip(): Unit =
         runBlocking {
             withFreshSettings {
