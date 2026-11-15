@@ -288,6 +288,17 @@ private fun providerName(provider: LyricsProvider): String =
             LyricsProvider.USER -> Res.string.lyrics_provider_user
             LyricsProvider.LYPRIO -> Res.string.brand_lyprio
             LyricsProvider.LIRIQO -> Res.string.brand_liriqo
+            LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music · LiriQo"
+            LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch · LiriQo"
+            LyricsProvider.LIRIQO_UNISON -> "Unison · LiriQo"
+            LyricsProvider.LIRIQO_NETEASE -> "NetEase Cloud Music · LiriQo"
+            LyricsProvider.LIRIQO_PETITLYRICS -> "PetitLyrics · LiriQo"
+            LyricsProvider.LIRIQO_KUGOU -> "KuGou · LiriQo"
+            LyricsProvider.LIRIQO_KUWO -> "Kuwo · LiriQo"
+            LyricsProvider.LIRIQO_MIGU -> "Migu · LiriQo"
+            LyricsProvider.LIRIQO_QQ_MUSIC -> "QQ Music · LiriQo"
+            LyricsProvider.LIRIQO_LRCLIB -> "LRCLib · LiriQo"
+            LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "YouTube Music · LiriQo"
             LyricsProvider.BETTERLYRICS -> Res.string.brand_better_lyrics
             LyricsProvider.LRCRED -> Res.string.brand_lrcred
             LyricsProvider.UNISON -> Res.string.brand_unison
