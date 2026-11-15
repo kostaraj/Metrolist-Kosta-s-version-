@@ -46,6 +46,7 @@ import com.metrolist.shared.generated.resources.brand_kugou
 import com.metrolist.shared.generated.resources.brand_lrclib
 import com.metrolist.shared.generated.resources.brand_lrcred
 import com.metrolist.shared.generated.resources.brand_lyprio
+import com.metrolist.shared.generated.resources.brand_liriqo
 import com.metrolist.shared.generated.resources.brand_paxsenix
 import com.metrolist.shared.generated.resources.brand_unison
 import com.metrolist.shared.generated.resources.choose_lyrics
@@ -281,7 +282,6 @@ private fun ProviderLoadingRows() {
     }
 }
 
-@Composable
 @Composable
 private fun providerName(provider: LyricsProvider): String =
     when (provider) {
