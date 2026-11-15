@@ -106,9 +106,9 @@ class FullscreenArtworkBleedTest {
         assertContentEquals(full.copyOfRange(first * width, full.size), lower)
     }
     @Test
-    fun staticArtworkUsesFullscreenBleedEvenWhenTheSongUsesVideoArtwork() {
+    fun videoSongArtworkUsesTheCroppedLayoutAndBlurredBackdrop() {
         assertTrue(usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false))
-        assertTrue(usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false, isVideoSong = true))
+        assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false, isVideoSong = true))
         assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = true, canvasTall = false))
         assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = true))
     }
