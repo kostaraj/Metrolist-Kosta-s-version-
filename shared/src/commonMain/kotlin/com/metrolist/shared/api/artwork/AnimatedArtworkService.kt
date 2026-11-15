@@ -556,6 +556,13 @@ class AnimatedArtworkService internal constructor(
         val isVariantTitle = isVariantTitle(title, cleanTitle)
         val albumIsVariant = album != null && cleanTitleText(album) != cleanAlbum
 
+        YtLogger.d(
+            TAG,
+            "Artwork match input: title='$title', artist='$artist', album='${album.orEmpty()}', " +
+                "cleanTitle='$cleanTitle', cleanAlbum='${cleanAlbum.orEmpty()}', explicit=$explicit, " +
+                "variantTitle=$isVariantTitle, variantAlbum=$albumIsVariant",
+        )
+
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
@@ -635,6 +642,23 @@ class AnimatedArtworkService internal constructor(
         YtLogger.d(TAG, "Total results: ${allResults.size}, artist matches: ${artistMatches.size}")
         val candidateAlbums = artistMatches.mapNotNull { it.first.collectionName }.distinct().take(12)
         YtLogger.d(TAG, "iTunes artist-match albums: ${candidateAlbums.joinToString(" | ")}")
+        val albumMatchDiagnostics =
+            artistMatches.joinToString(" | ") { (result, source) ->
+                val collectionName = result.collectionName
+                val albumMatch =
+                    cleanAlbum?.let { target ->
+                        collectionName?.let { albumNamesMatch(it, target, strict = albumIsVariant) } == true
+                    } ?: false
+                val albumEligible =
+                    collectionName != null &&
+                        (
+                            stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
+                                (cleanAlbum != null && stripReleaseSuffixes(cleanAlbum) == cleanTitle)
+                        ) &&
+                        albumMatch
+                "${result.trackName} / ${collectionName.orEmpty()} [source=$source, albumMatch=$albumMatch, eligible=$albumEligible]"
+            }
+        YtLogger.d(TAG, "iTunes album candidate checks: $albumMatchDiagnostics")
 
         matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
 
