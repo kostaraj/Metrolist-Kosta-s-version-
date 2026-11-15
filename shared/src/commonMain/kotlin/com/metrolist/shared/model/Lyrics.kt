@@ -202,7 +202,7 @@ val LyricsProvider.supportedTimingKinds: Set<LyricsTimingKind>
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 
-            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.UNISON -> {
+            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO, LyricsProvider.UNISON -> {
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 
