@@ -109,8 +109,21 @@ class LyricsClient(
                 result("KuGou") { kuGouLyricsProvider.getLyrics(title, artist, durationSec.toInt(), album) }
             }
 
-            LyricsProvider.LIRIQO -> {
-                result("LiriQo") { liriQoLyricsProvider.getLyrics(title, artist, duration, album) }
+            LyricsProvider.LIRIQO,
+            LyricsProvider.LIRIQO_APPLE_MUSIC,
+            LyricsProvider.LIRIQO_MUSIXMATCH,
+            LyricsProvider.LIRIQO_UNISON,
+            LyricsProvider.LIRIQO_NETEASE,
+            LyricsProvider.LIRIQO_PETITLYRICS,
+            LyricsProvider.LIRIQO_KUGOU,
+            LyricsProvider.LIRIQO_KUWO,
+            LyricsProvider.LIRIQO_MIGU,
+            LyricsProvider.LIRIQO_QQ_MUSIC,
+            LyricsProvider.LIRIQO_LRCLIB,
+            LyricsProvider.LIRIQO_YOUTUBE_MUSIC,
+            -> {
+                val source = if (provider == LyricsProvider.LIRIQO) LyricsProvider.LIRIQO_APPLE_MUSIC else provider
+                liriQoLyricsProvider.getLyricsResults(title, artist, duration, album, source).firstOrNull()
             }
 
             LyricsProvider.PAXSENIX -> {
@@ -165,10 +178,27 @@ class LyricsClient(
             if (provider == LyricsProvider.LYPRIO) {
                 val lyprio = checkNotNull(lyprioLyricsProvider) { "Lyprio is not configured" }
                 lyprio.getLyricsResults(title, artist, duration, album, videoId).map { LyricsWithProvider(it, "Lyprio") }
+            } else if (provider in LIRIQO_PROVIDERS || provider == LyricsProvider.LIRIQO) {
+                val source = if (provider == LyricsProvider.LIRIQO) LyricsProvider.LIRIQO_APPLE_MUSIC else provider
+                liriQoLyricsProvider.getLyricsResults(title, artist, duration, album, source)
             } else {
                 listOfNotNull(fetchLyrics(title, artist, duration, album, videoId, provider, isVideoContext))
             }
         }
+
+    private val LIRIQO_PROVIDERS = setOf(
+        LyricsProvider.LIRIQO_APPLE_MUSIC,
+        LyricsProvider.LIRIQO_MUSIXMATCH,
+        LyricsProvider.LIRIQO_UNISON,
+        LyricsProvider.LIRIQO_NETEASE,
+        LyricsProvider.LIRIQO_PETITLYRICS,
+        LyricsProvider.LIRIQO_KUGOU,
+        LyricsProvider.LIRIQO_KUWO,
+        LyricsProvider.LIRIQO_MIGU,
+        LyricsProvider.LIRIQO_QQ_MUSIC,
+        LyricsProvider.LIRIQO_LRCLIB,
+        LyricsProvider.LIRIQO_YOUTUBE_MUSIC,
+    )
 
     private suspend fun result(
         provider: String,
