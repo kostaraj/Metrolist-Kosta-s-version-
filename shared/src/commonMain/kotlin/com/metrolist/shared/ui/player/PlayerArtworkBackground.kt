@@ -250,7 +250,8 @@ internal fun PlayerBlurredArtworkBackground(
 internal fun usesFullscreenArtworkBleed(
     hasAnimatedVideo: Boolean,
     canvasTall: Boolean,
-): Boolean = !hasAnimatedVideo && !canvasTall
+    isVideoSong: Boolean = false,
+): Boolean = !hasAnimatedVideo && !canvasTall && !isVideoSong
 
 @Composable
 internal fun FullscreenThumbnailBackground(
@@ -272,6 +273,7 @@ internal fun FullscreenThumbnailBackground(
     canvasReady: Boolean = false,
     canvasKey: Pair<String, String>? = null,
     canvasTall: Boolean = false,
+    isVideoSong: Boolean = false,
     artworkCrossfade: PlayerArtworkCrossfade = PlayerArtworkCrossfade(),
 ) {
     if (isLandscape) {
@@ -343,7 +345,7 @@ internal fun FullscreenThumbnailBackground(
                 IntSize(maxWidth.roundToPx().coerceAtLeast(1), (maxHeight * seam).roundToPx().coerceAtLeast(1))
             }
         // Animated artwork keeps the cropped full-bleed layout; only static covers get the uncropped bleed.
-        val usesArtworkBleed = usesFullscreenArtworkBleed(hasVideo, canvasTall)
+        val usesArtworkBleed = usesFullscreenArtworkBleed(hasVideo, canvasTall, isVideoSong)
         if (!usesArtworkBleed) {
             when (playerBackground) {
                 PlayerBackgroundStyle.GRADIENT,
@@ -379,6 +381,15 @@ internal fun FullscreenThumbnailBackground(
 
         PlayerBackgroundArtwork(thumbnailUrl, artworkCrossfade) { currentUrl ->
             val artworkBitmap = rememberFullscreenArtworkBitmap(currentUrl, artworkSize)
+            if (isVideoSong && !hasVideo) {
+                AsyncImage(
+                    url = currentUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+                return@PlayerBackgroundArtwork
+            }
             if (usesArtworkBleed) {
                 FullscreenArtworkBleed(
                     url = currentUrl,
