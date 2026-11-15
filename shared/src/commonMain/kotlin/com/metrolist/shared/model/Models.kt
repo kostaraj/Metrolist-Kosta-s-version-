@@ -516,9 +516,8 @@ enum class LyricsProvider {
     companion object {
         val alwaysLastFallbacks: List<LyricsProvider> = listOf(YOUTUBESUBTITLE, YOUTUBE)
 
-        val userConfigurable: List<LyricsProvider> =
+        val liriQoProviders: List<LyricsProvider> =
             listOf(
-                LYPRIO,
                 LIRIQO_APPLE_MUSIC,
                 LIRIQO_MUSIXMATCH,
                 LIRIQO_UNISON,
@@ -530,13 +529,11 @@ enum class LyricsProvider {
                 LIRIQO_QQ_MUSIC,
                 LIRIQO_LRCLIB,
                 LIRIQO_YOUTUBE_MUSIC,
-                BETTERLYRICS,
-                LRCRED,
-                UNISON,
-                LRCLIB,
-                KUGOU,
-                PAXSENIX,
             )
+
+        val userConfigurable: List<LyricsProvider> =
+            listOf(LYPRIO) + liriQoProviders +
+                listOf(BETTERLYRICS, LRCRED, UNISON, LRCLIB, KUGOU, PAXSENIX)
 
         private val legacyDefaultUserOrders =
             listOf(
@@ -570,7 +567,7 @@ enum class LyricsProvider {
 
         fun parseUserOrderFromStoredCsv(csv: String): List<LyricsProvider> {
             val parsed =
-                csv.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it != AUTO }
+                csv.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it != AUTO }.flatMap(::expandLegacyProvider)
             if (parsed.isEmpty() || isLegacyDefaultUserOrder(csv, parsed)) {
                 return userConfigurable
             }
@@ -591,12 +588,15 @@ enum class LyricsProvider {
             if (trimmed.equals("NONE", ignoreCase = true)) return emptySet()
             if (trimmed.isBlank()) return userConfigurable.toSet()
             val parsed =
-                trimmed.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it in userConfigurable }
+                trimmed.split(",").mapNotNull { parseTokenFromSettings(it) }.flatMap(::expandLegacyProvider).filter { it in userConfigurable }
             if (isLegacyDefaultUserOrder(csv, parsed)) {
                 return userConfigurable.toSet()
             }
             return parsed.toSet()
         }
+
+        private fun expandLegacyProvider(provider: LyricsProvider): List<LyricsProvider> =
+            if (provider == LIRIQO) liriQoProviders else listOf(provider)
 
         private fun isLegacyDefaultUserOrder(
             csv: String,
