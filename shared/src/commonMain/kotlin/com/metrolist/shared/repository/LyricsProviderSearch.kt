@@ -36,7 +36,9 @@ class LyricsProviderSearch(
             (
                 listOf(LyricsProvider.USER) + LyricsProvider.parseUserOrderFromStoredCsv(providerOrder) +
                     LyricsProvider.afterUserLyricsFallbacks
-            ).map { LyricsProviderGroup(it, loading = true) },
+            ).map { provider ->
+                if (provider in LyricsProvider.liriQoProviders) LyricsProvider.LIRIQO else provider
+            }.distinct().map { LyricsProviderGroup(it, loading = true) },
         )
     val groups = _groups.asStateFlow()
 
@@ -46,7 +48,12 @@ class LyricsProviderSearch(
             jobs[provider] =
                 scope.launch {
                     try {
-                        val results = fetch(provider)
+                        val results =
+                            if (provider == LyricsProvider.LIRIQO) {
+                                LyricsProvider.liriQoProviders.flatMap { fetch(it) }
+                            } else {
+                                fetch(provider)
+                            }
                         currentCoroutineContext().ensureActive()
                         update(provider) { it.copy(loading = false, results = results) }
                     } catch (error: CancellationException) {
