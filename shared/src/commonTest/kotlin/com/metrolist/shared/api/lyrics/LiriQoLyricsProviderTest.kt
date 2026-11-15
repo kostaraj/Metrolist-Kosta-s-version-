@@ -224,7 +224,7 @@ class LiriQoLyricsProviderTest {
                     "syncLevel": "syllable",
                     "timed": [{
                       "id": 0,
-                      "text": "I swore my loyalty to me, (Me, myself, and I)",
+                      "text": "I swore my loyalty to me, myself, and I (Me, myself, I)",
                       "start": 36576,
                       "end": 40620,
                       "words": [
@@ -236,8 +236,10 @@ class LiriQoLyricsProviderTest {
                         {"text": "me, ", "start": 38256, "end": 38677},
                         {"text": "(Me, ", "start": 38677, "end": 39032},
                         {"text": "myself, ", "start": 39032, "end": 39513},
-                        {"text": "and ", "start": 39513, "end": 39976},
-                        {"text": "I)", "start": 39976, "end": 40620}
+                        {"text": "myself, ", "start": 39513, "end": 39976},
+                        {"text": "and ", "start": 39976, "end": 40245},
+                        {"text": "I ", "start": 40245, "end": 40620},
+                        {"text": "I)", "start": 40620, "end": 40700}
                       ]
                     }]
                   },
@@ -258,19 +260,19 @@ class LiriQoLyricsProviderTest {
                 val line = MlxParser.parse(mlx).lines.single()
                 assertEquals("I swore my loyalty to me,", line.text)
                 assertEquals(
-                    listOf("I", "swore", "my", "loyalty", "to", "me,"),
+                    listOf("I", "swore", "my", "loyalty", "to", "me,", "myself,", "and", "I"),
                     assertNotNull(line.words).filterNot { it.isBackground }.map { it.text },
                 )
                 assertEquals(
-                    listOf("Me,", "myself,", "and", "I"),
+                    listOf("Me,", "myself,", "I"),
                     assertNotNull(line.words).filter { it.isBackground }.map { it.text },
                 )
                 assertEquals(
-                    listOf(true, true, true, false),
+                    listOf(true, true, false),
                     line.words.filter { it.isBackground }.map { it.hasTrailingSpace },
                 )
                 assertEquals(
-                    listOf(38.677, 39.032, 39.513, 39.976),
+                    listOf(38.677, 39.513, 40.62),
                     line.words.filter { it.isBackground }.map { it.startTime },
                 )
             } finally {
