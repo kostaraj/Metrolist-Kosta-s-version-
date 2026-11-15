@@ -66,8 +66,7 @@ class LiriQoLyricsProvider(
 
         // Prefer verified native word timestamps over line-only results, regardless
         // of the API's primary selection. Keep the API's order as the tie-breaker.
-        return parsed.firstOrNull { it.wordSynced }?.mlx
-            ?: parsed.firstOrNull()?.mlx
+        return parsed.maxByOrNull { it.syncQuality }?.mlx
             ?: candidates.firstNotNullOfOrNull { track ->
                 track["lrc"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let {
                     lrcToMlx(it, title, artist, source = "LiriQo")
@@ -95,7 +94,7 @@ class LiriQoLyricsProvider(
                         artist = metadata?.string("artist") ?: requestedArtist,
                     )
             plain.lineSequence().filter { it.isNotBlank() }.forEach { builder.unsyncedLine(it.trim()) }
-            return ParsedTrack(builder.build(), false)
+            return ParsedTrack(builder.build(), 0)
         }
 
         val lines =
@@ -134,28 +133,25 @@ class LiriQoLyricsProvider(
                     }
                     .sortedBy { it.startMs }
 
-            if (validWords.isNotEmpty()) {
+            val mlxWords =
+                validWords.map { word ->
+                    val trailingSpace = word.text.lastOrNull()?.isWhitespace() == true
+                    MlxWord(
+                        text = word.text.trimEnd(),
+                        startMs = word.startMs,
+                        endMs = word.endMs,
+                        hasTrailingSpace = trailingSpace,
+                    )
+                }.filter { it.text.isNotEmpty() }
+            if (mlxWords.isNotEmpty()) {
                 hasWordTiming = true
-                builder.line(
-                    startMs = line.startMs,
-                    endMs = endMs,
-                    words =
-                        validWords.map { word ->
-                            val trailingSpace = word.text.lastOrNull()?.isWhitespace() == true
-                            MlxWord(
-                                text = word.text.trimEnd(),
-                                startMs = word.startMs,
-                                endMs = word.endMs,
-                                hasTrailingSpace = trailingSpace,
-                            )
-                        }.filter { it.text.isNotEmpty() },
-                )
+                builder.line(startMs = line.startMs, endMs = endMs, words = mlxWords)
             } else {
                 builder.line(line.startMs, endMs, line.text)
             }
         }
 
-        return ParsedTrack(builder.build(), hasWordTiming)
+        return ParsedTrack(builder.build(), if (hasWordTiming) 2 else 1)
     }
 
     private fun JsonObject.wordsFor(lineId: Long): JsonArray? {
@@ -199,7 +195,7 @@ class LiriQoLyricsProvider(
 
     private data class ParsedTrack(
         val mlx: String,
-        val wordSynced: Boolean,
+        val syncQuality: Int,
     )
 
     private companion object {
