@@ -610,7 +610,8 @@ class AnimatedArtworkService internal constructor(
         if (matchedTracks.isNotEmpty()) {
             val albumPreferred =
                 if (cleanAlbum == null) {
-                    emptyList()
+                    // Without album metadata, prefer a self-titled release (commonly the song's single).
+                    matchedTracks.filter { result -> isSelfTitledRelease(result, cleanTitle) }
                 } else {
                     matchedTracks.filter { result ->
                         result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
@@ -643,7 +644,7 @@ class AnimatedArtworkService internal constructor(
         matchedTracks = titleMatches()
         if (matchedTracks.isNotEmpty()) {
             val albumPreferred =
-                if (cleanAlbum == null) emptyList()
+                if (cleanAlbum == null) matchedTracks.filter { result -> isSelfTitledRelease(result, cleanTitle) }
                 else matchedTracks.filter { result ->
                     result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
                 }
