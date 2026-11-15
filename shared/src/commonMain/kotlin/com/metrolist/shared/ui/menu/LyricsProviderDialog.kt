@@ -287,6 +287,7 @@ private fun providerName(provider: LyricsProvider): String =
         when (provider) {
             LyricsProvider.USER -> Res.string.lyrics_provider_user
             LyricsProvider.LYPRIO -> Res.string.brand_lyprio
+            LyricsProvider.LIRIQO -> Res.string.brand_lyprio
             LyricsProvider.BETTERLYRICS -> Res.string.brand_better_lyrics
             LyricsProvider.LRCRED -> Res.string.brand_lrcred
             LyricsProvider.UNISON -> Res.string.brand_unison
