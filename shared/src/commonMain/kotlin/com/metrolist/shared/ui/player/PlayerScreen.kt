@@ -1066,6 +1066,7 @@ fun PlayerScreen(
                                             canvasReady = animatedCoverReady && isArtworkCover,
                                             canvasKey = currentCanvasLayer?.key,
                                             canvasTall = currentCanvasLayer?.tall == true,
+                                            isVideoSong = currentSong.isVideoSong,
                                             artworkCrossfade = artworkCrossfade,
                                             canvasContent =
                                                 if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
