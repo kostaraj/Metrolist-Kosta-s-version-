@@ -103,7 +103,7 @@ class LiriQoLyricsProviderTest {
         }
 
     @Test
-    fun returnsWordLineAndPlainVariantsAndSharesOneRequestAcrossSources() =
+    fun returnsOnlyBestSyncVariantPerSourceAndSharesOneRequestAcrossSources() =
         runBlocking {
             val response =
                 """
@@ -146,13 +146,13 @@ class LiriQoLyricsProviderTest {
                 val kugou = provider.getLyricsResults("Song", "Artist", 120_000, provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_KUGOU)
                 val qq = provider.getLyricsResults("Song", "Artist", 120_000, provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_QQ_MUSIC)
 
-                assertEquals(3, kugou.size)
+                assertEquals(1, kugou.size)
                 val parsedKugou = kugou.map { MlxParser.parse(it.lyrics) }
                 assertTrue(parsedKugou.any { document -> document.lines.any { !it.words.isNullOrEmpty() } })
-                assertTrue(parsedKugou.any { document -> document.lines.any { it.time > 0L && it.words.isNullOrEmpty() } })
-                assertTrue(parsedKugou.any { document -> document.lines.isNotEmpty() && document.lines.all { it.time == 0L } })
+                assertTrue(parsedKugou.none { document -> document.lines.any { it.time > 0L && it.words.isNullOrEmpty() } })
+                assertTrue(parsedKugou.none { document -> document.lines.isNotEmpty() && document.lines.all { it.time == 0L } })
 
-                assertEquals(2, qq.size)
+                assertEquals(1, qq.size)
                 assertEquals(1, requests)
                 assertTrue(kugou.all { it.provider == "LIRIQO/KUGOU" })
                 assertTrue(qq.all { it.provider == "LIRIQO/QQ_MUSIC" })
