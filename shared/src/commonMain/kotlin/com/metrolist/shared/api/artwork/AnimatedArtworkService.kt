@@ -633,6 +633,8 @@ class AnimatedArtworkService internal constructor(
                 matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
             }
         YtLogger.d(TAG, "Total results: ${allResults.size}, artist matches: ${artistMatches.size}")
+        val candidateAlbums = artistMatches.mapNotNull { it.first.collectionName }.distinct().take(12)
+        YtLogger.d(TAG, "iTunes artist-match albums: ${candidateAlbums.joinToString(" | ")}")
 
         matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
 
