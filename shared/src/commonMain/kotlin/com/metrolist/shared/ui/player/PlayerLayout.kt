@@ -1926,17 +1926,15 @@ internal fun ActiveLyricsLine(
                     fontWeight = FontWeight.Bold,
                     textAlign = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                 )
-            val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * 2 }
             val lyricsContent = @Composable {
                 AnimatedContent(
                     targetState = currentLine to lineEndTime,
                     transitionSpec = {
-                        (fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)))
-                            .using(null)
+                        fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400))
                     },
                     contentAlignment = Alignment.Center,
                     label = "activeLyricLineSwitch",
-                    modifier = Modifier.sizeIn(minHeight = reservedLineHeight).wrapContentHeight(Alignment.CenterVertically),
+                    modifier = Modifier.wrapContentHeight(Alignment.CenterVertically),
                 ) { (line, displayedLineEndTime) ->
                     if (line != null) {
                         val isActive by remember(line, displayedLineEndTime, lyricsPositionState) {
