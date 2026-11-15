@@ -12,6 +12,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -113,15 +115,19 @@ class LiriQoLyricsProvider(
             }
             val response =
                 try {
-                    httpClient
-                        .prepareGet("$BASE_URL/lyrics") {
-                            expectMissingLyrics()
-                            parameter("title", title)
-                            if (artist.isNotBlank()) parameter("artist", artist)
-                            duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
-                            album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
-                            parameter("full", "1")
-                        }.readLyricsText(MAX_RESPONSE_BYTES)
+                    withTimeout(10.seconds) {
+                        httpClient
+                            .prepareGet("$BASE_URL/lyrics") {
+                                expectMissingLyrics()
+                                parameter("title", title)
+                                if (artist.isNotBlank()) parameter("artist", artist)
+                                duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
+                                album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
+                                parameter("full", "1")
+                            }.readLyricsText(MAX_RESPONSE_BYTES)
+                    }
+                } catch (_: TimeoutCancellationException) {
+                    null
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
@@ -214,13 +220,26 @@ class LiriQoLyricsProvider(
                 } else {
                     emptyList()
                 }
+            var textSearchFrom = 0
             val mlxWords =
-                validWords.map { word ->
+                validWords.mapIndexed { index, word ->
+                    val text = word.text.trimEnd()
+                    val matchStart = line.text.indexOf(text, textSearchFrom, ignoreCase = true)
+                    val matchEnd = if (matchStart >= 0) matchStart + text.length else textSearchFrom + text.length
+                    val nextWordStart =
+                        validWords.getOrNull(index + 1)?.text?.trimEnd()?.let { nextText ->
+                            line.text.indexOf(nextText, matchEnd.coerceIn(0, line.text.length), ignoreCase = true)
+                        } ?: -1
+                    val separatorRangeEnd = if (nextWordStart >= 0) nextWordStart else matchEnd.coerceIn(0, line.text.length)
+                    val lineHasSeparator =
+                        matchStart >= 0 &&
+                            line.text.substring(matchEnd.coerceIn(0, line.text.length), separatorRangeEnd).any(Char::isWhitespace)
+                    textSearchFrom = matchEnd.coerceAtMost(line.text.length)
                     MlxWord(
-                        text = word.text.trimEnd(),
+                        text = text,
                         startMs = word.startMs,
                         endMs = word.endMs,
-                        hasTrailingSpace = word.text.lastOrNull()?.isWhitespace() == true,
+                        hasTrailingSpace = word.text.lastOrNull()?.isWhitespace() == true || lineHasSeparator,
                     )
                 }.filter { it.text.isNotEmpty() }
             if (mlxWords.isNotEmpty()) {
