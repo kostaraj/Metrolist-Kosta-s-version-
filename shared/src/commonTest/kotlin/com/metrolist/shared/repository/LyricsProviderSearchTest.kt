@@ -35,8 +35,9 @@ class LyricsProviderSearchTest {
             runCurrent()
             val liriQoGroups = search.groups.value.filter { it.provider == LyricsProvider.LIRIQO }
             assertEquals(1, liriQoGroups.size)
-            assertEquals(listOf(LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, search.groups.value.map { it.provider })
-            assertEquals(listOf(LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO) + LyricsProvider.afterUserLyricsFallbacks, calls)
+            val expectedGroups = listOf(LyricsProvider.USER) + LyricsProvider.userConfigurable + LyricsProvider.afterUserLyricsFallbacks
+            assertEquals(expectedGroups, search.groups.value.map { it.provider })
+            assertEquals(expectedGroups, calls)
             assertEquals(11, liriQoGroups.single().results?.size)
             search.cancel()
         }
