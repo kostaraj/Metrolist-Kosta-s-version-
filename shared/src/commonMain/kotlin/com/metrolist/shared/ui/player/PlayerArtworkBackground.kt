@@ -251,7 +251,7 @@ internal fun usesFullscreenArtworkBleed(
     hasAnimatedVideo: Boolean,
     canvasTall: Boolean,
     isVideoSong: Boolean = false,
-): Boolean = !hasAnimatedVideo && !canvasTall
+): Boolean = !hasAnimatedVideo && !canvasTall && !isVideoSong
 
 @Composable
 internal fun FullscreenThumbnailBackground(
@@ -390,7 +390,7 @@ internal fun FullscreenThumbnailBackground(
                 return@PlayerBackgroundArtwork
             }
             val backdropBitmap = if (canvasTall) null else canvasFrame ?: artworkBitmap
-            if (backdropBitmap != null && hasVideo) {
+            if (backdropBitmap != null && (hasVideo || isVideoSong)) {
                 FullscreenBlurredBackdropCanvas(
                     artwork = backdropBitmap,
                     scrimAlpha = BLURRED_ARTWORK_SCRIM_ALPHA,
