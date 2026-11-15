@@ -516,23 +516,25 @@ enum class LyricsProvider {
     companion object {
         val alwaysLastFallbacks: List<LyricsProvider> = listOf(YOUTUBESUBTITLE, YOUTUBE)
 
+        // Internal source order used only after the single LiriQo entry is selected.
+        // Keep this order aligned with the preferred source priority.
         val liriQoProviders: List<LyricsProvider> =
             listOf(
                 LIRIQO_APPLE_MUSIC,
-                LIRIQO_MUSIXMATCH,
                 LIRIQO_UNISON,
-                LIRIQO_NETEASE,
-                LIRIQO_PETITLYRICS,
+                LIRIQO_QQ_MUSIC,
                 LIRIQO_KUGOU,
                 LIRIQO_KUWO,
+                LIRIQO_NETEASE,
                 LIRIQO_MIGU,
-                LIRIQO_QQ_MUSIC,
+                LIRIQO_MUSIXMATCH,
+                LIRIQO_PETITLYRICS,
                 LIRIQO_LRCLIB,
                 LIRIQO_YOUTUBE_MUSIC,
             )
 
         val userConfigurable: List<LyricsProvider> =
-            listOf(LYPRIO) + liriQoProviders +
+            listOf(LYPRIO, LIRIQO) +
                 listOf(BETTERLYRICS, LRCRED, UNISON, LRCLIB, KUGOU, PAXSENIX)
 
         private val legacyDefaultUserOrders =
@@ -596,7 +598,7 @@ enum class LyricsProvider {
         }
 
         private fun expandLegacyProvider(provider: LyricsProvider): List<LyricsProvider> =
-            if (provider == LIRIQO) liriQoProviders else listOf(provider)
+            if (provider == LIRIQO || provider in liriQoProviders) listOf(LIRIQO) else listOf(provider)
 
         private fun isLegacyDefaultUserOrder(
             csv: String,
