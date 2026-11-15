@@ -296,13 +296,14 @@ class LiriQoLyricsProviderTest {
                     },
                     "timed": [{
                       "id": 0,
-                      "text": "Hello there",
+                      "text": "Hello there Hey",
                       "start": 1000,
                       "end": 3000,
                       "agent": "v2",
                       "words": [
                         {"text": "Hello ", "start": 1000, "end": 2000},
-                        {"text": "there", "start": 2000, "end": 3000}
+                        {"text": "there ", "start": 2000, "end": 2500},
+                        {"text": "Hey", "start": 2500, "end": 3000, "isBackground": true}
                       ]
                     }]
                   },
@@ -323,7 +324,8 @@ class LiriQoLyricsProviderTest {
                 val document = MlxParser.parse(mlx)
                 assertEquals("v2", document.lines.single().agent)
                 assertEquals("Singer Two", document.agents["v2"]?.name)
-                assertEquals("v2", document.lines.single().agent)
+                assertEquals("Hello there", document.lines.single().text)
+                assertEquals("Hey", document.lines.single().words!!.single { it.isBackground }.text)
             } finally {
                 client.close()
             }
