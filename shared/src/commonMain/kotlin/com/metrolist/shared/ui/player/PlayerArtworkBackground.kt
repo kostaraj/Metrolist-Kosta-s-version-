@@ -252,6 +252,7 @@ internal fun usesFullscreenArtworkBleed(
     canvasTall: Boolean,
 ): Boolean = !hasAnimatedVideo && !canvasTall
 
+@Composable
 internal fun FullscreenThumbnailBackground(
     thumbnailUrl: String,
     playerBackground: PlayerBackgroundStyle,
