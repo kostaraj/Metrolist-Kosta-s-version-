@@ -50,7 +50,7 @@ internal const val LYRICS_FAR_JUMP_VIEWPORTS = 2f
 
 private const val MAX_STAGGER_STEPS = 12
 private const val SUPPRESS_TAIL_MS = 250L
-private const val DEFAULT_FLIP_DURATION_MS = 520L
+private const val DEFAULT_FLIP_DURATION_MS = 600L
 private const val MIN_FLIP_DISTANCE_PX = 0.5f
 private const val SHIFT_RING = 32
 
