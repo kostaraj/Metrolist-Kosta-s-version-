@@ -11,6 +11,8 @@ import shutil
 import subprocess
 import zipfile
 
+from verify_linux_audio import verify_linux_audio
+
 ROOT = Path(__file__).resolve().parents[2]
 
 MACOS_JDK_DYLIBS = (
@@ -127,6 +129,7 @@ def package(image, target, destination, version, graal=None):
     if target.startswith('linux-'):
         if target not in ('linux-x64', 'linux-arm64'):
             raise ValueError('Unsupported native package platform')
+        verify_linux_audio([image])
         validate_posix(image, target)
         app = destination / (name + '.AppDir')
         if app.exists():
@@ -136,9 +139,9 @@ def package(image, target, destination, version, graal=None):
         (app / 'bin').mkdir()
         shutil.copy2(Path(__file__).with_name('linux-launcher.sh'), app / 'bin/Metrolist')
         (app / 'bin/Metrolist').chmod(0o755)
-        (app / 'AppRun').write_text('#!/bin/sh\nexec "$(dirname "$(readlink -f "$0")")/bin/Metrolist" "$@"\n')
+        shutil.copy2(ROOT / 'scripts/linux-appimage-apprun.sh', app / 'AppRun')
         (app / 'AppRun').chmod(0o755)
-        (app / 'Metrolist.desktop').write_text('[Desktop Entry]\nType=Application\nName=Metrolist\nExec=bin/Metrolist %u\nIcon=Metrolist\nStartupWMClass=Metrolist\nComment=Metrolist music client\nCategories=AudioVideo;Player;\nTerminal=false\nMimeType=x-scheme-handler/metrolist;x-scheme-handler/metrolist-auth;\n')
+        (app / 'Metrolist.desktop').write_text('[Desktop Entry]\nType=Application\nName=Metrolist\nExec=Metrolist %u\nIcon=Metrolist\nStartupWMClass=Metrolist\nComment=Metrolist music client\nCategories=AudioVideo;Player;\nTerminal=false\nMimeType=x-scheme-handler/metrolist;x-scheme-handler/metrolist-auth;\n')
         shutil.copy2(ROOT / 'desktopApp/src/desktopMain/resources/logo.png', app / 'Metrolist.png')
         (app / 'resources').symlink_to('lib/native/resources', target_is_directory=True)
         output = destination / (name + '.AppImage')

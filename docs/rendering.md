@@ -6,6 +6,8 @@ Shared collection covers resolve through `LibraryCovers.kt`. Keep user-selected 
 
 Player and collection artwork use square, centered crops. Full-player video thumbnails use the same preview source as song rows, including the thumbnail without encoded letterboxing. Dedicated video shelves, episode previews and video playback keep their wide layouts. On iOS, managed playlist-cover identifiers resolve against the current Application Support directory so container relocation does not break covers. Delete only managed files after the database change succeeds.
 
+The portrait full-screen artwork continuation starts before a wide thumbnail's bottom edge. Its preview and detailed blur keep their fades, with no uncovered band between the image and continuation.
+
 Android mini-player and expanded-player artwork slots request crop explicitly through the player platform. The loading artwork uses the same crop through the first-frame fade. Fullscreen video uses fit, including letterboxing when the screen and video have different aspect ratios. PiP has its own scaling.
 
 Android full-player artwork uses software bitmaps so Compose and image decoding can share pixels. Export code copies hardware images when a software canvas requires it.
@@ -98,6 +100,8 @@ Android publishes system dark mode to shared settings before palette resolution.
 Artwork palettes request a fixed source and decode at 128 px with a separate memory-cache key. Google artwork uses 256 px sources; YouTube video thumbnails use the bar-free `mqdefault` source. Palette requests do not reuse larger display thumbnails, so artwork load order and URL size variants cannot change the sampled colors. Animated covers do not supply palette frames.
 
 The landscape TV player keeps artwork backgrounds visible through a dark scrim behind its controls. Solid backgrounds keep their surface and content color pair. Both color changes animate with the theme motion scheme.
+
+The full-screen artwork style also applies to audio tracks in immersive landscape mode. Immersive mode hides system bars without changing the selected artwork style. Playing music videos retain their inline surface and fullscreen controls.
 
 Current-song rows use a pill container, scalloped artwork and matching content colors. Color transitions run in both directions. Preserve playing/paused accessibility descriptions without a repeating list animation.
 
