@@ -1066,6 +1066,7 @@ fun PlayerScreen(
                                             canvasReady = animatedCoverReady && isArtworkCover,
                                             canvasKey = currentCanvasLayer?.key,
                                             canvasTall = currentCanvasLayer?.tall == true,
+                                            isVideoSong = playbackResource?.hasVideo == true,
                                             artworkCrossfade = artworkCrossfade,
                                             canvasContent =
                                                 if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
@@ -1090,7 +1091,7 @@ fun PlayerScreen(
                                     PlayerBackgroundArtwork(currentSong.displayThumbnail!!, artworkCrossfade) { backgroundUrl ->
                                         BlurredArtworkBackground(
                                             url = backgroundUrl,
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f).align(Alignment.TopCenter),
                                             blurRadiusPx = playerBackgroundBlurRadiusPx,
                                             pendingScrimAlpha = 0.5f,
                                         )
