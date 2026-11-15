@@ -186,19 +186,7 @@ class LyricsClient(
             }
         }
 
-    private val LIRIQO_PROVIDERS = setOf(
-        LyricsProvider.LIRIQO_APPLE_MUSIC,
-        LyricsProvider.LIRIQO_MUSIXMATCH,
-        LyricsProvider.LIRIQO_UNISON,
-        LyricsProvider.LIRIQO_NETEASE,
-        LyricsProvider.LIRIQO_PETITLYRICS,
-        LyricsProvider.LIRIQO_KUGOU,
-        LyricsProvider.LIRIQO_KUWO,
-        LyricsProvider.LIRIQO_MIGU,
-        LyricsProvider.LIRIQO_QQ_MUSIC,
-        LyricsProvider.LIRIQO_LRCLIB,
-        LyricsProvider.LIRIQO_YOUTUBE_MUSIC,
-    )
+    private val LIRIQO_PROVIDERS = LyricsProvider.liriQoProviders.toSet()
 
     private suspend fun result(
         provider: String,
