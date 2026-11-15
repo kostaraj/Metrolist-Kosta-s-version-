@@ -21,6 +21,8 @@ jobs:
     permissions:
       contents: read
     with:
+      # Pull-request CI runs the full checks; manual APK builds should not be blocked by unrelated flaky tests.
+      run-verification: ${{ github.event_name != 'workflow_dispatch' }}
       variant: ${{ inputs.variant || 'debug' }}
       upload-artifact: ${{ github.event_name == 'workflow_dispatch' }}
       require-signing: ${{ inputs.variant == 'release' }}
