@@ -164,6 +164,34 @@ https://untrusted.example/video.m3u8
         }
 
     @Test
+    fun songTitleMatchTakesPriorityOverAlbumMismatch() =
+        runBlocking {
+            withFreshSettings {
+                val ampRequests = mutableListOf<String>()
+                val client = buildClient(songSearch(singleTrack), mapOf(SINGLE_ID to SINGLE_MP4), ampRequests)
+                val service = AnimatedArtworkService(client)
+
+                try {
+                    val result =
+                        service.fetchAnimatedCover(
+                            "Sharks",
+                            "Imagine Dragons",
+                            "An Album Name That Does Not Match",
+                        )
+                    assertEquals(SINGLE_MP4, result?.url)
+                    assertEquals(
+                        listOf("https://amp-api.music.apple.com/v1/catalog/us/albums/$SINGLE_ID"),
+                        ampRequests,
+                    )
+                } finally {
+                    service.dispose()
+                    service.clearCache()
+                    client.close()
+                }
+            }
+        }
+
+    @Test
     fun returnsAndCachesTheTallClipBesideTheSquareClip(): Unit =
         runBlocking {
             withFreshSettings {
@@ -329,6 +357,68 @@ https://untrusted.example/video.m3u8
                         listOf("https://amp-api.music.apple.com/v1/catalog/us/albums/$SINGLE_ID"),
                         ampRequests,
                     )
+                } finally {
+                    service.dispose()
+                    service.clearCache()
+                    client.close()
+                }
+            }
+        }
+
+    @Test
+    fun artistArtworkUsesOnlySupportedAmpRequestParameters() =
+        runBlocking {
+            withFreshSettings {
+                Settings.shared.enableAppleMusicArtistImages = true
+                Settings.shared.enableAppleMusicArtistVideos = true
+                Settings.shared.lastResolvedContentCountry = "US"
+                Settings.shared.lastResolvedContentLanguage = "sr"
+                val artistAssetRequests = mutableListOf<String>()
+                val client =
+                    HttpClient(
+                        MockEngine { request ->
+                            when {
+                                request.url.host == "itunes.apple.com" &&
+                                    request.url.encodedPath == "/search" &&
+                                    request.url.parameters["entity"] == "musicArtist" -> {
+                                    respond(
+                                        """{"resultCount":1,"results":[{"artistName":"Billie Eilish","artistId":1065981054}]}""",
+                                        HttpStatusCode.OK,
+                                    )
+                                }
+
+                                request.url.host == "music.apple.com" && request.url.encodedPath == "/us/browse" -> {
+                                    respond(BROWSE_HTML, HttpStatusCode.OK)
+                                }
+
+                                request.url.host == "music.apple.com" && request.url.encodedPath == "/assets/index.js" -> {
+                                    respond(JS_BUNDLE, HttpStatusCode.OK)
+                                }
+
+                                request.url.host == "amp-api.music.apple.com" &&
+                                    request.url.encodedPath == "/v1/catalog/us/artists/1065981054" -> {
+                                    artistAssetRequests += request.url.toString()
+                                    assertEquals(setOf("extend"), request.url.parameters.names())
+                                    assertEquals("editorialVideo", request.url.parameters["extend"])
+                                    respond(
+                                        """{"data":[{"attributes":{"artwork":{"url":"https://is1-ssl.mzstatic.com/image/thumb/artist/{w}x{h}{c}.{f}","width":100,"height":100},"editorialVideo":{"motionArtistSquare1x1":{"video":"https://video-ssl.itunes.apple.com/itunes-assets/artist.mp4"}}}}]}""",
+                                        HttpStatusCode.OK,
+                                    )
+                                }
+
+                                else -> respond("", HttpStatusCode.NotFound)
+                            }
+                        },
+                    )
+                val service = AnimatedArtworkService(client)
+
+                try {
+                    val result = service.fetchArtistArtwork("Billie Eilish")
+                    assertTrue(result is ArtistArtworkFetchResult.Found)
+                    val artwork = (result as ArtistArtworkFetchResult.Found).artwork
+                    assertEquals("https://is1-ssl.mzstatic.com/image/thumb/artist/100x100bb.webp", artwork.imageUrl)
+                    assertEquals("https://video-ssl.itunes.apple.com/itunes-assets/artist.mp4", artwork.videoUrl)
+                    assertEquals(1, artistAssetRequests.size)
                 } finally {
                     service.dispose()
                     service.clearCache()

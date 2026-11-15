@@ -306,7 +306,7 @@ class AnimatedArtworkService internal constructor(
                 } else {
                     val token = withContext(Dispatchers.Default) { getDevToken(country) } ?: return ArtistArtworkFetchResult.Unavailable
                     withContext(Dispatchers.Default) {
-                        fetchArtistAssets(artistId, token, country, language, includeImage, includeVideo, videoResolution)
+                        fetchArtistAssets(artistId, token, country, includeImage, includeVideo, videoResolution)
                     }
                 }
             } catch (e: TimeoutCancellationException) {
@@ -556,110 +556,124 @@ class AnimatedArtworkService internal constructor(
         val isVariantTitle = isVariantTitle(title, cleanTitle)
         val albumIsVariant = album != null && cleanTitleText(album) != cleanAlbum
 
+        YtLogger.d(
+            TAG,
+            "Artwork match input: title='$title', artist='$artist', album='${album.orEmpty()}', " +
+                "cleanTitle='$cleanTitle', cleanAlbum='${cleanAlbum.orEmpty()}', explicit=$explicit, " +
+                "variantTitle=$isVariantTitle, variantAlbum=$albumIsVariant",
+        )
+
         val seen = mutableSetOf<Long>()
         val allResults = mutableListOf<Pair<AniTunesSearchResult, String>>()
 
-        fun matchingAlbums(): List<Long> {
-            if (cleanAlbum != null && !isVariantTitle) {
-                val albumMatches =
-                    allResults
-                        .filter { (r, _) ->
-                            matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, true))
-                        }.filter { (r, _) ->
-                            val collectionName = r.collectionName
-                            collectionName != null &&
-                                (
-                                    stripReleaseSuffixes(normalizeAlbum(collectionName)) != cleanTitle ||
-                                        stripReleaseSuffixes(cleanAlbum) == cleanTitle
-                                ) &&
-                                albumNamesMatch(collectionName, cleanAlbum, strict = albumIsVariant)
-                        }
-                if (albumMatches.isNotEmpty()) {
-                    val exactAlbumMatches =
-                        albumMatches.filter {
-                            it.first.collectionName
-                                ?.let(::normalizeAlbum)
-                                ?.let(::stripArtworkEditionSuffix) == cleanAlbum
-                        }
-                    val candidates = exactAlbumMatches.ifEmpty { albumMatches }
-                    YtLogger.d(TAG, "Resolved animated artwork via album match (${candidates.size} candidates)")
-                    return candidates.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
+        fun titleMatches(): List<AniTunesSearchResult> =
+            allResults
+                .map { it.first }
+                .filter { result ->
+                    matchesArtist(result, cleanArtist) &&
+                        matchesTitle(result, cleanTitle, title) &&
+                        (explicit == null || matchesExplicit(result, explicit, cleanAlbum != null)) &&
+                        result.collectionId != null
                 }
-            }
+                .distinctBy { it.trackId }
 
-            return emptyList()
+        fun matchingAlbums(): List<Long> {
+            if (cleanAlbum == null || isVariantTitle) return emptyList()
+            val albumMatches =
+                allResults
+                    .map { it.first }
+                    .filter { result ->
+                        matchesArtist(result, cleanArtist) &&
+                            (explicit == null || matchesExplicit(result, explicit, true)) &&
+                            result.collectionId != null &&
+                            result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                    }
+            if (albumMatches.isEmpty()) return emptyList()
+            val exactAlbumMatches =
+                albumMatches.filter {
+                    it.collectionName
+                        ?.let(::normalizeAlbum)
+                        ?.let(::stripArtworkEditionSuffix) == cleanAlbum
+                }
+            val candidates = exactAlbumMatches.ifEmpty { albumMatches }
+            YtLogger.d(TAG, "Resolved animated artwork via album fallback (${candidates.size} candidates)")
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
-        if (cleanAlbum != null) {
-            val albumQuery = "$artist $cleanAlbum"
-            YtLogger.d(TAG, "Searching iTunes by album")
-            fetchSearchResults(albumQuery, seen).forEach { r ->
-                allResults.add(r to "album")
-            }
-        }
-
-        matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
-
+        // Search by the song first. A valid artist + track match is sufficient;
+        // album metadata is only used to rank matching releases, never to veto the song.
         val titleQuery = "$artist $cleanTitle"
-        YtLogger.d(TAG, "Searching iTunes for animated artwork")
-        fetchSearchResults(titleQuery, seen).forEach { r ->
-            allResults.add(r to "title")
+        YtLogger.d(TAG, "Searching iTunes by song title")
+        fetchSearchResults(titleQuery, seen).forEach { allResults.add(it to "title") }
+
+        var matchedTracks = titleMatches()
+        if (matchedTracks.isNotEmpty()) {
+            val albumPreferred =
+                if (cleanAlbum == null) {
+                    // Without album metadata, prefer a self-titled release (commonly the song's single).
+                    matchedTracks.filter { result -> isSelfTitledRelease(result, cleanTitle) }
+                } else {
+                    matchedTracks.filter { result ->
+                        result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                    }
+                }
+            val candidates = albumPreferred.ifEmpty { matchedTracks }
+            YtLogger.d(
+                TAG,
+                "Resolved animated artwork via song title (${candidates.size} candidates; album preference=${albumPreferred.isNotEmpty()})",
+            )
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
-        val hasGoodMatch =
-            allResults.any { (r, _) ->
-                matchesArtist(r, cleanArtist) && matchesTitle(r, cleanTitle, title) &&
-                    (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
-            }
-        if (!hasGoodMatch || allResults.size < 5) {
+        // Only search by album if the song-title query did not yield a usable track.
+        if (cleanAlbum != null) {
+            YtLogger.d(TAG, "Song title did not match; falling back to iTunes album search")
+            fetchSearchResults("$artist $cleanAlbum", seen).forEach { allResults.add(it to "album") }
+        }
+
+        if (allResults.size < 5) {
             val artistId = resolveArtistId(cleanArtist)
             if (artistId != null) {
                 YtLogger.d(TAG, "Looking up additional artist results")
-                fetchArtistResults(artistId, seen).forEach { r ->
-                    if (matchesArtist(r, cleanArtist)) {
-                        allResults.add(r to "artist_lookup")
-                    }
+                fetchArtistResults(artistId, seen).forEach { result ->
+                    if (matchesArtist(result, cleanArtist)) allResults.add(result to "artist_lookup")
                 }
             }
         }
 
-        if (allResults.isEmpty()) {
-            YtLogger.d(TAG, "No iTunes animated artwork results")
-            return emptyList()
+        matchedTracks = titleMatches()
+        if (matchedTracks.isNotEmpty()) {
+            val albumPreferred =
+                if (cleanAlbum == null) matchedTracks.filter { result -> isSelfTitledRelease(result, cleanTitle) }
+                else matchedTracks.filter { result ->
+                    result.collectionName?.let { albumNamesMatch(it, cleanAlbum, strict = albumIsVariant) } == true
+                }
+            val candidates = albumPreferred.ifEmpty { matchedTracks }
+            YtLogger.d(TAG, "Resolved animated artwork via song title after fallback (${candidates.size} candidates)")
+            return candidates.mapNotNull { it.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
         }
 
         val artistMatches =
-            allResults.filter { (r, _) ->
-                matchesArtist(r, cleanArtist) && (explicit == null || matchesExplicit(r, explicit, cleanAlbum != null))
+            allResults.map { it.first }.filter { result ->
+                matchesArtist(result, cleanArtist) &&
+                    (explicit == null || matchesExplicit(result, explicit, cleanAlbum != null))
             }
         YtLogger.d(TAG, "Total results: ${allResults.size}, artist matches: ${artistMatches.size}")
+        YtLogger.d(
+            TAG,
+            "iTunes album fallback candidates: " +
+                artistMatches.joinToString(" | ") { result ->
+                    val albumMatch = cleanAlbum?.let { target ->
+                        result.collectionName?.let { albumNamesMatch(it, target, strict = albumIsVariant) } == true
+                    } ?: false
+                    "${result.trackName} / ${result.collectionName.orEmpty()} [albumMatch=$albumMatch]"
+                },
+        )
 
-        matchingAlbums().takeIf { it.isNotEmpty() }?.let { return it }
+        val albumFallback = matchingAlbums()
+        if (albumFallback.isNotEmpty()) return albumFallback
 
-        val titleMatches =
-            artistMatches.filter { (r, _) ->
-                if (isVariantTitle) {
-                    r.trackName.trim().replace(smartQuotePattern, "'").equals(
-                        title.trim().replace(smartQuotePattern, "'"),
-                        ignoreCase = true,
-                    )
-                } else {
-                    matchesTitle(r, cleanTitle, title)
-                }
-            }
-        val selfTitledTitle =
-            if (isVariantTitle) {
-                title.trim().replace(smartQuotePattern, "'").lowercase()
-            } else {
-                cleanTitle
-            }
-        val selfTitledMatches = titleMatches.filter { (r, _) -> isSelfTitledRelease(r, selfTitledTitle) }
-        if (selfTitledMatches.isNotEmpty() && (cleanAlbum == null || isVariantTitle)) {
-            YtLogger.d(TAG, "Resolved animated artwork via title match (${selfTitledMatches.size} candidates)")
-            return selfTitledMatches.mapNotNull { it.first.collectionId }.distinct().take(MAX_COLLECTION_CANDIDATES)
-        }
-
-        YtLogger.d(TAG, "No animated artwork match (${artistMatches.size} candidate matches)")
+        YtLogger.d(TAG, "No animated artwork match (${artistMatches.size} artist candidates)")
         return emptyList()
     }
 
@@ -978,25 +992,22 @@ class AnimatedArtworkService internal constructor(
         artistId: Long,
         token: String,
         country: String,
-        language: String,
         includeImage: Boolean,
         includeVideo: Boolean,
         videoResolution: AnimatedCoverResolution,
     ): ArtistArtworkResult? {
+        val artistUrl = "https://amp-api.music.apple.com/v1/catalog/$country/artists/$artistId"
         val response =
             withTimeout(15_000.milliseconds) {
                 httpClient
-                    .prepareGet("https://amp-api.music.apple.com/v1/catalog/$country/artists/$artistId") {
+                    .prepareGet(artistUrl) {
                         header("Authorization", "Bearer $token")
                         header("Origin", "https://music.apple.com")
                         header("Accept", "application/json")
-                        parameter("art[url]", "c,f")
                         if (includeVideo) parameter("extend", "editorialVideo")
-                        parameter("format[resources]", "map")
-                        language.takeIf(String::isNotBlank)?.let { parameter("l", "$it-$country") }
-                        parameter("platform", "web")
                     }.readTextLimited(MAX_JSON_RESPONSE_BYTES)
             }
+        YtLogger.d(TAG, "Artist AMP response: HTTP ${response.status.value}, motionVideo=$includeVideo")
         if (response.status.value == 401) {
             tokenMutex.withLock { tokenCache = null }
         }
@@ -1054,10 +1065,16 @@ class AnimatedArtworkService internal constructor(
         country: String,
     ): MotionVideos? {
         try {
-            val response =
+            val albumUrl = "https://amp-api.music.apple.com/v1/catalog/${country.lowercase()}/albums/$collectionId"
+            val resolvedLang =
+                Settings.shared.lastResolvedContentLanguage
+                    .lowercase()
+                    .takeIf(String::isNotBlank)
+
+            suspend fun fetchAlbumResponse(includeLanguage: Boolean) =
                 withTimeout(15_000.milliseconds) {
                     httpClient
-                        .prepareGet("https://amp-api.music.apple.com/v1/catalog/${country.lowercase()}/albums/$collectionId") {
+                        .prepareGet(albumUrl) {
                             header("Authorization", "Bearer $token")
                             header("Origin", "https://music.apple.com")
                             header("Accept", "application/json")
@@ -1075,13 +1092,7 @@ class AnimatedArtworkService internal constructor(
                             parameter("include[music-videos]", "artists")
                             parameter("include[playlists]", "curator")
                             parameter("include[songs]", "artists,composers,albums")
-                            val resolvedLang =
-                                Settings.shared.lastResolvedContentLanguage
-                                    .lowercase()
-                                    .takeIf(String::isNotBlank)
-                            if (resolvedLang != null) {
-                                parameter("l", resolvedLang)
-                            }
+                            if (includeLanguage && resolvedLang != null) parameter("l", resolvedLang)
                             parameter("meta[albums:tracks]", "popularity")
                             parameter("platform", "web")
                             parameter(
@@ -1090,6 +1101,12 @@ class AnimatedArtworkService internal constructor(
                             )
                         }.readTextLimited(MAX_JSON_RESPONSE_BYTES)
                 }
+
+            var response = fetchAlbumResponse(includeLanguage = resolvedLang != null)
+            if (response.status.value == 400 && resolvedLang != null) {
+                YtLogger.w(TAG, "AMP album request returned HTTP 400 with locale; retrying without locale")
+                response = fetchAlbumResponse(includeLanguage = false)
+            }
             if (response.status.value == 401) {
                 tokenMutex.withLock { tokenCache = null }
                 YtLogger.w(TAG, "AMP API 401 - token rejected")
