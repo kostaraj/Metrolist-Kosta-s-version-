@@ -280,4 +280,52 @@ class LiriQoLyricsProviderTest {
             }
         }
 
+
+    @Test
+    fun preservesSingerAgentAnnotationsFromNormalizedLiriQoLines() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "apple_music_liriqo",
+                    "syncLevel": "word",
+                    "agents": {
+                      "v1": {"type": "person", "name": "Singer One"},
+                      "v2": {"type": "person", "name": "Singer Two"}
+                    },
+                    "timed": [{
+                      "id": 0,
+                      "text": "Hello there",
+                      "start": 1000,
+                      "end": 3000,
+                      "agent": "v2",
+                      "words": [
+                        {"text": "Hello ", "start": 1000, "end": 2000},
+                        {"text": "there", "start": 2000, "end": 3000}
+                      ]
+                    }]
+                  },
+                  "tracks": []
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx =
+                    assertNotNull(
+                        LiriQoLyricsProvider(client).getLyricsResults(
+                            "Song",
+                            "Artist",
+                            null,
+                            provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_APPLE_MUSIC,
+                        ).singleOrNull()?.lyrics,
+                    )
+                val document = MlxParser.parse(mlx)
+                assertEquals("v2", document.lines.single().agent)
+                assertEquals("Singer Two", document.agents["v2"]?.name)
+                assertEquals("v2", document.lines.single().agent)
+            } finally {
+                client.close()
+            }
+        }
 }
