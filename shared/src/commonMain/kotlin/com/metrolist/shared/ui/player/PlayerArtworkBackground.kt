@@ -238,7 +238,7 @@ internal fun PlayerBlurredArtworkBackground(
     val lyricsBackgroundBlurRadiusPx = with(density) { 180.dp.toPx() }
     BlurredArtworkBackground(
         url = thumbnailUrl,
-        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f),
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.97f),
         blurRadiusPx = if (isLyricsVisible) lyricsBackgroundBlurRadiusPx else playerBackgroundBlurRadiusPx,
         scrimAlpha = 0.3f,
         lyricsGradient = isLyricsVisible,
@@ -251,7 +251,7 @@ internal fun usesFullscreenArtworkBleed(
     hasAnimatedVideo: Boolean,
     canvasTall: Boolean,
     isVideoSong: Boolean = false,
-): Boolean = !hasAnimatedVideo && !canvasTall && !isVideoSong
+): Boolean = !hasAnimatedVideo && !canvasTall
 
 @Composable
 internal fun FullscreenThumbnailBackground(
@@ -381,15 +381,6 @@ internal fun FullscreenThumbnailBackground(
 
         PlayerBackgroundArtwork(thumbnailUrl, artworkCrossfade) { currentUrl ->
             val artworkBitmap = rememberFullscreenArtworkBitmap(currentUrl, artworkSize)
-            if (isVideoSong && !hasVideo) {
-                AsyncImage(
-                    url = currentUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-                return@PlayerBackgroundArtwork
-            }
             if (usesArtworkBleed) {
                 FullscreenArtworkBleed(
                     url = currentUrl,
