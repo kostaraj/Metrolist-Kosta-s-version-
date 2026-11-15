@@ -11,6 +11,7 @@ import com.metrolist.shared.model.LyricsWithProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -106,15 +107,21 @@ class LiriQoLyricsProvider(
         return requestMutex.withLock {
             if (responseCache.containsKey(key)) return@withLock responseCache[key]
             val response =
-                httpClient
-                    .prepareGet("$BASE_URL/lyrics") {
-                        expectMissingLyrics()
-                        parameter("title", title)
-                        if (artist.isNotBlank()) parameter("artist", artist)
-                        duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
-                        album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
-                        parameter("full", "1")
-                    }.readLyricsText(MAX_RESPONSE_BYTES)
+                try {
+                    httpClient
+                        .prepareGet("$BASE_URL/lyrics") {
+                            expectMissingLyrics()
+                            parameter("title", title)
+                            if (artist.isNotBlank()) parameter("artist", artist)
+                            duration?.takeIf { it > 0 }?.let { parameter("duration", it / 1_000L) }
+                            album?.takeIf { it.isNotBlank() }?.let { parameter("album", it) }
+                            parameter("full", "1")
+                        }.readLyricsText(MAX_RESPONSE_BYTES)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    null
+                }
 
             // Cache misses too, so all eleven providers still share a single failed lookup.
             responseCache[key] = response
