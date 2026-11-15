@@ -51,7 +51,7 @@ import androidx.compose.ui.graphics.Canvas as GraphicsCanvas
 // Blur radii in px at REFERENCE_WIDTH. The steps are fine at the low end so the first blurred rows are not a visible band.
 private val BLUR_RADII = floatArrayOf(0f, 1f, 2f, 3.5f, 5.5f, 8f, 11f, 15f, 20f, 27f, 36f, 48f, 63f, 82f, 105f, 135f, 170f, 210f, 250f)
 private const val REFERENCE_WIDTH = 1080f
-private const val BLUR_START = 0.70f
+private const val BLUR_START = 1.05f
 private const val BLUR_END = 1.55f
 
 // A steep start keeps the first blurred rows indistinguishable from the sharp art.
