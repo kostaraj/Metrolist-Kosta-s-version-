@@ -639,6 +639,7 @@ class LyricsEditorTest {
         assertEquals("Lead", line.text.trim())
         assertEquals("Yo", line.words!!.single { it.isBackground }.text)
         assertEquals(1.5, line.words!!.single { it.isBackground }.startTime)
+        assertEquals(2.5, line.words!!.single { it.isBackground }.endTime)
 
         editor.undo()
         val restored = MlxJsonParser.parse(editor.current.json)!!.lines.single()
