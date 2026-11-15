@@ -64,6 +64,14 @@ on:
         required: false
       KEY_PASSWORD:
         required: false
+      DEBUG_KEYSTORE:
+        required: false
+      DEBUG_KEYSTORE_PASSWORD:
+        required: false
+      DEBUG_KEY_ALIAS:
+        required: false
+      DEBUG_KEY_PASSWORD:
+        required: false
       SENTRY_AUTH_TOKEN:
         required: false
       LASTFM_API_KEY:
@@ -169,6 +177,16 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
+      - name: Prepare Android debug signing
+        if: inputs.variant == 'debug'
+        id: debug-signing
+        uses: ./.github/actions/prepare-debug-signing
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+          DEBUG_KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+          DEBUG_KEY_ALIAS: ${{ secrets.DEBUG_KEY_ALIAS }}
+          DEBUG_KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
+
       - name: Require Android signing
         if: inputs.variant == 'release' && inputs.require-signing && steps.signing.outputs.signing_available != 'true'
         shell: bash
@@ -186,6 +204,10 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          DEBUG_KEYSTORE_PATH: ${{ steps.debug-signing.outputs.keystore_path }}
+          DEBUG_KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+          DEBUG_KEY_ALIAS: ${{ secrets.DEBUG_KEY_ALIAS }}
+          DEBUG_KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
