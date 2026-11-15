@@ -1,6 +1,11 @@
 name: Build Android
 
 on:
+  # One-off benchmark build is triggered by the CI workflow adjustment commit.
+  push:
+    branches: [lyrics-animation-rework]
+    paths:
+      - .github/workflows/ci.yml
   workflow_dispatch:
     inputs:
       variant:
@@ -10,8 +15,7 @@ on:
         default: release
 
 concurrency:
-  # Dispatched APK builds get their own group so pushes to main cannot cancel them.
-  group: android-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
+  group: android-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -21,10 +25,9 @@ jobs:
     permissions:
       contents: read
     with:
-      # Pull-request CI runs the full checks; manual APK builds should not be blocked by unrelated flaky tests.
-      run-verification: ${{ github.event_name != 'workflow_dispatch' }}
-      variant: ${{ inputs.variant || 'debug' }}
-      upload-artifact: ${{ github.event_name == 'workflow_dispatch' }}
+      run-verification: ${{ github.event_name == 'pull_request' }}
+      variant: ${{ github.event_name == 'push' && 'benchmark' || inputs.variant || 'debug' }}
+      upload-artifact: ${{ github.event_name != 'pull_request' }}
       require-signing: ${{ inputs.variant == 'release' }}
       cache-read-only: ${{ github.event_name == 'pull_request' }}
     secrets:
