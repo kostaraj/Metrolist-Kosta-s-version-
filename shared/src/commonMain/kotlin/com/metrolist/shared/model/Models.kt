@@ -491,6 +491,17 @@ enum class LyricsProvider {
     USER,
     LYPRIO,
     LIRIQO,
+    LIRIQO_APPLE_MUSIC,
+    LIRIQO_MUSIXMATCH,
+    LIRIQO_UNISON,
+    LIRIQO_NETEASE,
+    LIRIQO_PETITLYRICS,
+    LIRIQO_KUGOU,
+    LIRIQO_KUWO,
+    LIRIQO_MIGU,
+    LIRIQO_QQ_MUSIC,
+    LIRIQO_LRCLIB,
+    LIRIQO_YOUTUBE_MUSIC,
     BETTERLYRICS,
     LRCRED,
     UNISON,
@@ -506,7 +517,26 @@ enum class LyricsProvider {
         val alwaysLastFallbacks: List<LyricsProvider> = listOf(YOUTUBESUBTITLE, YOUTUBE)
 
         val userConfigurable: List<LyricsProvider> =
-            listOf(LYPRIO, LIRIQO, BETTERLYRICS, LRCRED, UNISON, LRCLIB, KUGOU, PAXSENIX)
+            listOf(
+                LYPRIO,
+                LIRIQO_APPLE_MUSIC,
+                LIRIQO_MUSIXMATCH,
+                LIRIQO_UNISON,
+                LIRIQO_NETEASE,
+                LIRIQO_PETITLYRICS,
+                LIRIQO_KUGOU,
+                LIRIQO_KUWO,
+                LIRIQO_MIGU,
+                LIRIQO_QQ_MUSIC,
+                LIRIQO_LRCLIB,
+                LIRIQO_YOUTUBE_MUSIC,
+                BETTERLYRICS,
+                LRCRED,
+                UNISON,
+                LRCLIB,
+                KUGOU,
+                PAXSENIX,
+            )
 
         private val legacyDefaultUserOrders =
             listOf(
