@@ -429,21 +429,31 @@ private fun updateLine(
     if (parsed.agent != source?.get("agent")?.jsonPrimitive?.contentOrNull) {
         if (parsed.agent == null) updated.remove("agent") else updated["agent"] = JsonPrimitive(parsed.agent)
     }
+    val backgroundChanged =
+        parsed.backgroundText != original?.backgroundText ||
+            parsed.backgroundWords != original?.backgroundWords
+    if (backgroundChanged) updated.remove("backgroundTranslatedText")
     if (parsed.backgroundText != null) {
         updated["backgroundText"] = JsonPrimitive(parsed.backgroundText)
         updated.remove("backgroundWords")
     } else if (parsed.backgroundWords.isNotEmpty()) {
         val originals = shifted["backgroundWords"]?.jsonArray.orEmpty().map { it.jsonObject }.toMutableList()
+        val sameWordCount = originals.size == parsed.backgroundWords.size
         updated["backgroundWords"] = JsonArray(parsed.backgroundWords.mapIndexed { index, word ->
-            val previous = originals.firstOrNull { it["text"] == JsonPrimitive(word.text) }?.also { originals.remove(it) }
-            if (previous != null && previous["startMs"] == JsonPrimitive(word.time)) previous
+            val previous =
+                if (sameWordCount) originals[index]
+                else originals.firstOrNull { it["text"] == JsonPrimitive(word.text) }?.also { originals.remove(it) }
+            if (previous != null && previous["text"] == JsonPrimitive(word.text) &&
+                previous["startMs"] == JsonPrimitive(word.time)
+            ) previous
             else {
                 val end = previous?.get("endMs")?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
                     ?: parsed.backgroundWords.getOrNull(index + 1)?.time?.takeIf { it > word.time }
                     ?: shifted["endMs"]?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
                     ?: endMs?.takeIf { it > word.time }
                     ?: (word.time + 500).coerceAtMost(MAX_TIME_MS)
-                JsonObject((previous.orEmpty() - "syllables") + mapOf(
+                val retained = previous.orEmpty().let { if (it["text"] == JsonPrimitive(word.text)) it else it - "syllables" }
+                JsonObject(retained + mapOf(
                     "text" to JsonPrimitive(word.text),
                     "startMs" to JsonPrimitive(word.time),
                     "endMs" to JsonPrimitive(end),
