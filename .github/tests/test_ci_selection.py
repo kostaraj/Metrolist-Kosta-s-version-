@@ -119,14 +119,14 @@ class CIWorkflowTest(unittest.TestCase):
     def test_android_keeps_tests_and_lint_without_push_assembly(self):
         for assemble in ("true", "false"):
             tasks = self.task_arguments("reusable-android-build.yml", "Build Android",
-                                        BUILD_VARIANT="debug", ASSEMBLE=assemble, VERIFICATION_ONLY="true")
+                                        BUILD_VARIANT="debug", ASSEMBLE=assemble, RUN_VERIFICATION="true", VERIFICATION_ONLY="true")
             for task in (":androidApp:ktlintCheck", ":androidApp:lintDebug",
                          ":androidApp:testDebugUnitTest", ":shared:testAndroidHostTest"):
                 self.assertIn(task, tasks)
             self.assertEqual(":androidApp:assembleDebug" in tasks, assemble == "true")
             self.assertIn("-Pmetrolist.sourceRevision=", tasks)
         release_tasks = self.task_arguments("reusable-android-build.yml", "Build Android",
-                                            BUILD_VARIANT="release", ASSEMBLE="true", VERIFICATION_ONLY="false")
+                                            BUILD_VARIANT="release", ASSEMBLE="true", RUN_VERIFICATION="false", VERIFICATION_ONLY="false")
         self.assertIn(":androidApp:assembleRelease", release_tasks)
         self.assertNotIn(":androidApp:testDebugUnitTest", release_tasks)
         self.assertIn("--no-configuration-cache", release_tasks)
