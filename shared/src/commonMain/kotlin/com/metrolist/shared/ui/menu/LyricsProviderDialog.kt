@@ -282,34 +282,33 @@ private fun ProviderLoadingRows() {
 }
 
 @Composable
+@Composable
 private fun providerName(provider: LyricsProvider): String =
-    stringResource(
-        when (provider) {
-            LyricsProvider.USER -> Res.string.lyrics_provider_user
-            LyricsProvider.LYPRIO -> Res.string.brand_lyprio
-            LyricsProvider.LIRIQO -> Res.string.brand_liriqo
-            LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music · LiriQo"
-            LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch · LiriQo"
-            LyricsProvider.LIRIQO_UNISON -> "Unison · LiriQo"
-            LyricsProvider.LIRIQO_NETEASE -> "NetEase Cloud Music · LiriQo"
-            LyricsProvider.LIRIQO_PETITLYRICS -> "PetitLyrics · LiriQo"
-            LyricsProvider.LIRIQO_KUGOU -> "KuGou · LiriQo"
-            LyricsProvider.LIRIQO_KUWO -> "Kuwo · LiriQo"
-            LyricsProvider.LIRIQO_MIGU -> "Migu · LiriQo"
-            LyricsProvider.LIRIQO_QQ_MUSIC -> "QQ Music · LiriQo"
-            LyricsProvider.LIRIQO_LRCLIB -> "LRCLib · LiriQo"
-            LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "YouTube Music · LiriQo"
-            LyricsProvider.BETTERLYRICS -> Res.string.brand_better_lyrics
-            LyricsProvider.LRCRED -> Res.string.brand_lrcred
-            LyricsProvider.UNISON -> Res.string.brand_unison
-            LyricsProvider.LRCLIB -> Res.string.brand_lrclib
-            LyricsProvider.KUGOU -> Res.string.brand_kugou
-            LyricsProvider.PAXSENIX -> Res.string.brand_paxsenix
-            LyricsProvider.YOUTUBESUBTITLE -> Res.string.lyrics_youtube_captions
-            LyricsProvider.YOUTUBE -> Res.string.youtube_music
-            LyricsProvider.AUTO, LyricsProvider.SIMPMUSIC -> error("Provider is not in the manual source list: $provider")
-        },
-    )
+    when (provider) {
+        LyricsProvider.USER -> stringResource(Res.string.lyrics_provider_user)
+        LyricsProvider.LYPRIO -> stringResource(Res.string.brand_lyprio)
+        LyricsProvider.LIRIQO -> stringResource(Res.string.brand_liriqo)
+        LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music · LiriQo"
+        LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch · LiriQo"
+        LyricsProvider.LIRIQO_UNISON -> "Unison · LiriQo"
+        LyricsProvider.LIRIQO_NETEASE -> "NetEase Cloud Music · LiriQo"
+        LyricsProvider.LIRIQO_PETITLYRICS -> "PetitLyrics · LiriQo"
+        LyricsProvider.LIRIQO_KUGOU -> "KuGou · LiriQo"
+        LyricsProvider.LIRIQO_KUWO -> "Kuwo · LiriQo"
+        LyricsProvider.LIRIQO_MIGU -> "Migu · LiriQo"
+        LyricsProvider.LIRIQO_QQ_MUSIC -> "QQ Music · LiriQo"
+        LyricsProvider.LIRIQO_LRCLIB -> "LRCLib · LiriQo"
+        LyricsProvider.LIRIQO_YOUTUBE_MUSIC -> "YouTube Music · LiriQo"
+        LyricsProvider.BETTERLYRICS -> stringResource(Res.string.brand_better_lyrics)
+        LyricsProvider.LRCRED -> stringResource(Res.string.brand_lrcred)
+        LyricsProvider.UNISON -> stringResource(Res.string.brand_unison)
+        LyricsProvider.LRCLIB -> stringResource(Res.string.brand_lrclib)
+        LyricsProvider.KUGOU -> stringResource(Res.string.brand_kugou)
+        LyricsProvider.PAXSENIX -> stringResource(Res.string.brand_paxsenix)
+        LyricsProvider.YOUTUBESUBTITLE -> stringResource(Res.string.lyrics_youtube_captions)
+        LyricsProvider.YOUTUBE -> stringResource(Res.string.youtube_music)
+        LyricsProvider.AUTO, LyricsProvider.SIMPMUSIC -> error("Provider is not in the manual source list: $provider")
+    }
 
 @Composable
 private fun timingLabel(kind: LyricsTimingKind): String =
