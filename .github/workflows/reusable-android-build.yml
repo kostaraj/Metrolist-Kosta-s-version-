@@ -115,7 +115,7 @@ jobs:
           LYPRIO_HMAC_KEY: ${{ secrets.LYPRIO_HMAC_KEY }}
         run: |
           set -euo pipefail
-          if [[ "$BUILD_VARIANT" != "debug" && "$BUILD_VARIANT" != "release" ]]; then
+          if [[ "$BUILD_VARIANT" != "debug" && "$BUILD_VARIANT" != "benchmark" && "$BUILD_VARIANT" != "release" ]]; then
             echo "Unsupported Android variant: $BUILD_VARIANT" >&2
             exit 1
           fi
@@ -178,7 +178,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Prepare Android debug signing
-        if: inputs.variant == 'debug'
+        if: inputs.variant != 'release'
         id: debug-signing
         uses: ./.github/actions/prepare-debug-signing
         env:
@@ -225,6 +225,16 @@ jobs:
             extra_args=(--no-configuration-cache)
             # Keep lint tasks registered for verification; skip release analysis after debug lint passes.
             extra_args+=(-x :androidApp:lintVitalRelease)
+          elif [[ "$BUILD_VARIANT" == "benchmark" ]]; then
+            tasks=(
+              ":androidApp:lintDebug"
+              ":androidApp:testDebugUnitTest"
+              ":shared:testAndroidHostTest"
+              ":androidApp:ktlintCheck"
+            )
+            if [[ "$ASSEMBLE" == "true" ]]; then
+              tasks+=(":androidApp:assembleBenchmark")
+            fi
           else
             tasks=(
               ":androidApp:lintDebug"
@@ -239,7 +249,7 @@ jobs:
           ./gradlew "${tasks[@]}" --no-daemon "${extra_args[@]}"
 
       - name: Upload lint report
-        if: failure() && inputs.variant == 'debug'
+        if: failure() && inputs.variant != 'release'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: android-lint-report
