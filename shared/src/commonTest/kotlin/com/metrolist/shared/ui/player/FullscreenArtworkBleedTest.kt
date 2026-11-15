@@ -108,6 +108,7 @@ class FullscreenArtworkBleedTest {
     @Test
     fun staticArtworkUsesFullscreenBleedEvenWhenTheSongUsesVideoArtwork() {
         assertTrue(usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false))
+        assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = false, isVideoSong = true))
         assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = true, canvasTall = false))
         assertEquals(false, usesFullscreenArtworkBleed(hasAnimatedVideo = false, canvasTall = true))
     }
