@@ -284,7 +284,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             manifestPlaceholders["appLabel"] = "Metrolist KMP Debug"
-            signingConfig = if (hasPersistentDebugSigning) {
+            signingConfig =
+                if (hasPersistentDebugSigning) {
                 signingConfigs["persistentDebug"]
             } else {
                 signingConfigs.getByName("debug")
