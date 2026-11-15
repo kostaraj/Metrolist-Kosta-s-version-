@@ -212,4 +212,70 @@ class LiriQoLyricsProviderTest {
             }
         }
 
+
+    @Test
+    fun separatesParenthesizedBackgroundVocalsAndKeepsTheirWordSpacing() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "apple_music_liriqo",
+                    "syncLevel": "syllable",
+                    "timed": [{
+                      "id": 0,
+                      "text": "I swore my loyalty to me, (Me, myself, and I)",
+                      "start": 36576,
+                      "end": 40620,
+                      "words": [
+                        {"text": "I ", "start": 36576, "end": 36773},
+                        {"text": "swore ", "start": 36773, "end": 37011},
+                        {"text": "my ", "start": 37011, "end": 37291},
+                        {"text": "loyalty ", "start": 37291, "end": 38021},
+                        {"text": "to ", "start": 38021, "end": 38256},
+                        {"text": "me, ", "start": 38256, "end": 38677},
+                        {"text": "(Me, ", "start": 38677, "end": 39032},
+                        {"text": "myself, ", "start": 39032, "end": 39513},
+                        {"text": "and ", "start": 39513, "end": 39976},
+                        {"text": "I)", "start": 39976, "end": 40620}
+                      ]
+                    }]
+                  },
+                  "tracks": []
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx =
+                    assertNotNull(
+                        LiriQoLyricsProvider(client).getLyricsResults(
+                            "Song",
+                            "Artist",
+                            null,
+                            provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_APPLE_MUSIC,
+                        ).singleOrNull()?.lyrics,
+                    )
+                val line = MlxParser.parse(mlx).lines.single()
+                assertEquals("I swore my loyalty to me,", line.text)
+                assertEquals(
+                    listOf("I", "swore", "my", "loyalty", "to", "me,"),
+                    assertNotNull(line.words).filterNot { it.isBackground }.map { it.text },
+                )
+                assertEquals(
+                    listOf("Me,", "myself,", "and", "I"),
+                    assertNotNull(line.words).filter { it.isBackground }.map { it.text },
+                )
+                assertEquals(
+                    listOf(true, true, true, false),
+                    line.words.filter { it.isBackground }.map { it.hasTrailingSpace },
+                )
+                assertEquals(
+                    listOf(38.677, 39.032, 39.513, 39.976),
+                    line.words.filter { it.isBackground }.map { it.startTime },
+                )
+            } finally {
+                client.close()
+            }
+        }
+
 }
