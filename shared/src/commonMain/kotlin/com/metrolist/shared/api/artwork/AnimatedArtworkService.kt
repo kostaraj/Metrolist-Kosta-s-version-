@@ -984,26 +984,17 @@ class AnimatedArtworkService internal constructor(
         videoResolution: AnimatedCoverResolution,
     ): ArtistArtworkResult? {
         val artistUrl = "https://amp-api.music.apple.com/v1/catalog/$country/artists/$artistId"
-        suspend fun fetchArtistResponse(includeLanguage: Boolean) =
+        val response =
             withTimeout(15_000.milliseconds) {
                 httpClient
                     .prepareGet(artistUrl) {
                         header("Authorization", "Bearer $token")
                         header("Origin", "https://music.apple.com")
                         header("Accept", "application/json")
-                        parameter("art[url]", "c,f")
                         if (includeVideo) parameter("extend", "editorialVideo")
-                        parameter("format[resources]", "map")
-                        if (includeLanguage) language.takeIf(String::isNotBlank)?.let { parameter("l", "$it-$country") }
-                        parameter("platform", "web")
                     }.readTextLimited(MAX_JSON_RESPONSE_BYTES)
             }
-
-        var response = fetchArtistResponse(includeLanguage = language.isNotBlank())
-        if (response.status.value == 400 && language.isNotBlank()) {
-            YtLogger.w(TAG, "Artist assets returned HTTP 400 with locale; retrying without locale")
-            response = fetchArtistResponse(includeLanguage = false)
-        }
+        YtLogger.d(TAG, "Artist AMP response: HTTP ${response.status.value}, motionVideo=$includeVideo")
         if (response.status.value == 401) {
             tokenMutex.withLock { tokenCache = null }
         }
