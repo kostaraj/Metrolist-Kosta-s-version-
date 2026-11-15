@@ -983,20 +983,27 @@ class AnimatedArtworkService internal constructor(
         includeVideo: Boolean,
         videoResolution: AnimatedCoverResolution,
     ): ArtistArtworkResult? {
-        val response =
+        val artistUrl = "https://amp-api.music.apple.com/v1/catalog/$country/artists/$artistId"
+        suspend fun fetchArtistResponse(includeLanguage: Boolean) =
             withTimeout(15_000.milliseconds) {
                 httpClient
-                    .prepareGet("https://amp-api.music.apple.com/v1/catalog/$country/artists/$artistId") {
+                    .prepareGet(artistUrl) {
                         header("Authorization", "Bearer $token")
                         header("Origin", "https://music.apple.com")
                         header("Accept", "application/json")
                         parameter("art[url]", "c,f")
                         if (includeVideo) parameter("extend", "editorialVideo")
                         parameter("format[resources]", "map")
-                        language.takeIf(String::isNotBlank)?.let { parameter("l", "$it-$country") }
+                        if (includeLanguage) language.takeIf(String::isNotBlank)?.let { parameter("l", "$it-$country") }
                         parameter("platform", "web")
                     }.readTextLimited(MAX_JSON_RESPONSE_BYTES)
             }
+
+        var response = fetchArtistResponse(includeLanguage = language.isNotBlank())
+        if (response.status.value == 400 && language.isNotBlank()) {
+            YtLogger.w(TAG, "Artist assets returned HTTP 400 with locale; retrying without locale")
+            response = fetchArtistResponse(includeLanguage = false)
+        }
         if (response.status.value == 401) {
             tokenMutex.withLock { tokenCache = null }
         }
@@ -1054,10 +1061,16 @@ class AnimatedArtworkService internal constructor(
         country: String,
     ): MotionVideos? {
         try {
-            val response =
+            val albumUrl = "https://amp-api.music.apple.com/v1/catalog/${country.lowercase()}/albums/$collectionId"
+            val resolvedLang =
+                Settings.shared.lastResolvedContentLanguage
+                    .lowercase()
+                    .takeIf(String::isNotBlank)
+
+            suspend fun fetchAlbumResponse(includeLanguage: Boolean) =
                 withTimeout(15_000.milliseconds) {
                     httpClient
-                        .prepareGet("https://amp-api.music.apple.com/v1/catalog/${country.lowercase()}/albums/$collectionId") {
+                        .prepareGet(albumUrl) {
                             header("Authorization", "Bearer $token")
                             header("Origin", "https://music.apple.com")
                             header("Accept", "application/json")
@@ -1075,13 +1088,7 @@ class AnimatedArtworkService internal constructor(
                             parameter("include[music-videos]", "artists")
                             parameter("include[playlists]", "curator")
                             parameter("include[songs]", "artists,composers,albums")
-                            val resolvedLang =
-                                Settings.shared.lastResolvedContentLanguage
-                                    .lowercase()
-                                    .takeIf(String::isNotBlank)
-                            if (resolvedLang != null) {
-                                parameter("l", resolvedLang)
-                            }
+                            if (includeLanguage && resolvedLang != null) parameter("l", resolvedLang)
                             parameter("meta[albums:tracks]", "popularity")
                             parameter("platform", "web")
                             parameter(
@@ -1090,6 +1097,12 @@ class AnimatedArtworkService internal constructor(
                             )
                         }.readTextLimited(MAX_JSON_RESPONSE_BYTES)
                 }
+
+            var response = fetchAlbumResponse(includeLanguage = resolvedLang != null)
+            if (response.status.value == 400 && resolvedLang != null) {
+                YtLogger.w(TAG, "AMP album request returned HTTP 400 with locale; retrying without locale")
+                response = fetchAlbumResponse(includeLanguage = false)
+            }
             if (response.status.value == 401) {
                 tokenMutex.withLock { tokenCache = null }
                 YtLogger.w(TAG, "AMP API 401 - token rejected")
