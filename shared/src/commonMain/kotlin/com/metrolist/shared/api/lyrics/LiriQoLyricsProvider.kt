@@ -5,6 +5,7 @@
 
 package com.metrolist.shared.api.lyrics
 
+import com.metrolist.shared.model.AgentType
 import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsTimingKind
 import com.metrolist.shared.model.LyricsWithProvider
@@ -155,18 +156,24 @@ class LiriQoLyricsProvider(
                 val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val id = line.long("id")?.takeIf { it >= 0L } ?: 0L
                 val words = line["words"] as? JsonArray ?: track.wordsFor(id)
-                TimedLine(start, end, text, words?.mapNotNull(::parseWord).orEmpty())
+                TimedLine(
+                    start,
+                    end,
+                    text,
+                    words?.mapNotNull(::parseWord).orEmpty(),
+                    line.string("agent") ?: line.string("agentId"),
+                )
             }?.sortedBy { it.startMs }.orEmpty()
 
         if (lines.isNotEmpty()) {
             if (lines.any { it.words.isNotEmpty() }) {
-                val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = true)
+                val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = true)
                 if (timingKind(wordLyrics) == LyricsTimingKind.WORD_SYNCED) {
                     return listOf(LyricsWithProvider(wordLyrics, sourceLabel))
                 }
             }
 
-            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, includeWords = false)
+            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false)
             return listOf(LyricsWithProvider(lineLyrics, sourceLabel))
         }
 
@@ -193,6 +200,7 @@ class LiriQoLyricsProvider(
         requestedTitle: String,
         requestedArtist: String,
         metadata: JsonObject?,
+        track: JsonObject,
         includeWords: Boolean,
     ): String {
         val builder =
@@ -202,6 +210,11 @@ class LiriQoLyricsProvider(
                     title = metadata?.string("title") ?: requestedTitle,
                     artist = metadata?.string("artist") ?: requestedArtist,
                 )
+        lines.mapNotNull { it.agentId }.distinct().forEach { agentId ->
+            val agent = (track["agents"] as? JsonObject)?.get(agentId) as? JsonObject
+            val type = agent?.string("type")?.let(AgentType::fromString) ?: AgentType.PERSON
+            builder.agent(agentId, type, agent?.string("name"))
+        }
         lines.forEachIndexed { index, line ->
             val inferredEnd =
                 lines.getOrNull(index + 1)?.startMs
@@ -233,11 +246,13 @@ class LiriQoLyricsProvider(
                 builder.line(
                     startMs = line.startMs,
                     endMs = endMs,
+                    agentId = line.agentId,
                     words = mlxWords,
                     backgroundWords = backgroundWords.takeIf { it.isNotEmpty() },
                 )
             } else {
-                builder.line(line.startMs, endMs, outputMainText)
+                builder.line(line.startMs, endMs, outputMainText, agentId = line.agentId,
+                    background = BACKGROUND_PARENTHESIS.find(line.text)?.groupValues?.get(1))
             }
         }
         return builder.build()
@@ -373,6 +388,7 @@ class LiriQoLyricsProvider(
         val endMs: Long?,
         val text: String,
         val words: List<TimedWord>,
+        val agentId: String? = null,
     )
 
     private data class TimedWord(
