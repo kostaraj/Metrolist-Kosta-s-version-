@@ -306,7 +306,7 @@ class AnimatedArtworkService internal constructor(
                 } else {
                     val token = withContext(Dispatchers.Default) { getDevToken(country) } ?: return ArtistArtworkFetchResult.Unavailable
                     withContext(Dispatchers.Default) {
-                        fetchArtistAssets(artistId, token, country, language, includeImage, includeVideo, videoResolution)
+                        fetchArtistAssets(artistId, token, country, includeImage, includeVideo, videoResolution)
                     }
                 }
             } catch (e: TimeoutCancellationException) {
@@ -978,7 +978,6 @@ class AnimatedArtworkService internal constructor(
         artistId: Long,
         token: String,
         country: String,
-        language: String,
         includeImage: Boolean,
         includeVideo: Boolean,
         videoResolution: AnimatedCoverResolution,
