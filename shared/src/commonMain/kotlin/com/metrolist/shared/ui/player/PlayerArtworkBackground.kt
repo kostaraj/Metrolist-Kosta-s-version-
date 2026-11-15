@@ -342,7 +342,9 @@ internal fun FullscreenThumbnailBackground(
         val artworkFadeMask = fadeMask(seamFadeStart, seam)
         val artworkSize =
             with(density) {
-                IntSize(maxWidth.roundToPx().coerceAtLeast(1), (maxHeight * seam).roundToPx().coerceAtLeast(1))
+                val widthPx = maxWidth.roundToPx().coerceAtLeast(1)
+                val heightPx = (maxHeight * seam).roundToPx().coerceAtLeast(1)
+                IntSize(widthPx, if (isVideoSong) widthPx.coerceAtMost(heightPx) else heightPx)
             }
         // Animated artwork keeps the cropped full-bleed layout; only static covers get the uncropped bleed.
         val usesArtworkBleed = usesFullscreenArtworkBleed(hasVideo, canvasTall, isVideoSong)
@@ -403,6 +405,7 @@ internal fun FullscreenThumbnailBackground(
                         artwork = artworkBitmap,
                         mirrorSeamFraction = seam,
                         alphaMask = artworkFadeMask,
+                        squareArtwork = isVideoSong,
                     )
                 }
 
@@ -931,6 +934,7 @@ private fun FullscreenSharpArtworkCanvas(
     artwork: ImageBitmap,
     mirrorSeamFraction: Float,
     alphaMask: Brush,
+    squareArtwork: Boolean = false,
 ) {
     BoxWithConstraints(
         modifier =
@@ -949,14 +953,18 @@ private fun FullscreenSharpArtworkCanvas(
         val fullWidthPx = with(density) { maxWidth.toPx() }
         val fullHeightPx = with(density) { maxHeight.toPx() }
         val zoneHeightPx = fullHeightPx * mirrorSeamFraction
+        val artworkWidthPx = if (squareArtwork) minOf(fullWidthPx, zoneHeightPx) else fullWidthPx
+        val artworkHeightPx = if (squareArtwork) artworkWidthPx else zoneHeightPx
+        val artworkOffsetX = (fullWidthPx - artworkWidthPx) / 2f
         val artworkTransform =
-            remember(artwork, fullWidthPx, zoneHeightPx) {
-                calculateFullscreenCropTransform(
+            remember(artwork, fullWidthPx, zoneHeightPx, squareArtwork) {
+                val crop = calculateFullscreenCropTransform(
                     imageWidth = artwork.width.toFloat(),
                     imageHeight = artwork.height.toFloat(),
-                    dstWidth = fullWidthPx,
-                    dstHeight = zoneHeightPx,
+                    dstWidth = artworkWidthPx,
+                    dstHeight = artworkHeightPx,
                 )
+                crop.copy(offsetX = crop.offsetX + artworkOffsetX)
             }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
