@@ -23,6 +23,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 /**
  * One shared LiriQo request backs all eleven independently configurable source entries.
@@ -33,7 +36,7 @@ class LiriQoLyricsProvider(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val requestMutex = Mutex()
-    private val responseCache = linkedMapOf<String, String?>()
+    private val responseCache = linkedMapOf<String, CachedResponse>()
 
     suspend fun getLyrics(
         title: String,
@@ -105,7 +108,9 @@ class LiriQoLyricsProvider(
     ): String? {
         val key = listOf(title.trim(), artist.trim(), duration?.toString().orEmpty(), album.orEmpty()).joinToString("\u0000")
         return requestMutex.withLock {
-            if (responseCache.containsKey(key)) return@withLock responseCache[key]
+            responseCache[key]?.takeIf { it.createdAt.elapsedNow() < RESPONSE_CACHE_TTL }?.let {
+                return@withLock it.body
+            }
             val response =
                 try {
                     httpClient
@@ -124,7 +129,7 @@ class LiriQoLyricsProvider(
                 }
 
             // Cache misses too, so all eleven providers still share a single failed lookup.
-            responseCache[key] = response
+            responseCache[key] = CachedResponse(response, TimeSource.Monotonic.markNow())
             while (responseCache.size > MAX_CACHED_QUERIES) {
                 responseCache.remove(responseCache.keys.first())
             }
@@ -298,6 +303,11 @@ class LiriQoLyricsProvider(
     private fun JsonObject.stringArray(key: String): List<String> =
         (this[key] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
 
+    private data class CachedResponse(
+        val body: String?,
+        val createdAt: TimeMark,
+    )
+
     private data class TimedLine(
         val startMs: Long,
         val endMs: Long?,
@@ -315,5 +325,6 @@ class LiriQoLyricsProvider(
         const val BASE_URL = "https://api.liriqo-alfarrizi.my.id/v1"
         const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
         const val MAX_CACHED_QUERIES = 6
+        val RESPONSE_CACHE_TTL = 20.seconds
     }
 }
