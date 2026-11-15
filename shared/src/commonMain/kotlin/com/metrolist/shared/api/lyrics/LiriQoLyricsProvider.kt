@@ -218,20 +218,14 @@ class LiriQoLyricsProvider(
                 }
             val backgroundSource = BACKGROUND_PARENTHESIS.find(line.text)?.groupValues?.get(1).orEmpty()
             val mainSource = BACKGROUND_PARENTHESIS.replace(line.text, " ").replace(WHITESPACE, " ").trim()
-            var inBackground = false
-            val mainTimedWords = mutableListOf<TimedWord>()
-            val backgroundTimedWords = mutableListOf<TimedWord>()
-            validWords.forEach { word ->
-                val opensBackground = word.text.contains('(')
-                val closesBackground = word.text.contains(')')
-                if (opensBackground) inBackground = true
-                val cleanText = word.text.replace("(", "").replace(")", "").trim()
-                if (cleanText.isNotEmpty()) {
-                    val cleaned = word.copy(text = cleanText)
-                    if (inBackground) backgroundTimedWords += cleaned else mainTimedWords += cleaned
-                }
-                if (closesBackground) inBackground = false
-            }
+            // Parenthesized background vocals can overlap the main vocal. Do not toggle a
+            // background state from "(" to ")": timed main-vocal words may occur between
+            // two background words. Match the parenthesized phrase to timed words instead.
+            val backgroundIndexes = findBackgroundWordIndexes(validWords, backgroundSource)
+            val mainTimedWords = validWords.filterIndexed { index, _ -> index !in backgroundIndexes }
+            val backgroundTimedWords = validWords.filterIndexed { index, _ -> index in backgroundIndexes }
+                .map { it.copy(text = it.text.replace("(", "").replace(")", "").trim()) }
+                .filter { it.text.isNotEmpty() }
             val mlxWords = buildMlxWords(mainTimedWords, mainSource)
             val backgroundWords = buildMlxWords(backgroundTimedWords, backgroundSource)
             val outputMainText = mainSource.ifBlank { line.text }
@@ -247,6 +241,27 @@ class LiriQoLyricsProvider(
             }
         }
         return builder.build()
+    }
+
+    /**
+     * Finds the timed fragments that spell the parenthesized background phrase.
+     * Search backwards so repeated words in overlapping main/background vocals
+     * resolve to the later matching occurrence, leaving earlier main-vocal words intact.
+     */
+    private fun findBackgroundWordIndexes(words: List<TimedWord>, backgroundText: String): Set<Int> {
+        val phraseWords = backgroundText.trim().split(WHITESPACE).filter { it.isNotBlank() }
+        if (phraseWords.isEmpty()) return emptySet()
+        val selected = mutableListOf<Int>()
+        var searchBefore = words.lastIndex
+        for (phraseWord in phraseWords.asReversed()) {
+            val normalizedPhraseWord = phraseWord.trim('(', ')')
+            val match = (searchBefore downTo 0).firstOrNull { index ->
+                words[index].text.trim().trim('(', ')').equals(normalizedPhraseWord, ignoreCase = true)
+            } ?: return emptySet()
+            selected += match
+            searchBefore = match - 1
+        }
+        return selected.toSet()
     }
 
     /**
