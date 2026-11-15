@@ -42,7 +42,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.time.TimeSource
 
-internal val LyPlusScrollEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+internal val LyPlusScrollEasing = CubicBezierEasing(0.41f, 0f, 0.12f, 0.99f)
 
 internal const val LYRICS_SCROLL_LOCK_MS = 400L
 internal const val LYRICS_FORCED_SCROLL_MS = 500
@@ -62,7 +62,7 @@ internal fun lyPlusSpringFor(
     zeta: Float = SPRING_ZETA_DEFAULT,
 ): LyPlusSpring {
     val durKey = ((durationMs.coerceAtLeast(1L) + 5L) / 10L * 10L).toInt().coerceAtLeast(10)
-    val clampedZeta = (kotlin.math.round(zeta.coerceIn(0.78f, 0.97f) * 50f) / 50f)
+    val clampedZeta = (kotlin.math.round(zeta.coerceIn(0.3f, 0.97f) * 50f) / 50f)
     val zetaKey = (clampedZeta * 100f).roundToInt()
     val cacheKey = (durKey.toLong() shl 16) or (zetaKey.toLong() and 0xFFFFL)
     synchronized(springCacheLock) {
