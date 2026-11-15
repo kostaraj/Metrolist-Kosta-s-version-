@@ -26,7 +26,7 @@ class LiriQoLyricsProviderTest {
                     "timed":[{
                       "id":0,"text":"Hello world","start":1000,"end":3000,
                       "words":[
-                        {"text":"Hello ","start":1000,"end":1800},
+                        {"text":"Hello","start":1000,"end":1800},
                         {"text":"world","start":1900,"end":3000}
                       ]
                     }]
