@@ -1,11 +1,6 @@
 name: Build Android
 
 on:
-  # One-off benchmark build is triggered by the CI workflow adjustment commit.
-  push:
-    branches: [lyrics-animation-rework]
-    paths:
-      - .github/workflows/ci.yml
   workflow_dispatch:
     inputs:
       variant:
