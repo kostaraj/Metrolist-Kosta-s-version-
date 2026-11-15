@@ -101,4 +101,64 @@ class LiriQoLyricsProviderTest {
                 client.close()
             }
         }
+
+    @Test
+    fun returnsWordLineAndPlainVariantsAndSharesOneRequestAcrossSources() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "metadata":{"title":"Song","artist":"Artist"},
+                  "primary":null,
+                  "tracks":[
+                    {
+                      "provider":"kugou_legato",
+                      "upstreamProvider":"KuGou",
+                      "syncLevel":"word",
+                      "plain":"Hello world",
+                      "timed":[
+                        {
+                          "id":0,"text":"Hello world","start":1000,"end":3000,
+                          "words":[
+                            {"text":"Hello ","start":1000,"end":1800},
+                            {"text":"world","start":1900,"end":3000}
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "provider":"qq_portato",
+                      "upstreamProvider":"QQ Music",
+                      "syncLevel":"line",
+                      "plain":"Another lyric",
+                      "timed":[{"id":0,"text":"Another lyric","start":4000,"end":6000}]
+                    }
+                  ]
+                }
+                """.trimIndent()
+            var requests = 0
+            val client = HttpClient(MockEngine {
+                requests++
+                respond(response, HttpStatusCode.OK)
+            })
+            try {
+                val provider = LiriQoLyricsProvider(client)
+                val kugou = provider.getLyricsResults("Song", "Artist", 120_000, provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_KUGOU)
+                val qq = provider.getLyricsResults("Song", "Artist", 120_000, provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_QQ_MUSIC)
+
+                assertEquals(3, kugou.size)
+                val parsedKugou = kugou.map { MlxParser.parse(it.lyrics) }
+                assertTrue(parsedKugou.any { document -> document.lines.any { !it.words.isNullOrEmpty() } })
+                assertTrue(parsedKugou.any { document -> document.lines.any { it.time > 0L && it.words.isNullOrEmpty() } })
+                assertTrue(parsedKugou.any { document -> document.lines.isNotEmpty() && document.lines.all { it.time == 0L } })
+
+                assertEquals(2, qq.size)
+                assertEquals(1, requests)
+                assertTrue(kugou.all { it.provider.contains("KuGou") })
+                assertTrue(qq.all { it.provider.contains("QQ Music") })
+            } finally {
+                client.close()
+            }
+        }
+
 }
