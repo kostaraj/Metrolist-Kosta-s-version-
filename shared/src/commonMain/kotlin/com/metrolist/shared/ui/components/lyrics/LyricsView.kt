@@ -847,7 +847,7 @@ fun LyricsView(
                     try {
                         if (!scrollShifter.isRunning && !scrollShifter.isSuppressed) {
                             val scrollingDown = offset >= 0
-                            val durationMs = target.scrollDurationMs
+                            val durationMs = target.scrollDurationMs.coerceAtLeast(520L)
                             val zeta = resolveDynamicSpringZeta(target.scrollGapT)
                             scrollShifter.arm(
                                 LyricsScrollStagger(
@@ -1007,7 +1007,7 @@ fun LyricsView(
 
                                     resizeOnly -> {
                                         scrollShifter.clearSuppression()
-                                        val durationMs = target.scrollDurationMs
+                                        val durationMs = target.scrollDurationMs.coerceAtLeast(520L)
                                         val stagger =
                                             LyricsScrollStagger(
                                                 scrollingDown = offsetPx >= 0f,
@@ -1027,7 +1027,7 @@ fun LyricsView(
 
                                     abs(scrollOffset) > 1 || scrollShifter.hasStagedOffsets -> {
                                         scrollShifter.clearSuppression()
-                                        val durationMs = if (target.isSeek) 380L else target.scrollDurationMs
+                                        val durationMs = target.scrollDurationMs.coerceAtLeast(520L)
                                         val zeta =
                                             if (positionJumped || abs(offsetPx) > latestViewportHeightPx * 0.5f) {
                                                 SPRING_ZETA_TIGHT_GAP
