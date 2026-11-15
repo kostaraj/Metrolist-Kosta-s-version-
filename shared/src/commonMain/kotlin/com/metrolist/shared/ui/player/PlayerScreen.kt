@@ -1092,7 +1092,7 @@ fun PlayerScreen(
                                     PlayerBackgroundArtwork(currentSong.displayThumbnail!!, artworkCrossfade) { backgroundUrl ->
                                         BlurredArtworkBackground(
                                             url = backgroundUrl,
-                                            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f).align(Alignment.TopCenter),
+                                            modifier = Modifier.fillMaxSize(),
                                             blurRadiusPx = playerBackgroundBlurRadiusPx,
                                             pendingScrimAlpha = 0.5f,
                                         )
