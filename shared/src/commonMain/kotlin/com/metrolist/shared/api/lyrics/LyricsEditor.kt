@@ -255,7 +255,7 @@ data class LyricsEditorSnapshot(
                 val rendered = parseRow(renderLine(line))
                 index.takeIf {
                     parsed == null || parsed.time != stored || parsed.words != rendered?.words ||
-                        parsed.backgroundWords != rendered.backgroundWords ||
+                        parsed.backgroundWords != rendered?.backgroundWords ||
                         parsed.agent != line["agent"]?.jsonPrimitive?.contentOrNull ||
                         parsed.backgroundText != line["backgroundText"]?.jsonPrimitive?.contentOrNull
                 }
