@@ -91,8 +91,12 @@ fun MusicVideoSurface(
         remember(cornerRadius, density, useSurfaceView) {
             if (useSurfaceView) null else RoundedCornerOutlineProvider(with(density) { cornerRadius.toPx() })
         }
-    // Keep the video's complete frame visible; never zoom/crop its sides.
-    val targetResizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+    val targetResizeMode =
+        if (fillContainer) {
+            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        } else {
+            AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
     val isVideoReady = hasFrame
     val videoAlpha by animateFloatAsState(
         targetValue = if (isVideoReady) 1f else 0f,
@@ -236,7 +240,7 @@ fun MusicVideoSurface(
             AsyncImage(
                 url = artworkUrl,
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
+                contentScale = if (fillContainer) ContentScale.Crop else ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
         }
