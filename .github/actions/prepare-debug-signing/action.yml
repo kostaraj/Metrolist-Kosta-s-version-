@@ -1,0 +1,58 @@
+name: Prepare Android debug signing
+description: Materialize and validate the persistent debug keystore for repeatable APK updates
+
+outputs:
+  signing_available:
+    description: Whether all debug signing secrets are configured
+    value: ${{ steps.prepare.outputs.signing_available }}
+  keystore_path:
+    description: Path to the debug keystore file on the runner
+    value: ${{ steps.prepare.outputs.keystore_path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare debug signing keystore
+      id: prepare
+      shell: bash
+      env:
+        DEBUG_KEYSTORE: ${{ env.DEBUG_KEYSTORE }}
+        DEBUG_KEYSTORE_PASSWORD: ${{ env.DEBUG_KEYSTORE_PASSWORD }}
+        DEBUG_KEY_ALIAS: ${{ env.DEBUG_KEY_ALIAS }}
+        DEBUG_KEY_PASSWORD: ${{ env.DEBUG_KEY_PASSWORD }}
+      run: |
+        set -euo pipefail
+        if [ -z "$DEBUG_KEYSTORE" ] || [ -z "$DEBUG_KEYSTORE_PASSWORD" ] || [ -z "$DEBUG_KEY_ALIAS" ] || [ -z "$DEBUG_KEY_PASSWORD" ]; then
+          echo "Persistent debug signing secrets not fully configured; using the runner's default debug key"
+          echo "signing_available=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        KEYSTORE_FILE="${RUNNER_TEMP}/metrolist-debug.keystore"
+        umask 077
+        printf '%s' "$DEBUG_KEYSTORE" | base64 --decode > "$KEYSTORE_FILE"
+
+        if [ ! -s "$KEYSTORE_FILE" ]; then
+          echo "::error::Debug keystore is missing or empty"
+          exit 1
+        fi
+
+        VALIDATION_STORE="${RUNNER_TEMP}/debug-signing-validation.p12"
+        rm -f "$VALIDATION_STORE"
+        if ! keytool -importkeystore \
+          -srckeystore "$KEYSTORE_FILE" \
+          -srcstorepass "$DEBUG_KEYSTORE_PASSWORD" \
+          -srcalias "$DEBUG_KEY_ALIAS" \
+          -srckeypass "$DEBUG_KEY_PASSWORD" \
+          -destkeystore "$VALIDATION_STORE" \
+          -deststoretype PKCS12 \
+          -deststorepass metrolist-ci-validation \
+          -destkeypass metrolist-ci-validation \
+          -noprompt; then
+          echo "::error::Unable to read the Android debug signing key. Verify DEBUG_KEYSTORE_PASSWORD, DEBUG_KEY_ALIAS, and DEBUG_KEY_PASSWORD."
+          exit 1
+        fi
+        rm -f "$VALIDATION_STORE"
+
+        echo "signing_available=true" >> "$GITHUB_OUTPUT"
+        echo "keystore_path=$KEYSTORE_FILE" >> "$GITHUB_OUTPUT"
