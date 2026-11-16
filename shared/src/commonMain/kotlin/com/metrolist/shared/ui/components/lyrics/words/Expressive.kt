@@ -205,7 +205,7 @@ internal fun ExpressiveWordAnimation(
     val latestPosition by rememberUpdatedState(positionProvider)
     val density = LocalDensity.current
     val fontSizePx = remember(lyricStyle, density) { with(density) { lyricStyle.fontSize.toPx() } }
-    val gradientWidth = fontSizePx * 0.65f
+    val gradientWidth = fontSizePx * 0.8f
     val extraPaddingPx = minOf(fontSizePx * 0.4f, with(density) { LYRICS_LINE_HORIZONTAL_PADDING.toPx() })
 
     var frameWallTimeMs by remember { mutableLongStateOf(0L) }
@@ -298,12 +298,16 @@ internal fun ExpressiveWordAnimation(
             FloatArray(effectiveWords.size) { wIdx ->
                 val word = effectiveWords[wIdx]
                 val dur = ((word.endTime - word.startTime) * 1000.0).toFloat()
-                val wordLenText = word.text.length.coerceAtLeast(1)
-                val impactRatio = dur / wordLenText
-                (
-                    ((impactRatio - 100f) / 250f).coerceIn(0f, 1f) * 0.6f +
-                        ((dur - 300f) / 1500f).coerceIn(0f, 1f) * 0.4f
-                ).coerceIn(0f, 1f)
+                if (dur < 500f) {
+                    0f
+                } else {
+                    val wordLenText = word.text.length.coerceAtLeast(1)
+                    val impactRatio = dur / wordLenText
+                    (
+                        ((impactRatio - 100f) / 250f).coerceIn(0f, 1f) * 0.6f +
+                            ((dur - 300f) / 1500f).coerceIn(0f, 1f) * 0.4f
+                    ).coerceIn(0f, 1f)
+                }
             }
         }
 
@@ -1018,7 +1022,7 @@ private fun OgRtlExpressiveWordAnimation(
     val currentPositionProvider by rememberUpdatedState(positionProvider)
     val density = LocalDensity.current
     val fontSizePx = remember(lyricStyle) { with(density) { lyricStyle.fontSize.toPx() } }
-    val gradientWidth = fontSizePx * 0.65f
+    val gradientWidth = fontSizePx * 0.8f
     val extraPaddingPx = minOf(fontSizePx * 0.4f, with(density) { LYRICS_LINE_HORIZONTAL_PADDING.toPx() })
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
