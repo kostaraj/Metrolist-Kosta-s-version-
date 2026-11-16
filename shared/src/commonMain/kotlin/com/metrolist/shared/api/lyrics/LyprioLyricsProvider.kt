@@ -445,11 +445,9 @@ class LyprioLyricsProvider internal constructor(
             val lineText = line["text"]?.jsonPrimitive?.content.orEmpty()
             val start = line["startMs"]?.jsonPrimitive?.content?.toLongOrNull()
             val reference =
-                references.firstOrNull { it.first == normalized(lineText) }
-                    ?: references.filter { it.second != null && start != null }
-                        .minByOrNull { kotlin.math.abs(it.second!! - start!!) }
-                        ?.takeIf { it.first.isNotBlank() }
-                    ?: return@map element
+                references.firstOrNull {
+                    it.first == normalized(lineText) && (start == null || it.second == null || it.second == start)
+                } ?: return@map element
 
             fun mergeWords(key: String, referenceText: String?): JsonArray? {
                 val words = line[key] as? JsonArray ?: return null
