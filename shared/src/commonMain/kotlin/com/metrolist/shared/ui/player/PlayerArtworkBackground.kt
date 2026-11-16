@@ -308,7 +308,7 @@ internal fun FullscreenThumbnailBackground(
     val fadeStart = if (isVideoThumbnail) 0.84f else rawStart.coerceIn(0f, 0.75f)
     val mirrorSeam =
         if (isVideoThumbnail) {
-            1f
+            0.999f
         } else {
             rawEnd
                 .coerceAtLeast(fadeStart + 0.06f)
