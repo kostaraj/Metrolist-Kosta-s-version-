@@ -202,7 +202,7 @@ class LiriQoLyricsProviderTest {
                 val line = MlxParser.parse(mlx).lines.single()
                 val words = assertNotNull(line.words)
 
-                assertEquals("LiriQo/APPLE_MUSIC", line.meta.lyricSource)
+                assertEquals("LiriQo/APPLE_MUSIC", MlxParser.parse(mlx).meta.lyricSource)
                 assertEquals("beautiful song", line.text)
                 assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
                 assertEquals(listOf(1.0, 1.2, 1.45, 1.65, 2.5), words.map { it.startTime })
