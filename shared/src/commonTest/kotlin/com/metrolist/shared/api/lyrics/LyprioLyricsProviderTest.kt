@@ -860,6 +860,61 @@ class LyprioLyricsProviderTest {
         }
 
     @Test
+    fun terminalUnavailableEndsWithoutRetryingAllSources() =
+        runBlocking {
+            var requestCount = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requestCount++
+                        respond(
+                            v2Response("unavailable", complete = true),
+                            HttpStatusCode.ServiceUnavailable,
+                            headersOf(HttpHeaders.ContentType, "application/json", "X-Lyprio-Protocol", "2"),
+                        )
+                    },
+                )
+
+            client.use {
+                assertNull(provider(client).getLyrics("Busy", "Everyone", null))
+                assertEquals(1, requestCount)
+            }
+        }
+
+    @Test
+    fun mergesSyllableFragmentsUsingLineSyncFromTheSameSubprovider() =
+        runBlocking {
+            val lineSynced =
+                """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":6000,"text":"I found the melancholy"}]}"""
+            val wordSynced =
+                """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":6000,"text":"I found the melancholy","words":[{"text":"I ","startMs":1000,"endMs":1300},{"text":"found ","startMs":1300,"endMs":2000},{"text":"the ","startMs":2000,"endMs":2300},{"text":"melan ","startMs":2300,"endMs":3900},{"text":"choly","startMs":3900,"endMs":5000}]}]}"""
+            val client =
+                HttpClient(
+                    MockEngine {
+                        respond(
+                            v2Response(
+                                "ready",
+                                complete = true,
+                                result = result(lineSynced, "SAME_SOURCE", "line") +
+                                    "," + result(wordSynced, "SAME_SOURCE", "word"),
+                            ),
+                            HttpStatusCode.OK,
+                            headersOf(HttpHeaders.ContentType, "application/json", "X-Lyprio-Protocol", "2"),
+                        )
+                    },
+                )
+
+            client.use {
+                val results = provider(client).getLyricsResults("Song", "Artist", null)
+                assertEquals(1, results.size)
+                val words = MlxParser.parse(results.single()).lines.single().words.orEmpty()
+                assertEquals(listOf("I", "found", "the", "melancholy"), words.map { it.text })
+                assertEquals(2.3, words.last().startTime)
+                assertEquals(5.0, words.last().endTime)
+            }
+        }
+
+    @Test
     fun prefersWordSyncedResultAndExplicitlyRequestsAllSources() =
         runBlocking {
             val unsynced = """{"version":2,"song":{},"lines":[{"startMs":1000,"text":"Plain lyrics"}]}"""
