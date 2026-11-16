@@ -100,6 +100,7 @@ internal object MlxJsonParser {
                     },
                 lines =
                     source.lines.map { line ->
+                        val normalizedLineText = normalizeHyphenatedLyricSpacing(line.text)
                         // Untimed TTML paragraphs can inherit the song's end without a line start.
                         val lineEndMs = line.endMs?.takeIf { line.startMs != null }
                         val backgroundWords =
@@ -118,12 +119,12 @@ internal object MlxJsonParser {
                                     isLineTimed = true,
                                 )
                         }
-                        val foregroundWords = line.words.map { it.timestamp() }.withSpacingFrom(line.text)
+                        val foregroundWords = line.words.map { it.timestamp() }.withSpacingFrom(normalizedLineText)
                         val words = (foregroundWords + backgroundWords).takeIf { it.isNotEmpty() }
                         LyricsEntry(
                             time = line.startMs ?: 0,
                             text =
-                                line.text.ifBlank {
+                                normalizedLineText.ifBlank {
                                     line.words.joinToString("") { it.text }.ifBlank {
                                         line.backgroundText?.takeIf { it.isNotBlank() }
                                             ?: line.backgroundWords.joinToString("") { it.text }
@@ -172,23 +173,26 @@ internal object MlxJsonParser {
     private fun List<WordTimestamp>.withSpacingFrom(sourceText: String): List<WordTimestamp> {
         if (isEmpty() || sourceText.isBlank()) return this
         val compactSource = sourceText.filterNot { it.isWhitespace() }
-        val compactWords = joinToString("") { it.text }.filterNot { it.isWhitespace() }
+        val compactWords = joinToString("") { it.text.filterNot(Char::isWhitespace) }.filterNot { it.isWhitespace() }
         if (!compactSource.equals(compactWords, ignoreCase = true)) return this
 
         var searchFrom = 0
         val starts = mutableListOf<Int>()
         for (word in this) {
-            val start = sourceText.indexOf(word.text, searchFrom, ignoreCase = true)
+            val fragment = word.text.trimEnd()
+            val start = sourceText.indexOf(fragment, searchFrom, ignoreCase = true)
             if (start < 0) return this
             starts += start
-            searchFrom = start + word.text.length
+            searchFrom = start + fragment.length
         }
 
         return mapIndexed { index, word ->
-            val wordEnd = starts[index] + word.text.length
+            val fragment = word.text.trimEnd()
+            val wordEnd = starts[index] + fragment.length
             val nextWordStart = starts.getOrNull(index + 1) ?: wordEnd
             val hasSeparator =
-                nextWordStart > wordEnd &&
+                !fragment.endsWithLyricHyphen() &&
+                    nextWordStart > wordEnd &&
                     sourceText.substring(wordEnd, nextWordStart).any { it.isWhitespace() }
             word.copy(hasTrailingSpace = hasSeparator)
         }

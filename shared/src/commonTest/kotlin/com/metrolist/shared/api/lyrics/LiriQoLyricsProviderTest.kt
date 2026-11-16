@@ -486,4 +486,51 @@ class LiriQoLyricsProviderTest {
                 client.close()
             }
         }
+    
+    @Test
+    fun keepsHyphenatedSyllableFragmentsJoinedWhenNormalizingLiriQo() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "kugou_legato",
+                    "syncLevel": "syllable",
+                    "timed": [{
+                      "id": 0,
+                      "text": "Ooh- ooh- ooh- ooh",
+                      "start": 1000,
+                      "end": 3000,
+                      "words": [
+                        {"text":"Ooh- ","start":1000,"end":1500},
+                        {"text":"ooh- ","start":1500,"end":2000},
+                        {"text":"ooh- ","start":2000,"end":2500},
+                        {"text":"ooh","start":2500,"end":3000}
+                      ]
+                    }]
+                  },
+                  "tracks": []
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx =
+                    assertNotNull(
+                        LiriQoLyricsProvider(client).getLyricsResults(
+                            "Song",
+                            "Artist",
+                            null,
+                            provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_KUGOU,
+                        ).singleOrNull()?.lyrics,
+                    )
+                val line = MlxParser.parse(mlx).lines.single()
+                assertEquals("Ooh-ooh-ooh-ooh", line.text)
+                assertEquals(listOf("Ooh-", "ooh-", "ooh-", "ooh"), line.words!!.map { it.text })
+                assertEquals(listOf(false, false, false, false), line.words!!.map { it.hasTrailingSpace })
+                assertEquals(listOf(1.0, 1.5, 2.0, 2.5), line.words!!.map { it.startTime })
+            } finally {
+                client.close()
+            }
+        }
 }
+

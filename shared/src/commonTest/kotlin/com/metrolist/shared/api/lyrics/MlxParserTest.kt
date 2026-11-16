@@ -253,4 +253,27 @@ class MlxParserTest {
             """{"version":2,"lines":[{"startMs":1000,"endMs":2000,"backgroundWords":[{"text":"Echo","startMs":1000,"endMs":2000}]}]}"""
         assertEquals(LyricsTimingKind.WORD_SYNCED, lyricsTimingKind(MlxParser.parse(timedBackground).lines))
     }
+    
+    @Test
+    fun normalizesHyphenatedSyllableSpacingInTextAndJsonMlx() {
+        val textMlx =
+            """
+            [meta]
+            provider=LYPRIO
+            subprovider=KUGOU
+            [lyrics]
+            [00:01.000~00:03.000]<00:01.000>Ooh- <00:01.500>ooh- <00:02.000>ooh- <00:02.500>ooh
+            """.trimIndent()
+        val textLine = MlxParser.parse(textMlx).lines.single()
+        assertEquals("Ooh-ooh-ooh-ooh", textLine.text)
+        assertEquals(listOf(false, false, false, false), textLine.words!!.map { it.hasTrailingSpace })
+
+        val jsonMlx =
+            """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":3000,"text":"Ooh- ooh- ooh- ooh","words":[{"text":"Ooh- ","startMs":1000,"endMs":1500},{"text":"ooh- ","startMs":1500,"endMs":2000},{"text":"ooh- ","startMs":2000,"endMs":2500},{"text":"ooh","startMs":2500,"endMs":3000}]}]}"""
+        val jsonLine = MlxParser.parse(jsonMlx).lines.single()
+        assertEquals("Ooh-ooh-ooh-ooh", jsonLine.text)
+        assertEquals(listOf(false, false, false, false), jsonLine.words!!.map { it.hasTrailingSpace })
+        assertEquals(listOf(1.0, 1.5, 2.0, 2.5), jsonLine.words!!.map { it.startTime })
+    }
 }
+

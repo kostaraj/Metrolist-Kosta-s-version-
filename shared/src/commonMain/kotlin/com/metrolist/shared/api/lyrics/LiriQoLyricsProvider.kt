@@ -263,14 +263,16 @@ class LiriQoLyricsProvider(
                     emptyList()
                 }
             val boundaryText =
-                lineBoundaryReference.firstOrNull {
+                normalizeHyphenatedLyricSpacing(
+                    lineBoundaryReference.firstOrNull {
                     line.id != null && it.id == line.id && sameTextIgnoringWhitespace(it.text, line.text)
                 }?.text
                     ?: lineBoundaryReference.firstOrNull {
                         it.index == line.index && sameTextIgnoringWhitespace(it.text, line.text)
                     }?.text
                     ?: plainLines.getOrNull(line.index)?.takeIf { sameTextIgnoringWhitespace(it, line.text) }
-                    ?: line.text
+                    ?: line.text,
+                )
             val backgroundSource = BACKGROUND_PARENTHESIS.find(boundaryText)?.groupValues?.get(1).orEmpty()
             val mainSource = BACKGROUND_PARENTHESIS.replace(boundaryText, " ").replace(WHITESPACE, " ").trim()
             // Parenthesized background vocals can overlap the main vocal. Do not toggle a

@@ -8,6 +8,15 @@ package com.metrolist.shared.api.lyrics
 import com.metrolist.shared.model.AgentType
 import kotlin.time.Clock
 
+private val HYPHENATED_LYRIC_SPACE = Regex("""([-‐‑])\s+(?=\S)""")
+
+/** Removes accidental syllable separators after a hyphen without touching normal word spaces. */
+internal fun normalizeHyphenatedLyricSpacing(text: String): String =
+    text.replace(HYPHENATED_LYRIC_SPACE, "$1")
+
+internal fun String.endsWithLyricHyphen(): Boolean =
+    lastOrNull() in setOf('-', '‐', '‑')
+
 class MlxBuilder {
     private val metaLines = StringBuilder()
     private val songLines = StringBuilder()

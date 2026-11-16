@@ -572,8 +572,16 @@ object MlxParser {
         val fallbackEnd = lineEndMs?.takeIf { it > pendingStartMs } ?: (pendingStartMs + 500L)
         flushPending(fallbackEnd)
 
-        val plainText = textBuf.toString().trim()
-        return plainText to words.takeIf { it.isNotEmpty() }
+        val plainText = normalizeHyphenatedLyricSpacing(textBuf.toString().trim())
+        val normalizedWords =
+            words.mapIndexed { index, word ->
+                if (index < words.lastIndex && word.text.endsWithLyricHyphen()) {
+                    word.copy(hasTrailingSpace = false)
+                } else {
+                    word
+                }
+            }
+        return plainText to normalizedWords.takeIf { it.isNotEmpty() }
     }
 
     fun tsToMs(ts: String): Long {
