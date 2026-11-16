@@ -410,6 +410,7 @@ class LyricsRepository(
         suspend fun acceptFetch(
             fetch: ProviderLyricsFetch,
             providerIndex: Int,
+            provider: LyricsProvider,
         ) {
             hadProviderFailure = hadProviderFailure || fetch.failed
             for (candidate in fetch.lyrics) {
@@ -474,7 +475,7 @@ class LyricsRepository(
             currentCoroutineContext().ensureActive()
             if (bestTimingKind >= preferredTiming && index >= bestProviderIndex) continue
             val fetch = fetchProviderLyrics(lookupVideoId, title, artist, duration, album, provider, isVideoContext = isVideoContext)
-            acceptFetch(fetch, index)
+            acceptFetch(fetch, index, provider)
             if (bestTimingKind >= preferredTiming &&
                 fetchOrder.drop(fetchIndex + 1).none { providerPriority(it.name, providers) < bestProviderIndex }
             ) {
