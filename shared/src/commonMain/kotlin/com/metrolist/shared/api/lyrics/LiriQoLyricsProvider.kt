@@ -146,7 +146,7 @@ class LiriQoLyricsProvider(
         metadata: JsonObject?,
     ): List<LyricsWithProvider> {
         val sourceId = track.string("provider") ?: return emptyList()
-        val sourceLabel = "LIRIQO/${sourceSlug(sourceId)}"
+        val sourceLabel = "LiriQo/${sourceSlug(sourceId)}"
         val timed = track["timed"] as? JsonArray
         val lines =
             timed?.mapNotNull { element ->

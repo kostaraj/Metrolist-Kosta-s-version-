@@ -57,7 +57,7 @@ class LiriQoLyricsProviderTest {
                 assertEquals(listOf("Hello", "world"), words.map { it.text })
                 assertEquals(listOf(1.0, 1.9), words.map { it.startTime })
                 assertEquals(listOf(1.8, 3.0), words.map { it.endTime })
-                assertEquals("LIRIQO/KUGOU", document.meta.lyricSource)
+                assertEquals("LiriQo/KUGOU", document.meta.lyricSource)
             } finally {
                 client.close()
             }
@@ -154,8 +154,8 @@ class LiriQoLyricsProviderTest {
 
                 assertEquals(1, qq.size)
                 assertEquals(1, requests)
-                assertTrue(kugou.all { it.provider == "LIRIQO/KUGOU" })
-                assertTrue(qq.all { it.provider == "LIRIQO/QQ_MUSIC" })
+                assertTrue(kugou.all { it.provider == "LiriQo/KUGOU" })
+                assertTrue(qq.all { it.provider == "LiriQo/QQ_MUSIC" })
             } finally {
                 client.close()
             }
@@ -202,6 +202,7 @@ class LiriQoLyricsProviderTest {
                 val line = MlxParser.parse(mlx).lines.single()
                 val words = assertNotNull(line.words)
 
+                assertEquals("LiriQo/APPLE_MUSIC", line.meta.lyricSource)
                 assertEquals("beautiful song", line.text)
                 assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
                 assertEquals(listOf(1.0, 1.2, 1.45, 1.65, 2.5), words.map { it.startTime })
