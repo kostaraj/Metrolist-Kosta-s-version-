@@ -343,9 +343,16 @@ internal fun FullscreenThumbnailBackground(
         val artworkSize =
             with(density) {
                 val widthPx = maxWidth.roundToPx().coerceAtLeast(1)
-                val heightPx = (maxHeight * seam).roundToPx().coerceAtLeast(1)
-                IntSize(widthPx, if (isVideoSong) widthPx.coerceAtMost(heightPx) else heightPx)
+                val heightPx =
+                    if (isVideoSong) {
+                        maxHeight.roundToPx().coerceAtLeast(1)
+                    } else {
+                        (maxHeight * seam).roundToPx().coerceAtLeast(1)
+                    }
+                IntSize(widthPx, heightPx)
             }
+        // Video thumbnails fill the player viewport; the crop is centered instead of adding artwork bleed.
+        val artworkSeam = if (isVideoSong) 1f else seam
         // Animated artwork keeps the cropped full-bleed layout; only static covers get the uncropped bleed.
         val usesArtworkBleed = usesFullscreenArtworkBleed(hasVideo, canvasTall, isVideoSong)
         if (!usesArtworkBleed) {
@@ -403,9 +410,8 @@ internal fun FullscreenThumbnailBackground(
                 Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = 1f - videoVisible }) {
                     FullscreenSharpArtworkCanvas(
                         artwork = artworkBitmap,
-                        mirrorSeamFraction = seam,
+                        mirrorSeamFraction = artworkSeam,
                         alphaMask = artworkFadeMask,
-                        squareArtwork = isVideoSong,
                     )
                 }
 
@@ -431,7 +437,7 @@ internal fun FullscreenThumbnailBackground(
                     )
                 }
 
-                if (canvasTall) {
+                if (canvasTall && !isVideoSong) {
                     FullscreenMirroredBlurCanvas(
                         artwork = artworkBitmap,
                         mirrorSeamFraction = seam,
