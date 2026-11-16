@@ -166,9 +166,9 @@ class AuthManager {
                 false
             } else {
                 Settings.shared.accountName = info.name
-                Settings.shared.accountEmail = info.email ?: ""
-                Settings.shared.accountChannelHandle = info.channelHandle ?: ""
-                Settings.shared.accountThumbnail = info.thumbnailUrl ?: ""
+                Settings.shared.accountEmail = info.email ?: Settings.shared.accountEmail
+                Settings.shared.accountChannelHandle = info.channelHandle ?: Settings.shared.accountChannelHandle
+                Settings.shared.accountThumbnail = info.thumbnailUrl ?: Settings.shared.accountThumbnail
                 YouTubeSyncState.succeeded("account")
                 true
             }

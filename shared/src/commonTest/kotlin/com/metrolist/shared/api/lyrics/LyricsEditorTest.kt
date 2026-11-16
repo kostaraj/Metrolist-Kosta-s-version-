@@ -605,6 +605,52 @@ class LyricsEditorTest {
     }
 
     @Test
+    fun overlappingBackgroundWordTagsWithMixedPrecisionRemainEditable() {
+        val editor =
+            LyricsEditor(
+                """
+                {
+                  "version": 2,
+                  "lines": [{
+                    "startMs": 36576,
+                    "endMs": 40620,
+                    "text": "I swore my loyalty to me, myself, and I",
+                    "agent": "v1",
+                    "words": [
+                      {"text":"I ","startMs":36576,"endMs":36773},
+                      {"text":"swore ","startMs":36773,"endMs":37011},
+                      {"text":"my ","startMs":37011,"endMs":37291},
+                      {"text":"loyalty ","startMs":37291,"endMs":38021},
+                      {"text":"to ","startMs":38021,"endMs":38256},
+                      {"text":"me, ","startMs":38256,"endMs":39032},
+                      {"text":"myself, ","startMs":39032,"endMs":39976},
+                      {"text":"and ","startMs":39976,"endMs":40245},
+                      {"text":"I","startMs":40245,"endMs":40620}
+                    ],
+                    "backgroundWords": [
+                      {"text":"Me, ","startMs":38677,"endMs":39513},
+                      {"text":"myself, ","startMs":39513,"endMs":40620},
+                      {"text":"I","startMs":40620,"endMs":41120}
+                    ]
+                  }]
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(editor.current.isValid, editor.current.errors.toString())
+        assertTrue("[bg:<00:38.677>Me, <00:39.513>myself, <00:40.62>I" in editor.current.text)
+
+        val edited = editor.current.text.replace(" [bg:", "[bg:") + " "
+        editor.edit(edited, edited.length)
+
+        assertTrue(editor.current.isValid, editor.current.errors.toString())
+        val line = MlxJsonParser.parse(editor.current.json)!!.lines.single()
+        assertEquals("v1", line.agent)
+        assertEquals(listOf("Me,", "myself,", "I"), line.words!!.filter { it.isBackground }.map { it.text })
+        assertEquals(listOf(38.677, 39.513, 40.62), line.words!!.filter { it.isBackground }.map { it.startTime })
+    }
+
+    @Test
     fun backgroundWordsAndSingerAgentsAreVisibleEditableAndPreserved() {
         val editor =
             LyricsEditor(

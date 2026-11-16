@@ -143,6 +143,53 @@ class YouTubeRepositoryFailureTest {
         }
 
     @Test
+    fun accountLookupFallsBackToWebWhenRemixRequestThrows() =
+        runBlocking {
+            var requests = 0
+            HttpClient(
+                MockEngine {
+                    requests++
+                    if (requests == 1) throw IllegalStateException("WEB_REMIX unavailable")
+                    respond(ACCOUNT_MENU, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+                },
+            ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }.use { client ->
+                val innerTube = InnerTube(client).apply { cookie = "SAPISID=persisted" }
+                assertEquals("Music account", YouTubeRepository(innerTube).getAccountInfo()?.name)
+                assertEquals(2, requests)
+            }
+        }
+
+    @Test
+    fun accountLookupFallsBackToSelectedChannelWhenBothAccountMenusOmitTheHeader() =
+        runBlocking {
+            var requests = 0
+            HttpClient(
+                MockEngine {
+                    requests++
+                    val body =
+                        if (requests <= 2) {
+                            """{"actions":[]}"""
+                        } else {
+                            """{"contents":[{"accountItemRenderer":{
+                                "accountName":{"simpleText":"Selected channel"},
+                                "isSelected":true,
+                                "channelHandle":{"simpleText":"@selected"},
+                                "accountPhoto":{"thumbnails":[{"url":"avatar"}]}
+                            }}]}"""
+                        }
+                    respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+                },
+            ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }.use { client ->
+                val innerTube = InnerTube(client).apply { cookie = "SAPISID=persisted" }
+                val info = YouTubeRepository(innerTube).getAccountInfo()
+                assertEquals("Selected channel", info?.name)
+                assertEquals("@selected", info?.channelHandle)
+                assertEquals("avatar", info?.thumbnailUrl)
+                assertEquals(3, requests)
+            }
+        }
+
+    @Test
     fun unavailableAccountRevalidationPreservesTheActiveSession() =
         runBlocking {
             for (offline in listOf(false, true)) {

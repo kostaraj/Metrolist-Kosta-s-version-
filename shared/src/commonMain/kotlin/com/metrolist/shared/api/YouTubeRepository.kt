@@ -357,9 +357,31 @@ class YouTubeRepository(
                 forbiddenExpiresSession = true,
             )
 
+        suspend fun selectedAccountInfo(): AccountInfo? {
+            val selected = getAccountsList(publishExpiredSessionNotice = false).firstOrNull { it.isSelected }
+                ?: return null
+            requireCurrentSession(requestSession)
+            YtLogger.w(TAG, "Account menu fallback recovered the selected channel from the channel switcher")
+            return AccountInfo(
+                name = selected.name,
+                email = null,
+                channelHandle = selected.channelHandle,
+                thumbnailUrl = selected.thumbnailUrl,
+            )
+        }
+
         return try {
             var client = YouTubeClient.WEB_REMIX
-            var httpResponse = innerTube.accountMenu(client)
+            var httpResponse =
+                try {
+                    innerTube.accountMenu(client)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    YtLogger.w(TAG, "Account menu request failed client=$client type=${error::class.simpleName}; trying WEB")
+                    client = YouTubeClient.WEB
+                    innerTube.accountMenu(client)
+                }
             requireCurrentSession(requestSession)
             if (expired(httpResponse)) {
                 httpResponse.bodyAsChannel().cancel()
@@ -391,6 +413,12 @@ class YouTubeRepository(
                 }
                 if (!httpResponse.status.isSuccess()) {
                     httpResponse.bodyAsChannel().cancel()
+                    val selected = selectedAccountInfo()
+                    if (selected != null) {
+                        lastAccountInfo = selected
+                        if (publishExpiredSessionNotice) YouTubeSyncState.succeeded("account")
+                        return selected
+                    }
                     failed()
                     return null
                 }
@@ -416,6 +444,12 @@ class YouTubeRepository(
                 }
                 if (!httpResponse.status.isSuccess()) {
                     httpResponse.bodyAsChannel().cancel()
+                    val selected = selectedAccountInfo()
+                    if (selected != null) {
+                        lastAccountInfo = selected
+                        if (publishExpiredSessionNotice) YouTubeSyncState.succeeded("account")
+                        return selected
+                    }
                     failed()
                     return null
                 }
@@ -427,6 +461,9 @@ class YouTubeRepository(
                 info = withContext(responseDecodeDispatcher) { parseAccountInfoResponse(raw) }
             }
 
+            if (info == null) {
+                info = selectedAccountInfo()
+            }
             if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("YouTube session changed")
             if (info != null) {
                 lastAccountInfo = info

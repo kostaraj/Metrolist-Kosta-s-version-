@@ -148,15 +148,17 @@ class LiriQoLyricsProvider(
         }
     }
 
-    private fun parseLineBoundaryReference(track: JsonObject): Map<Long, String>? {
-        val timed = track["timed"] as? JsonArray ?: return null
-        val lines = timed.mapNotNull { element ->
-            val line = element as? JsonObject ?: return@mapNotNull null
-            val id = line.long("id")?.takeIf { it >= 0L } ?: return@mapNotNull null
-            val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            id to text
-        }.toMap()
-        return lines.takeIf { it.isNotEmpty() }
+    private fun parseLineBoundaryReference(track: JsonObject): List<LineBoundaryReference> {
+        val timed = track["timed"] as? JsonArray ?: return emptyList()
+        return timed.mapIndexedNotNull { index, element ->
+            val line = element as? JsonObject ?: return@mapIndexedNotNull null
+            val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapIndexedNotNull null
+            LineBoundaryReference(
+                index = index,
+                id = line.long("id")?.takeIf { it >= 0L },
+                text = text,
+            )
+        }
     }
 
     private fun parseTrackVariants(
@@ -164,20 +166,21 @@ class LiriQoLyricsProvider(
         requestedTitle: String,
         requestedArtist: String,
         metadata: JsonObject?,
-        lineBoundaryReference: Map<Long, String>,
+        lineBoundaryReference: List<LineBoundaryReference>,
     ): List<LyricsWithProvider> {
         val sourceId = track.string("provider") ?: return emptyList()
         val sourceLabel = "LiriQo/${sourceSlug(sourceId)}"
         val timed = track["timed"] as? JsonArray
         val lines =
-            timed?.mapNotNull { element ->
-                val line = element as? JsonObject ?: return@mapNotNull null
-                val start = line.long("start")?.takeIf { it >= 0L } ?: return@mapNotNull null
+            timed?.mapIndexedNotNull { index, element ->
+                val line = element as? JsonObject ?: return@mapIndexedNotNull null
+                val start = line.long("start")?.takeIf { it >= 0L } ?: return@mapIndexedNotNull null
                 val end = line.long("end")?.takeIf { it > start }
-                val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                val id = line.long("id")?.takeIf { it >= 0L } ?: 0L
-                val words = line["words"] as? JsonArray ?: track.wordsFor(id)
+                val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapIndexedNotNull null
+                val id = line.long("id")?.takeIf { it >= 0L }
+                val words = line["words"] as? JsonArray ?: track.wordsFor(id ?: index.toLong())
                 TimedLine(
+                    index,
                     id,
                     start,
                     end,
@@ -195,7 +198,7 @@ class LiriQoLyricsProvider(
                 }
             }
 
-            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false, lineBoundaryReference = emptyMap())
+            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false, lineBoundaryReference = emptyList())
             return listOf(LyricsWithProvider(lineLyrics, sourceLabel))
         }
 
@@ -224,7 +227,7 @@ class LiriQoLyricsProvider(
         metadata: JsonObject?,
         track: JsonObject,
         includeWords: Boolean,
-        lineBoundaryReference: Map<Long, String>,
+        lineBoundaryReference: List<LineBoundaryReference>,
     ): String {
         val builder =
             MlxBuilder()
@@ -238,6 +241,13 @@ class LiriQoLyricsProvider(
             val type = agent?.string("type")?.let { AgentType.fromString(it) } ?: AgentType.PERSON
             builder.agent(agentId, type, agent?.string("name"))
         }
+        val plainLines =
+            track.string("plain")
+                ?.lineSequence()
+                ?.filter { it.isNotBlank() }
+                ?.map { it.trim() }
+                ?.toList()
+                .orEmpty()
         lines.forEachIndexed { index, line ->
             val inferredEnd =
                 lines.getOrNull(index + 1)?.startMs
@@ -252,7 +262,15 @@ class LiriQoLyricsProvider(
                 } else {
                     emptyList()
                 }
-            val boundaryText = lineBoundaryReference[line.id] ?: line.text
+            val boundaryText =
+                lineBoundaryReference.firstOrNull {
+                    line.id != null && it.id == line.id && sameTextIgnoringWhitespace(it.text, line.text)
+                }?.text
+                    ?: lineBoundaryReference.firstOrNull {
+                        it.index == line.index && sameTextIgnoringWhitespace(it.text, line.text)
+                    }?.text
+                    ?: plainLines.getOrNull(line.index)?.takeIf { sameTextIgnoringWhitespace(it, line.text) }
+                    ?: line.text
             val backgroundSource = BACKGROUND_PARENTHESIS.find(boundaryText)?.groupValues?.get(1).orEmpty()
             val mainSource = BACKGROUND_PARENTHESIS.replace(boundaryText, " ").replace(WHITESPACE, " ").trim()
             // Parenthesized background vocals can overlap the main vocal. Do not toggle a
@@ -335,6 +353,12 @@ class LiriQoLyricsProvider(
         }
     }
 
+    private fun sameTextIgnoringWhitespace(first: String, second: String): Boolean =
+        first.filterNot { it.isWhitespace() }.equals(
+            second.filterNot { it.isWhitespace() },
+            ignoreCase = true,
+        )
+
     private fun timingKind(mlx: String): LyricsTimingKind {
         val document = runCatching { MlxParser.parse(mlx) }.getOrNull()
         if (document == null || document.lines.isEmpty()) return LyricsTimingKind.UNSYNCED
@@ -411,8 +435,15 @@ class LiriQoLyricsProvider(
         val createdAt: TimeMark,
     )
 
+    private data class LineBoundaryReference(
+        val index: Int,
+        val id: Long?,
+        val text: String,
+    )
+
     private data class TimedLine(
-        val id: Long,
+        val index: Int,
+        val id: Long?,
         val startMs: Long,
         val endMs: Long?,
         val text: String,

@@ -181,6 +181,37 @@ class MlxParserTest {
     }
 
     @Test
+    fun derivesSyllableWordSpacingFromJsonLineTextWithoutChangingTimings() {
+        val mlx =
+            """
+            {
+              "version": 2,
+              "lines": [{
+                "startMs": 1000,
+                "endMs": 4000,
+                "text": "beautiful song",
+                "words": [
+                  {"text":"be","startMs":1000,"endMs":1200},
+                  {"text":"au","startMs":1200,"endMs":1450},
+                  {"text":"ti","startMs":1450,"endMs":1650},
+                  {"text":"ful","startMs":1650,"endMs":2200},
+                  {"text":"song","startMs":2500,"endMs":4000}
+                ]
+              }]
+            }
+            """.trimIndent()
+
+        val line = MlxParser.parse(mlx).lines.single()
+        val words = line.words.orEmpty()
+
+        assertEquals("beautiful song", line.text)
+        assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
+        assertEquals(listOf(false, false, false, true, false), words.map { it.hasTrailingSpace })
+        assertEquals(listOf(1.0, 1.2, 1.45, 1.65, 2.5), words.map { it.startTime })
+        assertEquals(listOf(1.2, 1.45, 1.65, 2.2, 4.0), words.map { it.endTime })
+    }
+
+    @Test
     fun derivesVisibleTextFromBackgroundContentWhenForegroundIsAbsent() {
         val lines =
             """

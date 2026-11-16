@@ -165,6 +165,29 @@ class AuthManagerTest {
         }
 
     @Test
+    fun accountRefreshWithoutOptionalFieldsKeepsCachedProfileDetails() =
+        runTest {
+            val auth = AuthManager()
+            auth.saveCredentials(
+                "SAPISID=account",
+                "visitor",
+                "sync",
+                AccountInfo("Original", "cached@example.invalid", "@original", "cached-avatar"),
+            )
+
+            assertTrue(
+                auth.fetchAndSaveAccountInfo {
+                    AccountInfo("Updated", null, null, null)
+                },
+            )
+
+            assertEquals("Updated", auth.accountName)
+            assertEquals("cached@example.invalid", auth.accountEmail)
+            assertEquals("@original", auth.accountChannelHandle)
+            assertEquals("cached-avatar", auth.accountThumbnail)
+        }
+
+    @Test
     fun savingAnotherAccountClearsThePreviousAccountsLikes() {
         val auth = AuthManager()
         auth.saveCredentials(

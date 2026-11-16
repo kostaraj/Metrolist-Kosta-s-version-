@@ -267,9 +267,9 @@ data class LyricsEditorSnapshot(
 }
 
 private const val MAX_TIME_MS = Long.MAX_VALUE / 2
-private val editorRow = Regex("""^\[(\d+):([0-5]\d)\.(\d{2,3})(?:\|([^\]]+))?] ?(.*)$""")
-private val editorWord = Regex("""<(\d+):([0-5]\d)\.(\d{2,3})>""")
-private val editorBackground = Regex("""\s\[bg:(.*)]$""")
+private val editorRow = Regex("""^\[(\d+):([0-5]\d)[.:](\d{1,3})(?:\|([^\]]+))?] ?(.*)$""")
+private val editorWord = Regex("""<(\d+):([0-5]\d)[.:](\d{1,3})>""")
+private val editorBackground = Regex("""\s*\[bg:(.*)]\s*$""")
 
 private data class EditorWord(
     val time: Long,

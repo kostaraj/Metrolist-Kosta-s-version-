@@ -102,7 +102,11 @@ internal object MlxJsonParser {
                     source.lines.map { line ->
                         // Untimed TTML paragraphs can inherit the song's end without a line start.
                         val lineEndMs = line.endMs?.takeIf { line.startMs != null }
-                        val backgroundWords = line.backgroundWords.map { it.timestamp(background = true) }.toMutableList()
+                        val backgroundWords =
+                            line.backgroundWords
+                                .map { it.timestamp(background = true) }
+                                .withSpacingFrom(line.backgroundText.orEmpty())
+                                .toMutableList()
                         if (backgroundWords.isEmpty() && !line.backgroundText.isNullOrBlank()) {
                             backgroundWords +=
                                 WordTimestamp(
@@ -114,7 +118,8 @@ internal object MlxJsonParser {
                                     isLineTimed = true,
                                 )
                         }
-                        val words = (line.words.map { it.timestamp() } + backgroundWords).takeIf { it.isNotEmpty() }
+                        val foregroundWords = line.words.map { it.timestamp() }.withSpacingFrom(line.text)
+                        val words = (foregroundWords + backgroundWords).takeIf { it.isNotEmpty() }
                         LyricsEntry(
                             time = line.startMs ?: 0,
                             text =
@@ -157,6 +162,36 @@ internal object MlxJsonParser {
                 } ?: line
             }
         return json.encodeToString(JsonObject(document + ("lines" to JsonArray(lines))))
+    }
+
+    /**
+     * MLX providers may store each syllable as a separate timed fragment while keeping
+     * natural word spacing only in the line-level text. Reapply those spaces when the
+     * fragment text matches the line text, preserving every timing marker.
+     */
+    private fun List<WordTimestamp>.withSpacingFrom(sourceText: String): List<WordTimestamp> {
+        if (isEmpty() || sourceText.isBlank()) return this
+        val compactSource = sourceText.filterNot { it.isWhitespace() }
+        val compactWords = joinToString("") { it.text }.filterNot { it.isWhitespace() }
+        if (!compactSource.equals(compactWords, ignoreCase = true)) return this
+
+        var searchFrom = 0
+        val starts = mutableListOf<Int>()
+        for (word in this) {
+            val start = sourceText.indexOf(word.text, searchFrom, ignoreCase = true)
+            if (start < 0) return this
+            starts += start
+            searchFrom = start + word.text.length
+        }
+
+        return mapIndexed { index, word ->
+            val wordEnd = starts[index] + word.text.length
+            val nextWordStart = starts.getOrNull(index + 1) ?: wordEnd
+            val hasSeparator =
+                nextWordStart > wordEnd &&
+                    sourceText.substring(wordEnd, nextWordStart).any { it.isWhitespace() }
+            word.copy(hasTrailingSpace = hasSeparator)
+        }
     }
 
     private fun JsonWord.timestamp(background: Boolean = false): WordTimestamp =
