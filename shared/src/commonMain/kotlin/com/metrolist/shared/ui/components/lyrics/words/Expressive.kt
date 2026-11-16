@@ -885,7 +885,7 @@ internal fun ExpressiveWordAnimation(
 
                             else -> {
                                 val fXL = cWidth * charLp
-                                val eW = (cWidth * 0.45f).coerceAtLeast(1f)
+                                val eW = (cWidth * 0.65f).coerceAtLeast(1f)
                                 val sWL = (fXL - eW).coerceAtLeast(0f)
                                 val baseColor = expressiveAccent.copy(alpha = wordBaseAlphas[wordIdx])
                                 val edgeProgress = ((fXL - sWL) / eW).coerceIn(0f, 1f)
