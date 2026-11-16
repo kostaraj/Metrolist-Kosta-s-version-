@@ -1063,6 +1063,7 @@ fun PlayerScreen(
                                             alpha = 1f,
                                             transitionBounds = transitionBounds,
                                             isLandscape = useLandscapeLayout,
+                                            isMusicVideoThumbnail = playbackResource?.hasVideo == true,
                                             canvasReady = animatedCoverReady && isArtworkCover,
                                             canvasKey = currentCanvasLayer?.key,
                                             canvasTall = currentCanvasLayer?.tall == true,
