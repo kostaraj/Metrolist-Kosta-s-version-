@@ -460,13 +460,12 @@ class LyprioLyricsProvider internal constructor(
                     while (cursor < words.size) {
                         val piece = words[cursor] as? JsonObject ?: break
                         val raw = piece["text"]?.jsonPrimitive?.content ?: break
-                        val hasSpace = raw.endsWith(" ")
                         pieces += piece
                         joined += raw.trimEnd()
                         cursor++
                         val target = targets[targetIndex]
                         if (joined == target) break
-                        if (hasSpace || joined.length >= target.length || !target.startsWith(joined)) break
+                        if (joined.length >= target.length || !target.startsWith(joined)) break
                     }
                     val target = targets[targetIndex]
                     if (pieces.size > 1 && joined == target) {
