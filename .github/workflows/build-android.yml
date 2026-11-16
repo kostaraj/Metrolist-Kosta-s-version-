@@ -1,4 +1,5 @@
 name: Build Android
+run-name: "Android ${{ inputs.variant || 'release' }} — Startup & lyrics diagnostics"
 
 on:
   workflow_dispatch:
