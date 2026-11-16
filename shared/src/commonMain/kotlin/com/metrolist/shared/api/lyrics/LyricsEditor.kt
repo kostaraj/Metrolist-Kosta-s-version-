@@ -146,8 +146,10 @@ class LyricsEditor(
         }
         val rows = current.text.split('\n').toMutableList()
         val index = selectedLines().first
-        val text = editorRow.matchEntire(rows[index])?.groupValues?.get(5) ?: escapeText(rows[index])
-        rows[index] = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}] $text"
+        val match = editorRow.matchEntire(rows[index])
+        val agent = match?.groupValues?.get(4)?.takeIf { it.isNotBlank() }?.let { "|$it" }.orEmpty()
+        val text = match?.groupValues?.get(5) ?: escapeText(rows[index])
+        rows[index] = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}$agent] $text"
         edit(rows.joinToString("\n"), current.selectionStart, current.selectionEnd)
     }
 
