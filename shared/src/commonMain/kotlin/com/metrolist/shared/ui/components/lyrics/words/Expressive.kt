@@ -952,9 +952,16 @@ internal fun ExpressiveWordAnimation(
                                 val sWL = (fXL - eW).coerceAtLeast(0f)
                                 val baseColor = expressiveAccent.copy(alpha = wordBaseAlphas[wordIdx])
                                 val edgeProgress = ((fXL - sWL) / eW).coerceIn(0f, 1f)
-                                val edgeColor = lerp(litColor, baseColor, edgeProgress)
+                                val brightShineEnabled =
+                                    effWordEndMs[wordIdx] - effWordStartMs[wordIdx] >= 650L
+                                val edgeColor =
+                                    if (brightShineEnabled) {
+                                        lerp(litColor, baseColor, edgeProgress)
+                                    } else {
+                                        baseColor
+                                    }
                                 Brush.linearGradient(
-                                    0.0f to litColor,
+                                    0.0f to if (brightShineEnabled) litColor else baseColor,
                                     0.98f to edgeColor,
                                     1.0f to baseColor,
                                     start = Offset(sWL, 0f),
