@@ -508,12 +508,14 @@ class LyprioLyricsProvider internal constructor(
 
             val mainWords = mergeWords("words", reference.third["text"]?.jsonPrimitive?.content)
             val backgroundWords = mergeWords("backgroundWords", reference.third["backgroundText"]?.jsonPrimitive?.content)
-            if (mainWords == null && backgroundWords == null) return@map element
+            val romanizedWords = mergeWords("romanizedWords", reference.third["romanizedText"]?.jsonPrimitive?.content)
+            if (mainWords == null && backgroundWords == null && romanizedWords == null) return@map element
             JsonObject(
                 line +
                     buildMap {
                         if (mainWords != null) put("words", mainWords)
                         if (backgroundWords != null) put("backgroundWords", backgroundWords)
+                        if (romanizedWords != null) put("romanizedWords", romanizedWords)
                     },
             )
         }
