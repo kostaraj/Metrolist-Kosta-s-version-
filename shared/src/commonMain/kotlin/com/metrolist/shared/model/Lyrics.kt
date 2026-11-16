@@ -194,15 +194,22 @@ val LyricsProvider.supportedTimingKinds: Set<LyricsTimingKind>
                 emptySet()
             }
 
-            LyricsProvider.KUGOU -> {
-                setOf(LyricsTimingKind.LINE_SYNCED)
+            LyricsProvider.KUGOU, LyricsProvider.LIRIQO_KUGOU, LyricsProvider.LIRIQO_QQ_MUSIC -> {
+                setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED)
             }
 
-            LyricsProvider.LRCLIB, LyricsProvider.YOUTUBE -> {
+            LyricsProvider.LIRIQO_MUSIXMATCH -> {
+                setOf(LyricsTimingKind.WORD_SYNCED)
+            }
+
+            LyricsProvider.LIRIQO_LRCLIB, LyricsProvider.LIRIQO_YOUTUBE_MUSIC, LyricsProvider.LRCLIB, LyricsProvider.YOUTUBE -> {
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 
-            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.UNISON -> {
+            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO, LyricsProvider.UNISON,
+            LyricsProvider.LIRIQO_APPLE_MUSIC, LyricsProvider.LIRIQO_UNISON, LyricsProvider.LIRIQO_NETEASE,
+            LyricsProvider.LIRIQO_PETITLYRICS, LyricsProvider.LIRIQO_KUWO, LyricsProvider.LIRIQO_MIGU,
+            -> {
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 

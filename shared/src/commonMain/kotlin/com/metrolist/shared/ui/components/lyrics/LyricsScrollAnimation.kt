@@ -50,7 +50,7 @@ internal const val LYRICS_FAR_JUMP_VIEWPORTS = 2f
 
 private const val MAX_STAGGER_STEPS = 12
 private const val SUPPRESS_TAIL_MS = 250L
-private const val DEFAULT_FLIP_DURATION_MS = 400L
+private const val DEFAULT_FLIP_DURATION_MS = 600L
 private const val MIN_FLIP_DISTANCE_PX = 0.5f
 private const val SHIFT_RING = 32
 
@@ -62,7 +62,7 @@ internal fun lyPlusSpringFor(
     zeta: Float = SPRING_ZETA_DEFAULT,
 ): LyPlusSpring {
     val durKey = ((durationMs.coerceAtLeast(1L) + 5L) / 10L * 10L).toInt().coerceAtLeast(10)
-    val clampedZeta = (kotlin.math.round(zeta.coerceIn(0.3f, 0.97f) * 50f) / 50f)
+    val clampedZeta = (kotlin.math.round(zeta.coerceIn(0.45f, 0.65f) * 50f) / 50f)
     val zetaKey = (clampedZeta * 100f).roundToInt()
     val cacheKey = (durKey.toLong() shl 16) or (zetaKey.toLong() and 0xFFFFL)
     synchronized(springCacheLock) {
@@ -84,7 +84,7 @@ internal fun lyPlusSpringFor(
 internal class LyPlusSpring(
     private val peakMs: Float,
     zeta: Float = SPRING_ZETA_DEFAULT,
-    settleRatio: Float = 1.5f,
+    settleRatio: Float = 1.0f,
 ) {
     private val tailMs = peakMs * settleRatio
     private val peakValue: Float

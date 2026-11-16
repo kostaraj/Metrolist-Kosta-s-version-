@@ -1893,6 +1893,7 @@
     <string name="brand_google_translate" translatable="false">Google Translate</string>
     <!-- Translators: Option or section label for Lyprio in the settings. -->
     <string name="brand_lyprio" translatable="false">Lyprio</string>
+    <string name="brand_liriqo" translatable="false">LiriQo</string>
     <!-- Translators: Option or section label for better lyrics in the settings. -->
     <string name="brand_better_lyrics" translatable="false">BetterLyrics</string>
     <!-- Translators: Option or section label for unison in the settings. -->

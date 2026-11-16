@@ -708,14 +708,11 @@ internal fun ExpressiveWordAnimation(
                 wordIsSung[wIdx] = isSung
                 wordIsActive[wIdx] = isAct
 
-                val baseAlpha = if (isSung) 1f else (unfocusedAlphaVal + (1f - unfocusedAlphaVal) * factor)
+                // Keep unrevealed glyphs at their normal unfocused brightness.
+                // The existing per-glyph wipe alone controls when each part becomes lit.
+                val baseAlpha = if (isSung) 1f else unfocusedAlphaVal
                 wordBaseAlphas[wIdx] = baseAlpha
-                wordBaseBrushes[wIdx] =
-                    when {
-                        isSung || baseAlpha >= 0.999f -> pastBrush
-                        factor <= 0f -> unlitBrush
-                        else -> SolidColor(expressiveAccent.copy(alpha = baseAlpha))
-                    }
+                wordBaseBrushes[wIdx] = if (isSung) pastBrush else unlitBrush
 
                 if (!isSung && factor > 0.001f) {
                     val fadeFactor = (factor * 5f).coerceIn(0f, 1f) * ((1f - factor) * 8f).coerceIn(0f, 1f)
@@ -1332,7 +1329,8 @@ private fun OgRtlExpressiveWordAnimation(
             val pastBrush = pastBrushCache.get(pastColor)
             val unlitBrush = unlitBrushCache.get(unlitColor)
             val startAlpha = focusedAlpha()
-            val fadeAlpha = (startAlpha + (1f - startAlpha) * activeSylProgress.coerceIn(0f, 1f)).coerceIn(startAlpha, 1f)
+            // The wipe reveals text; do not also brighten the active syllable over time.
+            val fadeAlpha = startAlpha
             val activeUnlitColor =
                 if (isActiveLine && wipeSylIdx != -1) {
                     activeUnlitColorCache.get(expressiveAccent, fadeAlpha)

@@ -490,6 +490,18 @@ enum class LyricsProvider {
     AUTO,
     USER,
     LYPRIO,
+    LIRIQO,
+    LIRIQO_APPLE_MUSIC,
+    LIRIQO_MUSIXMATCH,
+    LIRIQO_UNISON,
+    LIRIQO_NETEASE,
+    LIRIQO_PETITLYRICS,
+    LIRIQO_KUGOU,
+    LIRIQO_KUWO,
+    LIRIQO_MIGU,
+    LIRIQO_QQ_MUSIC,
+    LIRIQO_LRCLIB,
+    LIRIQO_YOUTUBE_MUSIC,
     BETTERLYRICS,
     LRCRED,
     UNISON,
@@ -504,8 +516,26 @@ enum class LyricsProvider {
     companion object {
         val alwaysLastFallbacks: List<LyricsProvider> = listOf(YOUTUBESUBTITLE, YOUTUBE)
 
+        // Internal source order used only after the single LiriQo entry is selected.
+        // Keep this order aligned with the preferred source priority.
+        val liriQoProviders: List<LyricsProvider> =
+            listOf(
+                LIRIQO_APPLE_MUSIC,
+                LIRIQO_UNISON,
+                LIRIQO_QQ_MUSIC,
+                LIRIQO_KUGOU,
+                LIRIQO_KUWO,
+                LIRIQO_NETEASE,
+                LIRIQO_MIGU,
+                LIRIQO_MUSIXMATCH,
+                LIRIQO_PETITLYRICS,
+                LIRIQO_LRCLIB,
+                LIRIQO_YOUTUBE_MUSIC,
+            )
+
         val userConfigurable: List<LyricsProvider> =
-            listOf(LYPRIO, BETTERLYRICS, LRCRED, UNISON, LRCLIB, KUGOU, PAXSENIX)
+            listOf(LYPRIO, LIRIQO) +
+                listOf(BETTERLYRICS, LRCRED, UNISON, LRCLIB, KUGOU, PAXSENIX)
 
         private val legacyDefaultUserOrders =
             listOf(
@@ -523,6 +553,7 @@ enum class LyricsProvider {
             return when (t) {
                 "User" -> USER
                 "Lyprio" -> LYPRIO
+                "LiriQo" -> LIRIQO
                 "BetterLyrics" -> BETTERLYRICS
                 "lrc.red" -> LRCRED
                 "Unison" -> UNISON
@@ -538,7 +569,7 @@ enum class LyricsProvider {
 
         fun parseUserOrderFromStoredCsv(csv: String): List<LyricsProvider> {
             val parsed =
-                csv.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it != AUTO }
+                csv.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it != AUTO }.flatMap(::expandLegacyProvider)
             if (parsed.isEmpty() || isLegacyDefaultUserOrder(csv, parsed)) {
                 return userConfigurable
             }
@@ -559,12 +590,15 @@ enum class LyricsProvider {
             if (trimmed.equals("NONE", ignoreCase = true)) return emptySet()
             if (trimmed.isBlank()) return userConfigurable.toSet()
             val parsed =
-                trimmed.split(",").mapNotNull { parseTokenFromSettings(it) }.filter { it in userConfigurable }
+                trimmed.split(",").mapNotNull { parseTokenFromSettings(it) }.flatMap(::expandLegacyProvider).filter { it in userConfigurable }
             if (isLegacyDefaultUserOrder(csv, parsed)) {
                 return userConfigurable.toSet()
             }
             return parsed.toSet()
         }
+
+        private fun expandLegacyProvider(provider: LyricsProvider): List<LyricsProvider> =
+            if (provider == LIRIQO || provider in liriQoProviders) listOf(LIRIQO) else listOf(provider)
 
         private fun isLegacyDefaultUserOrder(
             csv: String,

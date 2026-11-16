@@ -275,8 +275,13 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".benchmark"
+            signingConfig =
+                if (hasPersistentDebugSigning) {
+                    signingConfigs["persistentDebug"]
+                } else {
+                    signingConfigs.getByName("debug")
+                }
+            applicationIdSuffix = ".debug"
             isDebuggable = false
             isProfileable = true
             matchingFallbacks += "release"

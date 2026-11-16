@@ -18,6 +18,55 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class LyricsProviderSearchTest {
     @Test
+    fun legacyLiriQoSubproviderEntriesCollapseIntoOneSearchGroup() =
+        runTest {
+            val calls = mutableListOf<LyricsProvider>()
+            val search =
+                LyricsProviderSearch(this, "LYPRIO,LIRIQO_APPLE_MUSIC,LIRIQO_KUGOU,LIRIQO_QQ_MUSIC") { provider ->
+                    calls += provider
+                    if (provider == LyricsProvider.LIRIQO) {
+                        LyricsProvider.liriQoProviders.map {
+                            LyricsProviderResult(it, it.name, "Lyrics", LyricsTimingKind.LINE_SYNCED)
+                        }
+                    } else {
+                        emptyList()
+                    }
+                }
+            runCurrent()
+            val liriQoGroups = search.groups.value.filter { it.provider == LyricsProvider.LIRIQO }
+            assertEquals(1, liriQoGroups.size)
+            val expectedGroups = listOf(LyricsProvider.USER) + LyricsProvider.userConfigurable + LyricsProvider.afterUserLyricsFallbacks
+            assertEquals(expectedGroups, search.groups.value.map { it.provider })
+            assertEquals(expectedGroups, calls)
+            assertEquals(11, liriQoGroups.single().results?.size)
+            search.cancel()
+        }
+
+    @Test
+    fun wordSyncedLiriQoResultsAreListedBeforeLineAndUnsyncedResults() =
+        runTest {
+            val search =
+                LyricsProviderSearch(this, "LIRIQO") { provider ->
+                    if (provider == LyricsProvider.LIRIQO) {
+                        listOf(
+                            LyricsProviderResult(LyricsProvider.LIRIQO_APPLE_MUSIC, "LIRIQO/APPLE_MUSIC", "plain", LyricsTimingKind.UNSYNCED),
+                            LyricsProviderResult(LyricsProvider.LIRIQO_UNISON, "LIRIQO/UNISON", "line", LyricsTimingKind.LINE_SYNCED),
+                            LyricsProviderResult(LyricsProvider.LIRIQO_QQ_MUSIC, "LIRIQO/QQ_MUSIC", "word", LyricsTimingKind.WORD_SYNCED),
+                        )
+                    } else {
+                        emptyList()
+                    }
+                }
+            runCurrent()
+            val results = search.groups.value.single { it.provider == LyricsProvider.LIRIQO }.results.orEmpty()
+            assertEquals(
+                listOf(LyricsTimingKind.WORD_SYNCED, LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.UNSYNCED),
+                results.map { it.timingKind },
+            )
+            search.cancel()
+        }
+
+    @Test
     fun searchesAllProvidersInParallelOnOpenIncludingDisabledOnes() =
         runTest {
             val calls = mutableListOf<LyricsProvider>()

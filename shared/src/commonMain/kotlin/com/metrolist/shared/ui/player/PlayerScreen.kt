@@ -181,6 +181,7 @@ import com.metrolist.shared.generated.resources.song
 import com.metrolist.shared.generated.resources.unknown
 import com.metrolist.shared.generated.resources.unlike
 import com.metrolist.shared.generated.resources.video
+import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.playback.LocalPlayerSession
 import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.settings.PlayerBackgroundStyle
@@ -1066,6 +1067,7 @@ fun PlayerScreen(
                                             canvasReady = animatedCoverReady && isArtworkCover,
                                             canvasKey = currentCanvasLayer?.key,
                                             canvasTall = currentCanvasLayer?.tall == true,
+                                            isVideoSong = currentSong?.isVideoSong == true || playbackResource?.hasVideo == true,
                                             artworkCrossfade = artworkCrossfade,
                                             canvasContent =
                                                 if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
@@ -1712,7 +1714,7 @@ fun PlayerScreen(
                                                     if (showVideoSurface) {
                                                         platform.MusicVideoSurface(
                                                             cornerRadius = 0.dp,
-                                                            fillContainer = true,
+                                                            fillContainer = false,
                                                             showControls = true,
                                                             useSurfaceView = false,
                                                             onFullscreenClick = onToggleFullscreen,

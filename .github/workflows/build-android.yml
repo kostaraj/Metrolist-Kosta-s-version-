@@ -6,12 +6,11 @@ on:
       variant:
         description: APK variant to build and upload as an artifact
         type: choice
-        options: [release, debug]
+        options: [release, benchmark, debug]
         default: release
 
 concurrency:
-  # Dispatched APK builds get their own group so pushes to main cannot cancel them.
-  group: android-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
+  group: android-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -21,8 +20,9 @@ jobs:
     permissions:
       contents: read
     with:
-      variant: ${{ inputs.variant || 'debug' }}
-      upload-artifact: ${{ github.event_name == 'workflow_dispatch' }}
+      run-verification: ${{ github.event_name == 'pull_request' }}
+      variant: ${{ github.event_name == 'push' && 'benchmark' || inputs.variant || 'debug' }}
+      upload-artifact: ${{ github.event_name != 'pull_request' }}
       require-signing: ${{ inputs.variant == 'release' }}
       cache-read-only: ${{ github.event_name == 'pull_request' }}
     secrets:
