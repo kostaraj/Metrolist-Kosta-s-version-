@@ -276,6 +276,7 @@ internal fun LyricsProviderOrderSetting() {
 private fun lyricsProviderLabel(provider: LyricsProvider): String =
     when (provider) {
         LyricsProvider.LYPRIO -> stringResource(Res.string.brand_lyprio)
+        LyricsProvider.LIRIQO -> "LiriQo"
         LyricsProvider.LIRIQO_APPLE_MUSIC -> "Apple Music · LiriQo"
         LyricsProvider.LIRIQO_MUSIXMATCH -> "Musixmatch · LiriQo"
         LyricsProvider.LIRIQO_UNISON -> "Unison · LiriQo"
