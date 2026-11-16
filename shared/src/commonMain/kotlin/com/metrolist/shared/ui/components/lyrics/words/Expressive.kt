@@ -205,7 +205,7 @@ internal fun ExpressiveWordAnimation(
     val latestPosition by rememberUpdatedState(positionProvider)
     val density = LocalDensity.current
     val fontSizePx = remember(lyricStyle, density) { with(density) { lyricStyle.fontSize.toPx() } }
-    val gradientWidth = fontSizePx * 0.4f
+    val gradientWidth = fontSizePx * 0.65f
     val extraPaddingPx = minOf(fontSizePx * 0.4f, with(density) { LYRICS_LINE_HORIZONTAL_PADDING.toPx() })
 
     var frameWallTimeMs by remember { mutableLongStateOf(0L) }
@@ -1018,7 +1018,7 @@ private fun OgRtlExpressiveWordAnimation(
     val currentPositionProvider by rememberUpdatedState(positionProvider)
     val density = LocalDensity.current
     val fontSizePx = remember(lyricStyle) { with(density) { lyricStyle.fontSize.toPx() } }
-    val gradientWidth = fontSizePx * 0.4f
+    val gradientWidth = fontSizePx * 0.65f
     val extraPaddingPx = minOf(fontSizePx * 0.4f, with(density) { LYRICS_LINE_HORIZONTAL_PADDING.toPx() })
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
