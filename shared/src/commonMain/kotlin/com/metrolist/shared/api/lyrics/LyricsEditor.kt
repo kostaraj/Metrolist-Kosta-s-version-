@@ -146,8 +146,10 @@ class LyricsEditor(
         }
         val rows = current.text.split('\n').toMutableList()
         val index = selectedLines().first
-        val text = editorRow.matchEntire(rows[index])?.groupValues?.get(4) ?: escapeText(rows[index])
-        rows[index] = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}] $text"
+        val match = editorRow.matchEntire(rows[index])
+        val agent = match?.groupValues?.get(4)?.takeIf { it.isNotBlank() }?.let { "|$it" }.orEmpty()
+        val text = match?.groupValues?.get(5) ?: escapeText(rows[index])
+        rows[index] = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}$agent] $text"
         edit(rows.joinToString("\n"), current.selectionStart, current.selectionEnd)
     }
 
@@ -251,14 +253,8 @@ data class LyricsEditorSnapshot(
                         .jsonObject["startMs"]
                         ?.jsonPrimitive
                         ?.longOrNull ?: 0L
-                val line = document.getValue("lines").jsonArray[index].jsonObject
-                val rendered = parseRow(renderLine(line))
-                index.takeIf {
-                    parsed == null || parsed.time != stored || parsed.words != rendered?.words ||
-                        parsed.backgroundWords != rendered?.backgroundWords ||
-                        parsed.agent != line["agent"]?.jsonPrimitive?.contentOrNull ||
-                        parsed.backgroundText != line["backgroundText"]?.jsonPrimitive?.contentOrNull
-                }
+                val rendered = parseRow(renderLine(document.getValue("lines").jsonArray[index].jsonObject))
+                index.takeIf { parsed == null || parsed.time != stored || parsed.words != rendered?.words || parsed.backgroundWords != rendered?.backgroundWords || parsed.backgroundText != rendered?.backgroundText || parsed.agent != rendered?.agent }
             }
         }
     val isValid: Boolean get() = errors.isEmpty() && !exceedsLimits
@@ -269,7 +265,6 @@ data class LyricsEditorSnapshot(
 private const val MAX_TIME_MS = Long.MAX_VALUE / 2
 private val editorRow = Regex("""^\[(\d+):([0-5]\d)\.(\d{2,3})(?:\|([^\]]+))?] ?(.*)$""")
 private val editorWord = Regex("""<(\d+):([0-5]\d)\.(\d{2,3})>""")
-private val editorBackground = Regex("""\s\[bg:(.*)]$""")
 
 private data class EditorWord(
     val time: Long,
@@ -280,9 +275,9 @@ private data class EditorRow(
     val time: Long,
     val text: String,
     val words: List<EditorWord>,
-    val backgroundWords: List<EditorWord>,
-    val backgroundText: String?,
     val agent: String?,
+    val backgroundText: String?,
+    val backgroundWords: List<EditorWord>,
 )
 
 private fun parseTime(match: MatchResult): Long? {
@@ -291,22 +286,10 @@ private fun parseTime(match: MatchResult): Long? {
     return minutes * 60_000 + match.groupValues[2].toLong() * 1000 + fraction
 }
 
-private fun parseRow(row: String): EditorRow? {
-    val match = editorRow.matchEntire(row) ?: return null
-    val time = parseTime(match) ?: return null
-    val agent = match.groupValues[4].takeIf { it.isNotBlank() }
-    val content = match.groupValues[5]
-    val backgroundMatch = editorBackground.find(content)
-    val mainContent = if (backgroundMatch != null) content.removeRange(backgroundMatch.range) else content
-    val backgroundContent = backgroundMatch?.groupValues?.get(1)
-    val mainWords = parseEditorWords(mainContent, time) ?: return null
-    val backgroundWords = backgroundContent?.let { parseEditorWords(it, time) ?: return null }.orEmpty()
-    val plainBackground = backgroundContent?.takeIf { backgroundWords.isEmpty() }
-    val text = if (mainWords.isEmpty()) mainContent else mainWords.joinToString("") { it.text }
-    return EditorRow(time, text, mainWords, backgroundWords, plainBackground, agent)
-}
-
-private fun parseEditorWords(content: String, lineTime: Long): List<EditorWord>? {
+private fun parseWordContent(
+    content: String,
+    lineTime: Long,
+): Pair<String, List<EditorWord>>? {
     val words = mutableListOf<EditorWord>()
     val text = StringBuilder()
     var wordTime: Long? = null
@@ -314,11 +297,13 @@ private fun parseEditorWords(content: String, lineTime: Long): List<EditorWord>?
     while (index < content.length) {
         when {
             content[index] == '\\' && index + 1 < content.length && content[index + 1] in "nr\\<>" -> {
-                text.append(when (val escaped = content[++index]) {
-                    'n' -> '\n'
-                    'r' -> '\r'
-                    else -> escaped
-                })
+                text.append(
+                    when (val escaped = content[++index]) {
+                        'n' -> '\n'
+                        'r' -> '\r'
+                        else -> escaped
+                    },
+                )
                 index++
             }
             content[index] == '<' -> {
@@ -334,7 +319,27 @@ private fun parseEditorWords(content: String, lineTime: Long): List<EditorWord>?
         }
     }
     if (wordTime != null) words += EditorWord(wordTime, text.toString())
-    return words
+    return (if (words.isEmpty()) text.toString() else words.joinToString("") { it.text }) to words
+}
+
+private fun parseRow(row: String): EditorRow? {
+    val match = editorRow.matchEntire(row) ?: return null
+    val time = parseTime(match) ?: return null
+    val agent = match.groupValues[4].takeIf { it.isNotBlank() }
+    val content = match.groupValues[5]
+    val backgroundStart = content.lastIndexOf("[bg:")
+    val mainContent = if (backgroundStart >= 0) content.substring(0, backgroundStart) else content
+    val backgroundContent =
+        if (backgroundStart >= 0) {
+            if (!content.endsWith("]")) return null
+            content.substring(backgroundStart + 4, content.length - 1)
+        } else null
+    val (text, words) = parseWordContent(mainContent, time) ?: return null
+    val (backgroundText, backgroundWords) =
+        if (backgroundContent != null) {
+            parseWordContent(backgroundContent, time)?.let { it.first to it.second } ?: return null
+        } else null to emptyList()
+    return EditorRow(time, text, words, agent, backgroundText, backgroundWords)
 }
 
 internal fun editorTimestamp(time: Long): String {
@@ -351,15 +356,15 @@ private fun escapeText(text: String): String =
         .replace(">", "\\>")
 
 private fun renderLine(line: JsonObject): String {
-    val start = editorTimestamp(line["startMs"]?.jsonPrimitive?.longOrNull ?: 0)
-    val agent = line["agent"]?.jsonPrimitive?.contentOrNull
-    val header = "[$start${agent?.let { "|$it" }.orEmpty()}]"
+    val time = line["startMs"]?.jsonPrimitive?.longOrNull ?: 0
+    val agent = line["agent"]?.jsonPrimitive?.contentOrNull?.let { "|" + it }.orEmpty()
     val words = line["words"]?.jsonArray.orEmpty()
-    val mainText =
+    val foreground =
         if (words.any { it.jsonObject["isLineTimed"]?.jsonPrimitive?.booleanOrNull != true }) {
             words.joinToString("") {
                 val word = it.jsonObject
-                "<${editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!)}>${escapeText(word.getValue("text").jsonPrimitive.content)}"
+                "<" + editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!) + ">" +
+                    escapeText(word.getValue("text").jsonPrimitive.content)
             }
         } else {
             escapeText(
@@ -370,27 +375,21 @@ private fun renderLine(line: JsonObject): String {
             )
         }
     val backgroundWords = line["backgroundWords"]?.jsonArray.orEmpty()
-    val backgroundText = line["backgroundText"]?.jsonPrimitive?.contentOrNull
     val background =
         when {
-            backgroundWords.isNotEmpty() -> backgroundWords.joinToString("") {
-                val word = it.jsonObject
-                "<${editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!)}>${escapeText(word.getValue("text").jsonPrimitive.content)}"
-            }
-            !backgroundText.isNullOrBlank() -> escapeText(backgroundText)
+            backgroundWords.isNotEmpty() ->
+                "[bg:" + backgroundWords.joinToString("") {
+                    val word = it.jsonObject
+                    "<" + editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!) + ">" +
+                        escapeText(word.getValue("text").jsonPrimitive.content)
+                } + "]"
+            !line["backgroundText"]?.jsonPrimitive?.contentOrNull.isNullOrEmpty() ->
+                "[bg:" + escapeText(line["backgroundText"]!!.jsonPrimitive.content) + "]"
             else -> ""
         }
-    return buildString {
-        append(header)
-        append(' ')
-        append(mainText)
-        if (background.isNotEmpty()) {
-            append(" [bg:")
-            append(background)
-            append(']')
-        }
-    }
+    return "[" + editorTimestamp(time) + agent + "] " + foreground + background
 }
+
 private fun snapshot(document: JsonObject): LyricsEditorSnapshot =
     LyricsEditorSnapshot(
         document.getValue("lines").jsonArray.joinToString("\n") {
@@ -426,47 +425,40 @@ private fun updateLine(
     val updated = result.toMutableMap()
     updated["startMs"] = JsonPrimitive(time)
     if (text != original?.text) updated["text"] = JsonPrimitive(text)
-    if (parsed.agent != source?.get("agent")?.jsonPrimitive?.contentOrNull) {
+    if (parsed.agent != original?.agent) {
         if (parsed.agent == null) updated.remove("agent") else updated["agent"] = JsonPrimitive(parsed.agent)
     }
-    val backgroundChanged =
-        parsed.backgroundText != original?.backgroundText ||
-            parsed.backgroundWords != original?.backgroundWords
-    if (backgroundChanged) updated.remove("backgroundTranslatedText")
-    if (parsed.backgroundText != null) {
-        updated["backgroundText"] = JsonPrimitive(parsed.backgroundText)
-        updated.remove("backgroundWords")
-    } else if (parsed.backgroundWords.isNotEmpty()) {
-        val originals = shifted["backgroundWords"]?.jsonArray.orEmpty().map { it.jsonObject }.toMutableList()
-        val sameWordCount = originals.size == parsed.backgroundWords.size
-        updated["backgroundWords"] = JsonArray(parsed.backgroundWords.mapIndexed { index, word ->
-            val previous =
-                if (sameWordCount) originals[index]
-                else originals.firstOrNull { it["text"] == JsonPrimitive(word.text) }?.also { originals.remove(it) }
-            if (previous != null && previous["text"] == JsonPrimitive(word.text) &&
-                previous["startMs"] == JsonPrimitive(word.time)
-            ) previous
-            else {
-                val end = previous?.get("endMs")?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
-                    ?: parsed.backgroundWords.getOrNull(index + 1)?.time?.takeIf { it > word.time }
-                    ?: shifted["endMs"]?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
-                    ?: endMs?.takeIf { it > word.time }
-                    ?: (word.time + 500).coerceAtMost(MAX_TIME_MS)
-                val retained = previous.orEmpty().let { if (it["text"] == JsonPrimitive(word.text)) it else it - "syllables" }
-                JsonObject(retained + mapOf(
-                    "text" to JsonPrimitive(word.text),
-                    "startMs" to JsonPrimitive(word.time),
-                    "endMs" to JsonPrimitive(end),
-                ))
-            }
-        })
-        updated.remove("backgroundText")
-    } else if (source != null &&
-        (!source["backgroundWords"]?.jsonArray.isNullOrEmpty() ||
-            !source["backgroundText"]?.jsonPrimitive?.contentOrNull.isNullOrBlank())
-    ) {
-        updated.remove("backgroundWords")
-        updated.remove("backgroundText")
+    if (parsed.backgroundText != original?.backgroundText || parsed.backgroundWords != original?.backgroundWords) {
+        if (parsed.backgroundWords.isEmpty()) {
+            updated.remove("backgroundWords")
+        } else {
+            val previousBackground = shifted["backgroundWords"]?.jsonArray.orEmpty().map { it.jsonObject }
+            updated["backgroundWords"] = JsonArray(
+                parsed.backgroundWords.mapIndexed { index, word ->
+                    val previous = previousBackground.getOrNull(index)
+                    if (previous != null && previous["text"] == JsonPrimitive(word.text) && previous["startMs"] == JsonPrimitive(word.time)) {
+                        previous
+                    } else {
+                        val end =
+                            previous?.get("endMs")?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
+                                ?: parsed.backgroundWords.getOrNull(index + 1)?.time?.takeIf { it > word.time }
+                                ?: shifted["endMs"]?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
+                                ?: endMs?.takeIf { it > word.time }
+                                ?: (word.time + 500).coerceAtMost(MAX_TIME_MS)
+                        JsonObject(
+                            (previous.orEmpty() - "isLineTimed") +
+                                mapOf(
+                                    "text" to JsonPrimitive(word.text),
+                                    "startMs" to JsonPrimitive(word.time),
+                                    "endMs" to JsonPrimitive(end),
+                                ),
+                        )
+                    }
+                },
+            )
+        }
+        if (parsed.backgroundText.isNullOrEmpty()) updated.remove("backgroundText")
+        else updated["backgroundText"] = JsonPrimitive(parsed.backgroundText)
     }
     if (parsed.words.isEmpty()) {
         if (!original?.words.isNullOrEmpty() || text != original?.text) updated.remove("words")

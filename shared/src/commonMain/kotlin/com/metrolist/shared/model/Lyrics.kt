@@ -26,6 +26,8 @@ data class LyricsEntry(
     val songPart: String? = null,
     val backgroundText: String? = null,
     val backgroundTranslatedText: String? = null,
+    val translationLanguage: String? = null,
+    val translationMode: String = "Literal",
 ) : Comparable<LyricsEntry> {
     override fun compareTo(other: LyricsEntry): Int = (time - other.time).toInt()
 
@@ -131,10 +133,11 @@ fun lyricsProviderLabel(
 fun lyricsProviderUrl(
     provider: String?,
     sourceId: String?,
+    lyricSource: String? = null,
 ): String? {
     val id = sourceId?.takeIf { it.isNotBlank() } ?: return null
     return when {
-        provider.equals("Unison", ignoreCase = true) && UNISON_VIDEO_ID.matches(id) -> {
+        isUnisonLyrics(provider, lyricSource) && UNISON_VIDEO_ID.matches(id) -> {
             "https://unison.betterlyrics.org/song/$id"
         }
 
@@ -155,11 +158,20 @@ fun lyricsProviderUrl(
 fun lyricsCuratorUrl(
     provider: String?,
     curatorId: String?,
+    lyricSource: String? = null,
 ): String? {
-    if (!provider.equals("Unison", ignoreCase = true)) return null
+    if (!isUnisonLyrics(provider, lyricSource)) return null
     val id = curatorId?.takeIf { UNISON_CURATOR_ID.matches(it) } ?: return null
     return "https://unison.betterlyrics.org/curator/$id"
 }
+
+private fun isUnisonLyrics(
+    provider: String?,
+    lyricSource: String?,
+): Boolean =
+    provider.equals("Unison", ignoreCase = true) ||
+        provider.equals("Lyprio/UNISON", ignoreCase = true) ||
+        (provider?.substringBefore('/').equals("Lyprio", ignoreCase = true) && lyricSource.equals("Unison", ignoreCase = true))
 
 private val UNISON_VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
 private val UNISON_CURATOR_ID = Regex("[A-Za-z0-9][A-Za-z0-9._~-]*")
@@ -194,22 +206,15 @@ val LyricsProvider.supportedTimingKinds: Set<LyricsTimingKind>
                 emptySet()
             }
 
-            LyricsProvider.KUGOU, LyricsProvider.LIRIQO_KUGOU, LyricsProvider.LIRIQO_QQ_MUSIC -> {
-                setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED)
+            LyricsProvider.KUGOU -> {
+                setOf(LyricsTimingKind.LINE_SYNCED)
             }
 
-            LyricsProvider.LIRIQO_MUSIXMATCH -> {
-                setOf(LyricsTimingKind.WORD_SYNCED)
-            }
-
-            LyricsProvider.LIRIQO_LRCLIB, LyricsProvider.LIRIQO_YOUTUBE_MUSIC, LyricsProvider.LRCLIB, LyricsProvider.YOUTUBE -> {
+            LyricsProvider.LRCLIB, LyricsProvider.YOUTUBE -> {
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 
-            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.LIRIQO, LyricsProvider.UNISON,
-            LyricsProvider.LIRIQO_APPLE_MUSIC, LyricsProvider.LIRIQO_UNISON, LyricsProvider.LIRIQO_NETEASE,
-            LyricsProvider.LIRIQO_PETITLYRICS, LyricsProvider.LIRIQO_KUWO, LyricsProvider.LIRIQO_MIGU,
-            -> {
+            LyricsProvider.USER, LyricsProvider.LYPRIO, LyricsProvider.UNISON -> {
                 setOf(LyricsTimingKind.LINE_SYNCED, LyricsTimingKind.WORD_SYNCED, LyricsTimingKind.UNSYNCED)
             }
 

@@ -247,13 +247,6 @@ internal fun PlayerBlurredArtworkBackground(
 }
 
 @Composable
-internal fun usesFullscreenArtworkBleed(
-    hasAnimatedVideo: Boolean,
-    canvasTall: Boolean,
-    isVideoSong: Boolean = false,
-): Boolean = !hasAnimatedVideo && !canvasTall && !isVideoSong
-
-@Composable
 internal fun FullscreenThumbnailBackground(
     thumbnailUrl: String,
     playerBackground: PlayerBackgroundStyle,
@@ -273,7 +266,7 @@ internal fun FullscreenThumbnailBackground(
     canvasReady: Boolean = false,
     canvasKey: Pair<String, String>? = null,
     canvasTall: Boolean = false,
-    isVideoSong: Boolean = false,
+    isMusicVideoThumbnail: Boolean = false,
     artworkCrossfade: PlayerArtworkCrossfade = PlayerArtworkCrossfade(),
 ) {
     if (isLandscape) {
@@ -307,13 +300,20 @@ internal fun FullscreenThumbnailBackground(
         animateFloatAsState(if (canvasReady || coverReady) 1f else 0f, tween(CANVAS_CROSSFADE_DURATION_MS))
     }
     val hasVideo = animatedCoverUrl != null || canvasContent != null
+    // A music-video thumbnail fills the portrait player as a true 16:9 crop. Its blur is only a short fade
+    // beneath the title area; unlike album artwork, it must not create a reflected bleed.
+    val isVideoThumbnail = isMusicVideoThumbnail && !hasVideo && !canvasTall
     val rawStart = transitionBounds?.bottomTransitionStartFraction ?: 0.58f
     val rawEnd = transitionBounds?.bottomTransitionEndFraction ?: 0.66f
-    val fadeStart = rawStart.coerceIn(0f, 0.75f)
+    val fadeStart = if (isVideoThumbnail) 0.84f else rawStart.coerceIn(0f, 0.75f)
     val mirrorSeam =
-        rawEnd
-            .coerceAtLeast(fadeStart + 0.06f)
-            .coerceIn(0f, 0.85f)
+        if (isVideoThumbnail) {
+            0.999f
+        } else {
+            rawEnd
+                .coerceAtLeast(fadeStart + 0.06f)
+                .coerceIn(0f, 0.85f)
+        }
     val statusBarFadeHeight = WindowInsets.systemBars.asPaddingValues().calculateTopPadding() + 56.dp
 
     fun fadeMask(
@@ -342,12 +342,10 @@ internal fun FullscreenThumbnailBackground(
         val artworkFadeMask = fadeMask(seamFadeStart, seam)
         val artworkSize =
             with(density) {
-                val widthPx = maxWidth.roundToPx().coerceAtLeast(1)
-                val heightPx = (maxHeight * seam).roundToPx().coerceAtLeast(1)
-                IntSize(widthPx, if (isVideoSong) widthPx.coerceAtMost(heightPx) else heightPx)
+                IntSize(maxWidth.roundToPx().coerceAtLeast(1), (maxHeight * seam).roundToPx().coerceAtLeast(1))
             }
         // Animated artwork keeps the cropped full-bleed layout; only static covers get the uncropped bleed.
-        val usesArtworkBleed = usesFullscreenArtworkBleed(hasVideo, canvasTall, isVideoSong)
+        val usesArtworkBleed = !hasVideo && !canvasTall && !isVideoThumbnail
         if (!usesArtworkBleed) {
             when (playerBackground) {
                 PlayerBackgroundStyle.GRADIENT,
@@ -392,7 +390,7 @@ internal fun FullscreenThumbnailBackground(
                 return@PlayerBackgroundArtwork
             }
             val backdropBitmap = if (canvasTall) null else canvasFrame ?: artworkBitmap
-            if (backdropBitmap != null && (hasVideo || isVideoSong)) {
+            if (backdropBitmap != null && (hasVideo || isVideoThumbnail)) {
                 FullscreenBlurredBackdropCanvas(
                     artwork = backdropBitmap,
                     scrimAlpha = BLURRED_ARTWORK_SCRIM_ALPHA,
@@ -405,7 +403,6 @@ internal fun FullscreenThumbnailBackground(
                         artwork = artworkBitmap,
                         mirrorSeamFraction = seam,
                         alphaMask = artworkFadeMask,
-                        squareArtwork = isVideoSong,
                     )
                 }
 
@@ -934,7 +931,6 @@ private fun FullscreenSharpArtworkCanvas(
     artwork: ImageBitmap,
     mirrorSeamFraction: Float,
     alphaMask: Brush,
-    squareArtwork: Boolean = false,
 ) {
     BoxWithConstraints(
         modifier =
@@ -953,18 +949,14 @@ private fun FullscreenSharpArtworkCanvas(
         val fullWidthPx = with(density) { maxWidth.toPx() }
         val fullHeightPx = with(density) { maxHeight.toPx() }
         val zoneHeightPx = fullHeightPx * mirrorSeamFraction
-        val artworkWidthPx = if (squareArtwork) minOf(fullWidthPx, zoneHeightPx) else fullWidthPx
-        val artworkHeightPx = if (squareArtwork) artworkWidthPx else zoneHeightPx
-        val artworkOffsetX = (fullWidthPx - artworkWidthPx) / 2f
         val artworkTransform =
-            remember(artwork, fullWidthPx, zoneHeightPx, squareArtwork) {
-                val crop = calculateFullscreenCropTransform(
+            remember(artwork, fullWidthPx, zoneHeightPx) {
+                calculateFullscreenCropTransform(
                     imageWidth = artwork.width.toFloat(),
                     imageHeight = artwork.height.toFloat(),
-                    dstWidth = artworkWidthPx,
-                    dstHeight = artworkHeightPx,
+                    dstWidth = fullWidthPx,
+                    dstHeight = zoneHeightPx,
                 )
-                crop.copy(offsetX = crop.offsetX + artworkOffsetX)
             }
 
         Canvas(modifier = Modifier.fillMaxSize()) {

@@ -35,6 +35,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -158,10 +163,24 @@ class LyprioLyricsProvider internal constructor(
         title: String,
         artist: String,
     ): SearchResult {
-        val results = linkedMapOf<String, ConvertedLyrics>()
+        val results = linkedMapOf<String, SubproviderLyrics>()
         var previousConversions = emptyMap<LyprioLyricsResult, String?>()
 
-        fun accumulated(complete: Boolean) = SearchResult(results.values.sortedByDescending { it.quality }.map { it.lyrics }, complete)
+        fun accumulated(complete: Boolean): SearchResult {
+            val selected =
+                results.values.mapNotNull { candidate ->
+                    val best = candidate.best ?: return@mapNotNull null
+                    val lyrics =
+                        if (best.quality == WORD_SYNC_QUALITY) {
+                            val lineReference = candidate.lineSynced?.lyrics
+                            if (lineReference != null) mergeSyllableFragments(best.lyrics, lineReference) else best.lyrics
+                        } else {
+                            best.lyrics
+                        }
+                    ConvertedLyrics(lyrics, best.quality)
+                }
+            return SearchResult(selected.sortedByDescending { it.quality }.map { it.lyrics }, complete)
+        }
         var totalWaitMs = 0L
         var response = sendRequest(V2_SEARCH_PATH, body)
         val pollingStarted = TimeSource.Monotonic.markNow()
@@ -194,10 +213,16 @@ class LyprioLyricsProvider internal constructor(
                     check(matching.isEmpty() || conversions.values.any { it != null }) { "Lyprio returned no usable lyrics" }
                     for (result in matching) {
                         val lyrics = conversions[result] ?: continue
-                        val previous = results[result.subprovider]
                         val quality = lyrics.syncQuality()
-                        if (previous == null || quality >= previous.quality) {
-                            results[result.subprovider] = ConvertedLyrics(lyrics, quality)
+                        val candidate = results.getOrPut(result.subprovider) { SubproviderLyrics() }
+                        val converted = ConvertedLyrics(lyrics, quality)
+                        if (candidate.best == null || quality >= candidate.best!!.quality) {
+                            candidate.best = converted
+                        }
+                        if (quality == LINE_SYNC_QUALITY &&
+                            (candidate.lineSynced == null || quality >= candidate.lineSynced!!.quality)
+                        ) {
+                            candidate.lineSynced = converted
                         }
                     }
                     if (payload.complete) return accumulated(complete = true)
@@ -381,6 +406,118 @@ class LyprioLyricsProvider internal constructor(
         val quality: Int,
     )
 
+    private class SubproviderLyrics {
+        var best: ConvertedLyrics? = null
+        var lineSynced: ConvertedLyrics? = null
+    }
+
+    /**
+     * Liriqo can return a word-synced version where one real word is split into
+     * multiple timestamp fragments. Use the same subprovider's line lyrics as
+     * the spelling reference, and merge only adjacent fragments that together
+     * exactly reproduce one whitespace-delimited word.
+     */
+    private fun mergeSyllableFragments(
+        wordLyrics: String,
+        lineLyrics: String,
+    ): String {
+        val wordDocument = runCatching { json.parseToJsonElement(wordLyrics).jsonObject }.getOrNull() ?: return wordLyrics
+        val lineDocument = runCatching { json.parseToJsonElement(lineLyrics).jsonObject }.getOrNull() ?: return wordLyrics
+        val wordLines = wordDocument["lines"] as? JsonArray ?: return wordLyrics
+        val referenceLines = lineDocument["lines"] as? JsonArray ?: return wordLyrics
+        if (wordLines.isEmpty() || referenceLines.isEmpty()) return wordLyrics
+
+        fun normalized(value: String): String = value.trim().replace(Regex("\\s+"), " ")
+
+        val references = referenceLines.mapNotNull { element ->
+            val line = element as? JsonObject ?: return@mapNotNull null
+            val text = line["text"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val start = line["startMs"]?.jsonPrimitive?.content?.toLongOrNull()
+            Triple(normalized(text), start, line)
+        }
+        var changed = false
+        val mergedLines = wordLines.map { element ->
+            val line = element as? JsonObject ?: return@map element
+            val lineText = line["text"]?.jsonPrimitive?.content.orEmpty()
+            val start = line["startMs"]?.jsonPrimitive?.content?.toLongOrNull()
+            val reference =
+                references.firstOrNull {
+                    it.first == normalized(lineText) && (start == null || it.second == null || it.second == start)
+                } ?: return@map element
+
+            fun mergeWords(key: String, referenceText: String?): JsonArray? {
+                val words = line[key] as? JsonArray ?: return null
+                if (words.size < 2 || referenceText.isNullOrBlank()) return words
+                val targets = referenceText.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+                if (targets.isEmpty()) return words
+                val output = mutableListOf<kotlinx.serialization.json.JsonElement>()
+                var wordIndex = 0
+                var targetIndex = 0
+                while (wordIndex < words.size) {
+                    val first = words[wordIndex] as? JsonObject
+                    if (first == null || targetIndex >= targets.size) {
+                        output += words[wordIndex++]
+                        continue
+                    }
+                    val pieces = mutableListOf<JsonObject>()
+                    var joined = ""
+                    var cursor = wordIndex
+                    while (cursor < words.size) {
+                        val piece = words[cursor] as? JsonObject ?: break
+                        val raw = piece["text"]?.jsonPrimitive?.content ?: break
+                        pieces += piece
+                        joined += raw.trimEnd()
+                        cursor++
+                        val target = targets[targetIndex]
+                        if (joined == target) break
+                        if (joined.length >= target.length || !target.startsWith(joined)) break
+                    }
+                    val target = targets[targetIndex]
+                    if (pieces.size > 1 && joined == target) {
+                        val firstPiece = pieces.first()
+                        val lastPiece = pieces.last()
+                        val lastText = lastPiece["text"]?.jsonPrimitive?.content.orEmpty()
+                        val mergedText = target + if (lastText.endsWith(" ")) " " else ""
+                        val merged =
+                            JsonObject(
+                                firstPiece +
+                                    mapOf(
+                                        "text" to JsonPrimitive(mergedText),
+                                        "startMs" to (firstPiece["startMs"] ?: JsonPrimitive(0)),
+                                        "endMs" to (lastPiece["endMs"] ?: firstPiece["endMs"] ?: JsonPrimitive(0)),
+                                    ),
+                            )
+                        output += merged
+                        wordIndex += pieces.size
+                        targetIndex++
+                        changed = true
+                    } else {
+                        output += words[wordIndex]
+                        val raw = first["text"]?.jsonPrimitive?.content.orEmpty()
+                        if (raw.endsWith(" ")) targetIndex++
+                        wordIndex++
+                    }
+                }
+                return JsonArray(output)
+            }
+
+            val mainWords = mergeWords("words", reference.third["text"]?.jsonPrimitive?.content)
+            val backgroundWords = mergeWords("backgroundWords", reference.third["backgroundText"]?.jsonPrimitive?.content)
+            val romanizedWords = mergeWords("romanizedWords", reference.third["romanizedText"]?.jsonPrimitive?.content)
+            if (mainWords == null && backgroundWords == null && romanizedWords == null) return@map element
+            JsonObject(
+                line +
+                    buildMap {
+                        if (mainWords != null) put("words", mainWords)
+                        if (backgroundWords != null) put("backgroundWords", backgroundWords)
+                        if (romanizedWords != null) put("romanizedWords", romanizedWords)
+                    },
+            )
+        }
+        if (!changed) return wordLyrics
+        return json.encodeToString(JsonObject(wordDocument + ("lines" to JsonArray(mergedLines))))
+    }
+
     private data class SearchResult(
         val lyrics: List<String>,
         val complete: Boolean,
@@ -393,6 +530,8 @@ class LyprioLyricsProvider internal constructor(
         private const val PROTOCOL_VERSION = "2"
         private const val ROMANIZATION_HEADER = "X-Lyprio-Romanization"
         private const val CLIENT_ROMANIZATION = "client"
+        private const val LINE_SYNC_QUALITY = 1
+        private const val WORD_SYNC_QUALITY = 2
         private const val REQUEST_TIMEOUT_MS = 25_000L
         internal const val SEARCH_TIMEOUT_MS = 50_000L
         private const val MAX_RESPONSE_BYTES = 8 * 1024 * 1024

@@ -120,6 +120,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -181,7 +182,6 @@ import com.metrolist.shared.generated.resources.song
 import com.metrolist.shared.generated.resources.unknown
 import com.metrolist.shared.generated.resources.unlike
 import com.metrolist.shared.generated.resources.video
-import com.metrolist.shared.model.isVideoSong
 import com.metrolist.shared.playback.LocalPlayerSession
 import com.metrolist.shared.playback.SleepTimerState
 import com.metrolist.shared.settings.PlayerBackgroundStyle
@@ -636,6 +636,7 @@ fun PlayerScreen(
         hideSystemBars = shouldHideSystemBars,
         lockLandscape =
             !isTv && isFullscreen && !bottomSheetState.isCollapsed && !bottomSheetState.isDismissed && !isInPipMode,
+        lightStatusBars = (textBackgroundColor.luminance() < 0.5f).takeIf { playerContentState.isVisible },
     )
 
     val playerType = Settings.shared.playerType
@@ -1064,10 +1065,10 @@ fun PlayerScreen(
                                             alpha = 1f,
                                             transitionBounds = transitionBounds,
                                             isLandscape = useLandscapeLayout,
+                                            isMusicVideoThumbnail = playbackResource?.hasVideo == true,
                                             canvasReady = animatedCoverReady && isArtworkCover,
                                             canvasKey = currentCanvasLayer?.key,
                                             canvasTall = currentCanvasLayer?.tall == true,
-                                            isVideoSong = currentSong?.isVideoSong == true || playbackResource?.hasVideo == true,
                                             artworkCrossfade = artworkCrossfade,
                                             canvasContent =
                                                 if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
@@ -1714,7 +1715,7 @@ fun PlayerScreen(
                                                     if (showVideoSurface) {
                                                         platform.MusicVideoSurface(
                                                             cornerRadius = 0.dp,
-                                                            fillContainer = false,
+                                                            fillContainer = true,
                                                             showControls = true,
                                                             useSurfaceView = false,
                                                             onFullscreenClick = onToggleFullscreen,

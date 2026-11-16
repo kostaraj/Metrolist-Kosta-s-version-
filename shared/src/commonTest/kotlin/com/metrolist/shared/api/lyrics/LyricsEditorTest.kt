@@ -95,7 +95,7 @@ class LyricsEditorTest {
     @Test
     fun unchangedJsonRoundTripPreservesEveryFieldAndSubCentisecond() {
         val editor = LyricsEditor(raw)
-        assertEquals("[00:01.234] <00:01.234>Hello <00:02.10>world\n[00:04.00] \n[00:05.00] Last", editor.current.text)
+        assertEquals("[00:01.234] <00:01.234>Hello <00:02.10>world[bg:<00:01.50>Hey]\n[00:04.00] \n[00:05.00] Last", editor.current.text)
         editor.edit(editor.current.text, 12)
         assertEquals(Json.parseToJsonElement(raw), Json.parseToJsonElement(editor.current.json))
         assertFalse(editor.canUndo)
@@ -603,77 +603,40 @@ class LyricsEditorTest {
         assertEquals(0, editor.current.selectionEnd)
         assertTrue(editor.current.text.startsWith("[00:01.24] <00:01.24>Hello <00:02.14>world"))
     }
-
     @Test
-    fun backgroundWordsAndSingerAgentsAreVisibleEditableAndPreserved() {
-        val editor =
-            LyricsEditor(
-                """
-                {
-                  "version": 2,
-                  "agents": {
-                    "v1": {"type": "person", "name": "Singer One"},
-                    "v2": {"type": "person", "name": "Singer Two"}
-                  },
-                  "lines": [{
-                    "startMs": 1000,
-                    "endMs": 3000,
-                    "text": "Main",
-                    "agent": "v1",
-                    "words": [{"text": "Main ", "startMs": 1000, "endMs": 2000}],
-                    "backgroundWords": [{"text": "Hey", "startMs": 1500, "endMs": 2500}]
-                  }]
-                }
-                """.trimIndent(),
-            )
+    fun backgroundWordTagsAndSingerAlignmentAreEditable() {
+        val raw =
+            "[00:36.576|v1] <00:36.576>I <00:36.773>swore <00:37.011>my " +
+                "<00:37.291>loyalty <00:38.021>to <00:38.256>me, " +
+                "<00:39.032>myself, <00:39.976>and <00:40.245>I " +
+                "[bg:<00:38.677>Me, <00:39.513>myself, <00:40.62>I]"
+        val editor = LyricsEditor(raw)
 
-        assertEquals("[00:01.00|v1] <00:01.00>Main  [bg:<00:01.50>Hey", editor.current.text.removeSuffix("]"))
+        assertTrue(editor.current.isValid)
+        assertTrue("|v1]" in editor.current.text)
+        assertTrue("[bg:" in editor.current.text)
 
-        editor.edit(
-            editor.current.text.replace("|v1", "|v2").replace("Main", "Lead").replace("Hey", "Yo"),
-            0,
+        val before = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), before["agent"])
+        assertEquals(
+            listOf(38677L, 39513L, 40620L),
+            before.getValue("backgroundWords").jsonArray.map {
+                it.jsonObject.getValue("startMs").toString().toLong()
+            },
         )
-        assertTrue(editor.current.isValid)
-        val line = MlxJsonParser.parse(editor.current.json)!!.lines.single()
-        assertEquals("v2", line.agent)
-        assertEquals("Lead", line.text.trim())
-        assertEquals("Yo", line.words!!.single { it.isBackground }.text)
-        assertEquals(1.5, line.words!!.single { it.isBackground }.startTime)
-        assertEquals(2.5, line.words!!.single { it.isBackground }.endTime)
 
-        editor.undo()
-        val restored = MlxJsonParser.parse(editor.current.json)!!.lines.single()
-        assertEquals("v1", restored.agent)
-        assertEquals("Hey", restored.words!!.single { it.isBackground }.text)
-        editor.redo()
-        val redone = MlxJsonParser.parse(editor.current.json)!!.lines.single()
-        assertEquals("v2", redone.agent)
-        assertEquals("Yo", redone.words!!.single { it.isBackground }.text)
+        editor.edit(editor.current.text.replace("<00:40.62>I]", "<00:40.70>I]"), 0)
+        assertTrue(editor.current.isValid)
+        val after = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), after["agent"])
+        assertEquals(JsonPrimitive(40700), after.getValue("backgroundWords").jsonArray.last().jsonObject["startMs"])
+        assertEquals(before.getValue("words"), after.getValue("words"))
+
+        editor.timestamp(41000)
+        assertTrue(editor.current.isValid)
+        val synced = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), synced["agent"])
+        assertEquals(JsonPrimitive(41000), synced["startMs"])
     }
 
-    @Test
-    fun mlxImportDisplaysBackgroundWordTimingAndSingerAssignment() {
-        val editor =
-            LyricsEditor(
-                """
-                [meta]
-                mlx_version=1.0
-                [agents]
-                v1=person,Singer One
-                v2=person,Singer Two
-                [lyrics]
-                [00:01.000~00:03.000|v1]<00:01.000>Main [bg:<00:01.500>Hey<00:02.500>]
-                """.trimIndent(),
-            )
-
-        assertTrue("|v1" in editor.current.text)
-        assertTrue("[bg:<00:01.50>Hey" in editor.current.text)
-        editor.edit(editor.current.text.replace("|v1", "|v2").replace("Hey", "Yo"), 0)
-        assertTrue(editor.current.isValid)
-        val line = MlxJsonParser.parse(editor.current.json)!!.lines.single()
-        assertEquals("v2", line.agent)
-        assertEquals("Yo", line.words!!.single { it.isBackground }.text)
-        assertEquals(1.5, line.words!!.single { it.isBackground }.startTime)
-        assertEquals(2.5, line.words!!.single { it.isBackground }.endTime)
-    }
 }

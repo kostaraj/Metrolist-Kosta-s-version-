@@ -1835,9 +1835,9 @@ internal fun LyricsViewWithPosition(
         songwriters = songwriters,
         agents = agents,
         provider = displayedProvider,
-        providerUrl = lyricsProviderUrl(provider, uiState.lyricsMeta?.sourceId),
+        providerUrl = lyricsProviderUrl(provider, uiState.lyricsMeta?.sourceId, uiState.lyricsMeta?.lyricSource),
         lyricsMeta = uiState.lyricsMeta,
-        lyricsCuratorUrl = lyricsCuratorUrl(provider, uiState.lyricsMeta?.lyricsCuratorId),
+        lyricsCuratorUrl = lyricsCuratorUrl(provider, uiState.lyricsMeta?.lyricsCuratorId, uiState.lyricsMeta?.lyricSource),
         currentPositionFlow = viewModel.currentPosition,
         positionReader = viewModel::currentPositionMs,
         playbackSpeed = viewModel.playbackSpeed.collectAsState().value,
@@ -1926,15 +1926,17 @@ internal fun ActiveLyricsLine(
                     fontWeight = FontWeight.Bold,
                     textAlign = LyricsUtils.textAlignment(Settings.shared.activeLyricsTextPosition),
                 )
+            val reservedLineHeight = with(LocalDensity.current) { style.lineHeight.toDp() * 2 }
             val lyricsContent = @Composable {
                 AnimatedContent(
                     targetState = currentLine to lineEndTime,
                     transitionSpec = {
-                        fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400))
+                        (fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400)))
+                            .using(null)
                     },
                     contentAlignment = Alignment.Center,
                     label = "activeLyricLineSwitch",
-                    modifier = Modifier.wrapContentHeight(Alignment.CenterVertically),
+                    modifier = Modifier.sizeIn(minHeight = reservedLineHeight).wrapContentHeight(Alignment.CenterVertically),
                 ) { (line, displayedLineEndTime) ->
                     if (line != null) {
                         val isActive by remember(line, displayedLineEndTime, lyricsPositionState) {
