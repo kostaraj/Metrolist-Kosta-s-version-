@@ -266,6 +266,7 @@ internal fun FullscreenThumbnailBackground(
     canvasReady: Boolean = false,
     canvasKey: Pair<String, String>? = null,
     canvasTall: Boolean = false,
+    isMusicVideoThumbnail: Boolean = false,
     artworkCrossfade: PlayerArtworkCrossfade = PlayerArtworkCrossfade(),
 ) {
     if (isLandscape) {
@@ -299,13 +300,20 @@ internal fun FullscreenThumbnailBackground(
         animateFloatAsState(if (canvasReady || coverReady) 1f else 0f, tween(CANVAS_CROSSFADE_DURATION_MS))
     }
     val hasVideo = animatedCoverUrl != null || canvasContent != null
+    // A music-video thumbnail fills the portrait player as a true 16:9 crop. Its blur is only a short fade
+    // beneath the title area; unlike album artwork, it must not create a reflected bleed.
+    val isVideoThumbnail = isMusicVideoThumbnail && !hasVideo && !canvasTall
     val rawStart = transitionBounds?.bottomTransitionStartFraction ?: 0.58f
     val rawEnd = transitionBounds?.bottomTransitionEndFraction ?: 0.66f
-    val fadeStart = rawStart.coerceIn(0f, 0.75f)
+    val fadeStart = if (isVideoThumbnail) 0.84f else rawStart.coerceIn(0f, 0.75f)
     val mirrorSeam =
-        rawEnd
-            .coerceAtLeast(fadeStart + 0.06f)
-            .coerceIn(0f, 0.85f)
+        if (isVideoThumbnail) {
+            1f
+        } else {
+            rawEnd
+                .coerceAtLeast(fadeStart + 0.06f)
+                .coerceIn(0f, 0.85f)
+        }
     val statusBarFadeHeight = WindowInsets.systemBars.asPaddingValues().calculateTopPadding() + 56.dp
 
     fun fadeMask(
@@ -337,7 +345,7 @@ internal fun FullscreenThumbnailBackground(
                 IntSize(maxWidth.roundToPx().coerceAtLeast(1), (maxHeight * seam).roundToPx().coerceAtLeast(1))
             }
         // Animated artwork keeps the cropped full-bleed layout; only static covers get the uncropped bleed.
-        val usesArtworkBleed = !hasVideo && !canvasTall
+        val usesArtworkBleed = !hasVideo && !canvasTall && !isVideoThumbnail
         if (!usesArtworkBleed) {
             when (playerBackground) {
                 PlayerBackgroundStyle.GRADIENT,
@@ -382,7 +390,7 @@ internal fun FullscreenThumbnailBackground(
                 return@PlayerBackgroundArtwork
             }
             val backdropBitmap = if (canvasTall) null else canvasFrame ?: artworkBitmap
-            if (backdropBitmap != null && hasVideo) {
+            if (backdropBitmap != null && (hasVideo || isVideoThumbnail)) {
                 FullscreenBlurredBackdropCanvas(
                     artwork = backdropBitmap,
                     scrimAlpha = BLURRED_ARTWORK_SCRIM_ALPHA,
