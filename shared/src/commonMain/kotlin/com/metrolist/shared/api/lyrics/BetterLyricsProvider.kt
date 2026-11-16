@@ -549,17 +549,21 @@ private fun parseWordSpan(
     val end = timingAttr(span, "end")
     if (begin.isEmpty() || end.isEmpty()) return
     val text = span.textContent
-    val next = span.nextSibling
-    val nextText = if (next is XmlText) next.value else ""
-    val extraWhitespace =
-        if (nextText.startsWith("\n") || nextText.startsWith("\r")) {
-            if (nextText.trim().isEmpty()) "" else " "
-        } else {
-            nextText.takeWhile { it == ' ' || it == '\t' }
-        }
-    val fullText = text + extraWhitespace
-    val hasTrailingSpace = fullText.isNotEmpty() && fullText.last().isWhitespace()
-    val wordText = if (hasTrailingSpace && fullText.endsWith(' ')) fullText.dropLast(1) else fullText
+    val nextText = (span.nextSibling as? XmlText)?.value.orEmpty()
+    // Whitespace-only nodes containing a line break are XML formatting, not lyric word gaps.
+    val nextIsFormattingWhitespace =
+        nextText.isNotEmpty() &&
+            nextText.all(Char::isWhitespace) &&
+            nextText.any { it == '\n' || it == '\r' }
+    val nextStartsWithSeparator =
+        !nextIsFormattingWhitespace &&
+            nextText.firstOrNull()?.let { it == ' ' || it == '\t' || it == '\u00A0' } == true
+    val textEndsWithSeparator =
+        text.lastOrNull()?.let { it == ' ' || it == '\t' || it == '\u00A0' } == true
+    val wordText = text.trimEnd(' ', '\t', '\u00A0')
+    val hasTrailingSpace =
+        (textEndsWithSeparator || nextStartsWithSeparator) &&
+            !wordText.endsWithLyricHyphen()
     out.add(TtmlWord(wordText, parseTime(begin) + offset, parseTime(end) + offset, hasTrailingSpace))
 }
 
@@ -645,7 +649,7 @@ private fun buildLineText(words: List<TtmlWord>) =
     buildString {
         words.forEachIndexed { i, w ->
             append(w.text)
-            if (w.hasTrailingSpace && !w.text.endsWith('-') && i < words.lastIndex) append(" ")
+            if (w.hasTrailingSpace && !w.text.endsWithLyricHyphen() && i < words.lastIndex) append(" ")
         }
     }.trim()
 

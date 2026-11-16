@@ -236,6 +236,45 @@ class BetterLyricsProviderTest {
     }
 
     @Test
+    fun ttmlSyllableFragmentsIgnoreIndentationButKeepRealWordSpaces() {
+        val ttml =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="1s" end="6s">
+                <span begin="1s" end="1.5s">be</span> 
+                <span begin="1.5s" end="2s">au</span> 
+                <span begin="2s" end="2.5s">ti</span> 
+                <span begin="2.5s" end="3s">ful</span> <span begin="3.5s" end="6s">song</span>
+            </p></div></body></tt>
+            """.trimIndent()
+        val mlx = parseTtmlToMlx(ttml, "title", "artist", "test")
+        val line = MlxParser.parse(mlx).lines.single()
+        val words = assertNotNull(line.words)
+
+        assertEquals("beautiful song", line.text)
+        assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
+        assertEquals(listOf(false, false, false, true, false), words.map { it.hasTrailingSpace })
+        assertEquals(listOf(1.0, 1.5, 2.0, 2.5, 3.5), words.map { it.startTime })
+    }
+
+    @Test
+    fun ttmlHyphenatedFragmentsDoNotGainWordSpaces() {
+        val ttml =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml"><body><div>
+                <p begin="1s" end="3s"><span begin="1s" end="1.5s">Ooh-</span> <span begin="1.5s" end="2.5s">ooh-</span> <span begin="2.5s" end="3s">ooh</span></p>
+            </div></body></tt>
+            """.trimIndent()
+        val mlx = parseTtmlToMlx(ttml, "title", "artist", "test")
+        val line = MlxParser.parse(mlx).lines.single()
+        val words = assertNotNull(line.words)
+
+        assertEquals("Ooh-ooh-ooh", line.text)
+        assertEquals(listOf(false, false, false), words.map { it.hasTrailingSpace })
+        assertFalse(mlx.contains("Ooh- "))
+        assertFalse(mlx.contains("ooh- "))
+    }
+
+    @Test
     fun ttmlParserRejectsDoctypeAndExternalEntities() {
         val maliciousTtml =
             """

@@ -344,7 +344,8 @@ class LiriQoLyricsProvider(
             val separatorEnd = if (nextWordStart >= 0) nextWordStart else matchEnd.coerceIn(0, sourceText.length)
             val hasSeparator =
                 matchStart >= 0 &&
-                    sourceText.substring(matchEnd.coerceIn(0, sourceText.length), separatorEnd).any(Char::isWhitespace)
+                    sourceText.substring(matchEnd.coerceIn(0, sourceText.length), separatorEnd).any(Char::isWhitespace) &&
+                    !text.endsWithLyricHyphen()
             searchFrom = matchEnd.coerceAtMost(sourceText.length)
             MlxWord(
                 text = text,

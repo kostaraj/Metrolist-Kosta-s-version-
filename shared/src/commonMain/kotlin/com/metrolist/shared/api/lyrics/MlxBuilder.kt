@@ -244,7 +244,7 @@ class MlxBuilder {
                 target.append(wts(w.startMs))
             }
             target.append(w.text)
-            if (w.hasTrailingSpace) target.append(' ')
+            if (w.hasTrailingSpace && !w.text.endsWithLyricHyphen()) target.append(' ')
             target.append(wts(w.endMs))
             lastEmittedMs = w.endMs
         }
