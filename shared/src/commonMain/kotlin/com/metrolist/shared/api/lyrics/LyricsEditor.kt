@@ -146,7 +146,7 @@ class LyricsEditor(
         }
         val rows = current.text.split('\n').toMutableList()
         val index = selectedLines().first
-        val text = editorRow.matchEntire(rows[index])?.groupValues?.get(4) ?: escapeText(rows[index])
+        val text = editorRow.matchEntire(rows[index])?.groupValues?.get(5) ?: escapeText(rows[index])
         rows[index] = "[${editorTimestamp(positionMs.coerceIn(0, MAX_TIME_MS))}] $text"
         edit(rows.joinToString("\n"), current.selectionStart, current.selectionEnd)
     }
@@ -251,8 +251,8 @@ data class LyricsEditorSnapshot(
                         .jsonObject["startMs"]
                         ?.jsonPrimitive
                         ?.longOrNull ?: 0L
-                val words = parseRow(renderLine(document.getValue("lines").jsonArray[index].jsonObject))?.words
-                index.takeIf { parsed == null || parsed.time != stored || parsed.words != words }
+                val rendered = parseRow(renderLine(document.getValue("lines").jsonArray[index].jsonObject))
+                index.takeIf { parsed == null || parsed.time != stored || parsed.words != rendered?.words || parsed.backgroundWords != rendered?.backgroundWords || parsed.backgroundText != rendered?.backgroundText || parsed.agent != rendered?.agent }
             }
         }
     val isValid: Boolean get() = errors.isEmpty() && !exceedsLimits
@@ -261,7 +261,7 @@ data class LyricsEditorSnapshot(
 }
 
 private const val MAX_TIME_MS = Long.MAX_VALUE / 2
-private val editorRow = Regex("""^\[(\d+):([0-5]\d)\.(\d{2,3})] ?(.*)$""")
+private val editorRow = Regex("""^\[(\d+):([0-5]\d)\.(\d{2,3})(?:\|([^\]]+))?] ?(.*)$""")
 private val editorWord = Regex("""<(\d+):([0-5]\d)\.(\d{2,3})>""")
 
 private data class EditorWord(
@@ -273,6 +273,9 @@ private data class EditorRow(
     val time: Long,
     val text: String,
     val words: List<EditorWord>,
+    val agent: String?,
+    val backgroundText: String?,
+    val backgroundWords: List<EditorWord>,
 )
 
 private fun parseTime(match: MatchResult): Long? {
@@ -281,10 +284,10 @@ private fun parseTime(match: MatchResult): Long? {
     return minutes * 60_000 + match.groupValues[2].toLong() * 1000 + fraction
 }
 
-private fun parseRow(row: String): EditorRow? {
-    val match = editorRow.matchEntire(row) ?: return null
-    val time = parseTime(match) ?: return null
-    val content = match.groupValues[4]
+private fun parseWordContent(
+    content: String,
+    lineTime: Long,
+): Pair<String, List<EditorWord>>? {
     val words = mutableListOf<EditorWord>()
     val text = StringBuilder()
     var wordTime: Long? = null
@@ -301,27 +304,40 @@ private fun parseRow(row: String): EditorRow? {
                 )
                 index++
             }
-
             content[index] == '<' -> {
                 val marker = editorWord.matchAt(content, index) ?: return null
                 val start = parseTime(marker) ?: return null
-                if (wordTime != null || text.isNotEmpty()) words += EditorWord(wordTime ?: time, text.toString())
+                if (wordTime != null || text.isNotEmpty()) words += EditorWord(wordTime ?: lineTime, text.toString())
                 text.clear()
                 wordTime = start
                 index = marker.range.last + 1
             }
-
-            content[index] == '>' -> {
-                return null
-            }
-
-            else -> {
-                text.append(content[index++])
-            }
+            content[index] == '>' -> return null
+            else -> text.append(content[index++])
         }
     }
     if (wordTime != null) words += EditorWord(wordTime, text.toString())
-    return EditorRow(time, if (words.isEmpty()) text.toString() else words.joinToString("") { it.text }, words)
+    return (if (words.isEmpty()) text.toString() else words.joinToString("") { it.text }) to words
+}
+
+private fun parseRow(row: String): EditorRow? {
+    val match = editorRow.matchEntire(row) ?: return null
+    val time = parseTime(match) ?: return null
+    val agent = match.groupValues[4].takeIf { it.isNotBlank() }
+    val content = match.groupValues[5]
+    val backgroundStart = content.lastIndexOf("[bg:")
+    val mainContent = if (backgroundStart >= 0) content.substring(0, backgroundStart) else content
+    val backgroundContent =
+        if (backgroundStart >= 0) {
+            if (!content.endsWith("]")) return null
+            content.substring(backgroundStart + 4, content.length - 1)
+        } else null
+    val (text, words) = parseWordContent(mainContent, time) ?: return null
+    val (backgroundText, backgroundWords) =
+        if (backgroundContent != null) {
+            parseWordContent(backgroundContent, time)?.let { it.first to it.second } ?: return null
+        } else null to emptyList()
+    return EditorRow(time, text, words, agent, backgroundText, backgroundWords)
 }
 
 internal fun editorTimestamp(time: Long): String {
@@ -338,27 +354,38 @@ private fun escapeText(text: String): String =
         .replace(">", "\\>")
 
 private fun renderLine(line: JsonObject): String {
+    val time = line["startMs"]?.jsonPrimitive?.longOrNull ?: 0
+    val agent = line["agent"]?.jsonPrimitive?.contentOrNull?.let { "|" + it }.orEmpty()
     val words = line["words"]?.jsonArray.orEmpty()
-    if (words.any { it.jsonObject["isLineTimed"]?.jsonPrimitive?.booleanOrNull != true }) {
-        val text =
+    val foreground =
+        if (words.any { it.jsonObject["isLineTimed"]?.jsonPrimitive?.booleanOrNull != true }) {
             words.joinToString("") {
                 val word = it.jsonObject
-                "<${editorTimestamp(
-                    word.getValue("startMs").jsonPrimitive.longOrNull!!,
-                )}>${escapeText(word.getValue("text").jsonPrimitive.content)}"
+                "<" + editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!) + ">" +
+                    escapeText(word.getValue("text").jsonPrimitive.content)
             }
-        return "[${editorTimestamp(line["startMs"]?.jsonPrimitive?.longOrNull ?: 0)}] $text"
-    }
-    val text =
-        line["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
-            ?: MlxJsonParser
-                .parse(
-                    JsonObject(mapOf("version" to JsonPrimitive(2), "lines" to JsonArray(listOf(line)))).toString(),
-                )?.lines
-                ?.firstOrNull()
-                ?.text
-                .orEmpty()
-    return "[${editorTimestamp(line["startMs"]?.jsonPrimitive?.longOrNull ?: 0)}] ${escapeText(text)}"
+        } else {
+            escapeText(
+                line["text"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                    ?: MlxJsonParser.parse(
+                        JsonObject(mapOf("version" to JsonPrimitive(2), "lines" to JsonArray(listOf(line)))).toString(),
+                    )?.lines?.firstOrNull()?.text.orEmpty(),
+            )
+        }
+    val backgroundWords = line["backgroundWords"]?.jsonArray.orEmpty()
+    val background =
+        when {
+            backgroundWords.isNotEmpty() ->
+                "[bg:" + backgroundWords.joinToString("") {
+                    val word = it.jsonObject
+                    "<" + editorTimestamp(word.getValue("startMs").jsonPrimitive.longOrNull!!) + ">" +
+                        escapeText(word.getValue("text").jsonPrimitive.content)
+                } + "]"
+            !line["backgroundText"]?.jsonPrimitive?.contentOrNull.isNullOrEmpty() ->
+                "[bg:" + escapeText(line["backgroundText"]!!.jsonPrimitive.content) + "]"
+            else -> ""
+        }
+    return "[" + editorTimestamp(time) + agent + "] " + foreground + background
 }
 
 private fun snapshot(document: JsonObject): LyricsEditorSnapshot =
@@ -396,6 +423,41 @@ private fun updateLine(
     val updated = result.toMutableMap()
     updated["startMs"] = JsonPrimitive(time)
     if (text != original?.text) updated["text"] = JsonPrimitive(text)
+    if (parsed.agent != original?.agent) {
+        if (parsed.agent == null) updated.remove("agent") else updated["agent"] = JsonPrimitive(parsed.agent)
+    }
+    if (parsed.backgroundText != original?.backgroundText || parsed.backgroundWords != original?.backgroundWords) {
+        if (parsed.backgroundWords.isEmpty()) {
+            updated.remove("backgroundWords")
+        } else {
+            val previousBackground = shifted["backgroundWords"]?.jsonArray.orEmpty().map { it.jsonObject }
+            updated["backgroundWords"] = JsonArray(
+                parsed.backgroundWords.mapIndexed { index, word ->
+                    val previous = previousBackground.getOrNull(index)
+                    if (previous != null && previous["text"] == JsonPrimitive(word.text) && previous["startMs"] == JsonPrimitive(word.time)) {
+                        previous
+                    } else {
+                        val end =
+                            previous?.get("endMs")?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
+                                ?: parsed.backgroundWords.getOrNull(index + 1)?.time?.takeIf { it > word.time }
+                                ?: shifted["endMs"]?.jsonPrimitive?.longOrNull?.takeIf { it > word.time }
+                                ?: endMs?.takeIf { it > word.time }
+                                ?: (word.time + 500).coerceAtMost(MAX_TIME_MS)
+                        JsonObject(
+                            (previous.orEmpty() - "isLineTimed") +
+                                mapOf(
+                                    "text" to JsonPrimitive(word.text),
+                                    "startMs" to JsonPrimitive(word.time),
+                                    "endMs" to JsonPrimitive(end),
+                                ),
+                        )
+                    }
+                },
+            )
+        }
+        if (parsed.backgroundText.isNullOrEmpty()) updated.remove("backgroundText")
+        else updated["backgroundText"] = JsonPrimitive(parsed.backgroundText)
+    }
     if (parsed.words.isEmpty()) {
         if (!original?.words.isNullOrEmpty() || text != original?.text) updated.remove("words")
         if (!original?.words.isNullOrEmpty()) updated.remove("romanizedWords")
