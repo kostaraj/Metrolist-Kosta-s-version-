@@ -138,7 +138,6 @@ internal object MlxJsonParser {
                             songPart = line.part?.let(parts::getOrNull)?.name,
                             backgroundText = line.backgroundText,
                             backgroundTranslatedText = line.backgroundTranslatedText,
-                            translationLanguage = source.song.translationLanguage,
                         )
                     },
                 songParts = parts,

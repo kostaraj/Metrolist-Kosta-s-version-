@@ -88,7 +88,6 @@ import com.metrolist.shared.ui.components.PopupVisibility
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.monthlyAudienceText
-import com.metrolist.shared.utils.parseAudienceCount
 import org.jetbrains.compose.resources.stringResource
 
 enum class MediaDownloadState {
@@ -479,7 +478,7 @@ fun artistMediaMenuModel(
         title = artist.displayTitle,
         subtitle =
             monthlyAudienceText(artist.monthlyListeners, stringResource(Res.string.monthly_audience_short))
-                ?: parseAudienceCount(artist.subscribers)?.withLabel { "${stringResource(Res.string.subscribers)}: $it" },
+                ?: artist.subscribers?.takeIf(String::isNotBlank)?.let { "${stringResource(Res.string.subscribers)}: $it" },
         thumbnail = artist.thumbnail,
         fallbackIcon = MetrolistIcons.Outlined.AccountCircle,
         artistId = artist.id,

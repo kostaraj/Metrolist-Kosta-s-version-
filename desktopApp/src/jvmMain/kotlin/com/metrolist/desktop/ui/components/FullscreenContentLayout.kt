@@ -303,14 +303,14 @@ internal fun DesktopLyricsContent(
             lyricsProvidedBy = { provider -> String.format(lyricsProvidedByFmt, provider) },
             providerUrl =
                 if (isMatchingTrack) {
-                    lyricsProviderUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.sourceId, lyricsDoc?.meta?.lyricSource)
+                    lyricsProviderUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.sourceId)
                 } else {
                     null
                 },
             lyricsMeta = if (isMatchingTrack) lyricsDoc?.meta else null,
             lyricsCuratorUrl =
                 if (isMatchingTrack) {
-                    lyricsCuratorUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.lyricsCuratorId, lyricsDoc?.meta?.lyricSource)
+                    lyricsCuratorUrl(LyricsState.currentLyricsProvider, lyricsDoc?.meta?.lyricsCuratorId)
                 } else {
                     null
                 },

@@ -580,7 +580,7 @@ class YouTubeRepository(
                                         complete = true,
                                     )
                                 } else {
-                                    getAllBrowseItems(browseId, requestSession = requestSession, includeRecommendations = false).let {
+                                    getAllBrowseItems(browseId, requestSession = requestSession).let {
                                         LibraryItemsResult(it.items, it.complete)
                                     }
                                 },
@@ -636,7 +636,6 @@ class YouTubeRepository(
         browseId: String,
         params: String? = null,
         requestSession: InnerTube.SessionSnapshot = innerTube.sessionSnapshot(),
-        includeRecommendations: Boolean = true,
     ): PaginationResult<YTItem> {
         val voteRevision = SongLikeState.voteObservationRevision()
         requireCurrentSession(requestSession)
@@ -645,7 +644,7 @@ class YouTubeRepository(
                 innerTube.browse(YouTubeClient.WEB_REMIX, browseId = browseId, params = params, setLogin = true)
             }
         check(firstResponse.contents != null) { "Missing library contents: $browseId" }
-        val first = parseBrowseResponse(firstResponse, includeRecommendations = includeRecommendations)
+        val first = parseBrowseResponse(firstResponse)
         requireCurrentSession(requestSession)
         return collectPages(
             initial = ParsedPage(first.sections.values.flatten(), first.continuation, first.continuationAmbiguous),
@@ -657,7 +656,7 @@ class YouTubeRepository(
                 readAccountBrowse(requestSession, browseId, continuation = true, voteRevision = continuationRevision) {
                     innerTube.browse(YouTubeClient.WEB_REMIX, continuation = continuation, setLogin = true)
                 }
-            val next = parseBrowseResponse(nextResponse, includeRecommendations = includeRecommendations)
+            val next = parseBrowseResponse(nextResponse)
             requireCurrentSession(requestSession)
             ParsedPage(next.sections.values.flatten(), next.continuation, next.continuationAmbiguous)
         }
@@ -1247,7 +1246,7 @@ class YouTubeRepository(
 
     suspend fun getLibraryPodcastsForSync(): List<PodcastItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("FEmusic_library_non_music_audio_list", includeRecommendations = false)
+        val result = getAllBrowseItems("FEmusic_library_non_music_audio_list")
         check(result.complete) { "Podcast library pagination ended before the final page" }
         return result.items
             .filterIsInstance<PodcastItem>()
@@ -1270,7 +1269,7 @@ class YouTubeRepository(
 
     suspend fun getSavedEpisodesForSync(): List<EpisodeItem> {
         require(innerTube.hasSapCookieAuth()) { "YouTube Music sign-in is required" }
-        val result = getAllBrowseItems("VLSE", includeRecommendations = false)
+        val result = getAllBrowseItems("VLSE")
         check(result.complete) { "Saved episode pagination ended before the final page" }
         return result.items
             .mapNotNull { item ->
@@ -1709,7 +1708,20 @@ class YouTubeRepository(
                     repositoryJson.decodeFromJsonElement<PlayerResponse>(response).videoDetails
                 } ?: return null
             val duration = details.lengthSeconds?.toLongOrNull()?.takeIf { it > 0L }
-            val isLive = response.isLivePlayerResponse()
+            val rawDetails = response["videoDetails"].asObject()
+            val liveFlags =
+                listOf(
+                    rawDetails?.get("isLive"),
+                    rawDetails?.get("isLiveNow"),
+                    response.findFirstObject("liveBroadcastDetails")?.get("isLiveNow"),
+                ).mapNotNull { it?.jsonPrimitive?.booleanOrNull }
+            val streamingData = response["streamingData"].asObject()
+            val hlsOnly =
+                streamingData?.get("hlsManifestUrl").primitiveText()?.isNotBlank() == true &&
+                    streamingData?.get("formats").asArray().isNullOrEmpty() &&
+                    streamingData?.get("adaptiveFormats").asArray().isNullOrEmpty()
+            // isLiveContent also marks recordings and premieres; only current stream evidence counts.
+            val isLive = true in liveFlags || (false !in liveFlags && duration == null && hlsOnly)
             SongPlayerInformation(
                 title = details.title?.takeIf { it.isNotBlank() },
                 artist = details.author?.takeIf { it.isNotBlank() },
@@ -2114,7 +2126,7 @@ class YouTubeRepository(
                 }
             }
             try {
-                val result = getAllBrowseItems("FEmusic_liked_playlists", requestSession = requestSession, includeRecommendations = false)
+                val result = getAllBrowseItems("FEmusic_liked_playlists", requestSession = requestSession)
                 val unresolvedIds = mutableSetOf<String>()
                 val items =
                     coroutineScope {

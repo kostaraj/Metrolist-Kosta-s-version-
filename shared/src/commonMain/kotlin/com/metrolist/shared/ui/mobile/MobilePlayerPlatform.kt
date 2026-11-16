@@ -108,7 +108,6 @@ internal class MobilePlayerPlatform(
     override fun PlayerWindowEffects(
         hideSystemBars: Boolean,
         lockLandscape: Boolean,
-        lightStatusBars: Boolean?,
     ) = Unit
 
     override fun enterPictureInPicture(

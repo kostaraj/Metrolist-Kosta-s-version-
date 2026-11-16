@@ -52,7 +52,6 @@ internal class SilenceSkippingSupport(
     private val audioPositionDiagnostics = AudioPositionDiagnostics()
     val playoutTracker = AudioPlayoutTracker()
     val positionDiagnostics: Map<String, String> get() = audioPositionDiagnostics.details
-    val playbackHeadPosition: Long? get() = audioPositionDiagnostics.playbackHeadPosition()
 
     @Volatile private var equalizer: EqualizerAudioProcessor? = null
 

@@ -3,7 +3,6 @@ package com.metrolist.shared.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,33 +29,6 @@ import kotlin.math.roundToInt
 fun LazyListScrollbar(
     state: LazyListState,
     modifier: Modifier = Modifier,
-) {
-    Scrollbar(state, modifier) { scrollOffset ->
-        val indicator = state.scrollIndicatorState ?: return@Scrollbar
-        val (index, offset) =
-            scrollbarScrollPosition(
-                scrollOffset,
-                (indicator.contentSize - indicator.viewportSize).toFloat(),
-                state.layoutInfo.totalItemsCount,
-                indicator.contentSize,
-            )
-        state.requestScrollToItem(index, offset)
-    }
-}
-
-@Composable
-fun Scrollbar(
-    state: ScrollState,
-    modifier: Modifier = Modifier,
-) {
-    Scrollbar(state, modifier) { scrollOffset -> state.dispatchRawDelta(scrollOffset - state.value) }
-}
-
-@Composable
-private fun Scrollbar(
-    state: ScrollableState,
-    modifier: Modifier,
-    scrollTo: (Float) -> Unit,
 ) {
     var isDragging by remember(state) { mutableStateOf(false) }
     val alpha by animateFloatAsState(
@@ -97,7 +69,14 @@ private fun Scrollbar(
                                                 metrics.maxScroll,
                                                 scrollTrackLength,
                                             )
-                                        scrollTo(dragTargetOffset)
+                                        val (index, offset) =
+                                            scrollbarScrollPosition(
+                                                dragTargetOffset,
+                                                metrics.maxScroll,
+                                                state.layoutInfo.totalItemsCount,
+                                                metrics.contentSize,
+                                            )
+                                        state.requestScrollToItem(index, offset)
                                     }
                                 }
                             }

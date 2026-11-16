@@ -32,7 +32,6 @@ import com.metrolist.shared.storage.trackedDownloadPlaylistId
 import com.metrolist.shared.youtube.extraction.models.toContentHints
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -229,29 +228,23 @@ class SongDownloadManager(
     internal suspend fun processNext(resolve: suspend (SongItem, Boolean) -> PlaybackResource? = ::resolvePlaybackResource): Boolean =
         withContext(Dispatchers.IO) {
             queueRestored.await()
-            val (request, task, previousTask) =
+            val (request, task) =
                 synchronized(queueLock) {
                     val next =
                         readQueue().filter { it.state == DownloadQueueState.QUEUED }.minByOrNull { it.enqueuedAt }
                             ?: return@withContext false
                     val task = DownloadTask(next.song.id, AudioDownloadControl())
-                    val previousTask = activeDownloads.putIfAbsent(next.song.id, task)
-                    if (previousTask != null) return@synchronized Triple(next, task, previousTask)
+                    if (activeDownloads.putIfAbsent(next.song.id, task) != null) return@withContext false
                     try {
                         updateRequestLocked(next.song.id) {
                             it.copy(state = DownloadQueueState.RUNNING, updatedAt = System.currentTimeMillis(), lastError = null)
                         }
                     } catch (e: Throwable) {
                         activeDownloads.remove(next.song.id, task)
-                        task.completion.complete(Unit)
                         throw e
                     }
-                    Triple(next, task, null)
+                    next to task
                 }
-            if (previousTask != null) {
-                previousTask.completion.await()
-                return@withContext true
-            }
             val song = request.song
             var transferStarted = false
             try {
@@ -316,7 +309,6 @@ class SongDownloadManager(
                             true
                         } else {
                             activeDownloads.remove(song.id, task)
-                            task.completion.complete(Unit)
                             false
                         }
                     }
@@ -324,10 +316,7 @@ class SongDownloadManager(
                     try {
                         withContext(NonCancellable) { audioCacheManager.removeDownload(song.id) }
                     } finally {
-                        synchronized(queueLock) {
-                            activeDownloads.remove(song.id, task)
-                            task.completion.complete(Unit)
-                        }
+                        synchronized(queueLock) { activeDownloads.remove(song.id, task) }
                     }
                 }
             }
@@ -580,9 +569,7 @@ class SongDownloadManager(
         var downloadedBytes: Long = 0L,
         var totalBytes: Long? = null,
         var lastProgressAt: Long = 0L,
-    ) {
-        val completion = CompletableDeferred<Unit>()
-    }
+    )
 
     companion object {
         const val CHANNEL_ID = "downloads"

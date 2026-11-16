@@ -68,7 +68,6 @@ import com.metrolist.android.playlistimport.DeezerLoginScreen
 import com.metrolist.android.playlistimport.PlaylistImportPreparationType
 import com.metrolist.android.playlistimport.TidalLoginScreen
 import com.metrolist.android.playlistimport.containsAndroidInaccessibleReference
-import com.metrolist.android.playlistimport.preparePlaylistBatch
 import com.metrolist.android.playlistimport.readPlaylistFile
 import com.metrolist.android.spotifyimport.SpotifyLoginScreen
 import com.metrolist.android.spotifyimport.SpotifyPlaylistPickerSheet
@@ -546,25 +545,6 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                         val message = resolveImportError(error)
                         errorDetails = message to emptyList()
                     }
-            } finally {
-                isBusy = false
-            }
-        }
-    }
-
-    fun startBatchImport(
-        loaded: List<SpotifyImportManager.LoadedPlaylist>,
-        source: String,
-        provider: ImportSourceType,
-    ) {
-        val imports = preparePlaylistBatch(loaded, source, provider)
-        applicationScope.launch(Dispatchers.Main.immediate) {
-            isBusy = true
-            try {
-                clearRetainedPreparationResult()
-                AndroidPlaylistImportTransfer
-                    .startBatch(context, playlistImportManager, imports)
-                    .onFailure { error -> errorDetails = resolveImportError(error) to emptyList() }
             } finally {
                 isBusy = false
             }
@@ -1389,12 +1369,8 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                     showSpotifyPreviewSheet = false
                     AndroidPlaylistImportTransfer.restorePreviousPreparation()
                 },
-                onContinue = continueImport@{
+                onContinue = {
                     showSpotifyPreviewSheet = false
-                    if (loaded.size > 1) {
-                        startBatchImport(loaded, spotifySource, ImportSourceType.SPOTIFY)
-                        return@continueImport
-                    }
                     val allTracks =
                         loaded.flatMap { pl ->
                             pl.tracks.map {
@@ -1519,12 +1495,8 @@ fun BackupRestoreScreen(onNavigateBack: () -> Unit) {
                     showAppleMusicPreviewSheet = false
                     AndroidPlaylistImportTransfer.restorePreviousPreparation()
                 },
-                onContinue = continueImport@{
+                onContinue = {
                     showAppleMusicPreviewSheet = false
-                    if (loaded.size > 1) {
-                        startBatchImport(loaded, appleMusicSource, ImportSourceType.APPLE_MUSIC)
-                        return@continueImport
-                    }
                     val allTracks =
                         loaded.flatMap { pl ->
                             pl.tracks.map {

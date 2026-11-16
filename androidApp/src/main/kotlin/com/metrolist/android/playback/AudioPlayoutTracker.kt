@@ -13,7 +13,6 @@ import java.nio.ByteBuffer
 internal class AudioPlayoutTracker {
     internal class OutputProgress(
         val config: AudioOutputProvider.OutputConfig,
-        val audioOutput: AudioOutput,
     ) {
         var writtenBytes = 0L
 
@@ -71,7 +70,7 @@ internal class AudioPlayoutTracker {
         object : ForwardingAudioOutputProvider(provider) {
             override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
                 val delegate = super.getAudioOutput(config)
-                var progress = OutputProgress(config, delegate).also { output = it }
+                var progress = OutputProgress(config).also { output = it }
                 return object : ForwardingAudioOutput(delegate) {
                     override fun write(
                         buffer: ByteBuffer,
@@ -88,7 +87,7 @@ internal class AudioPlayoutTracker {
 
                     override fun flush() {
                         super.flush()
-                        progress = OutputProgress(config, delegate).also { output = it }
+                        progress = OutputProgress(config).also { output = it }
                     }
 
                     override fun release() {

@@ -22,7 +22,6 @@ data class LyricsEntity(
     @ColumnInfo(defaultValue = "0") val translationNotNeeded: Boolean = false,
     @ColumnInfo(defaultValue = "0") val offsetMs: Int = 0,
     @ColumnInfo(defaultValue = "0") val isUserSelected: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val isLegacyProtected: Boolean = false,
     val userLyrics: String? = null,
     val userLyricsDraft: String? = null,
     // A User fork set aside by choosing a provider, kept so the user can restore it.

@@ -25,7 +25,6 @@ internal object LinuxWindowMove {
     fun start(window: Window): Boolean {
         if (!isX11Toolkit()) return false
         val toolkit = Toolkit.getDefaultToolkit().javaClass
-        if (!hasAwtX11PeerAccess(toolkit.module, LinuxWindowMove::class.java.module)) return false
 
         val lock = toolkit.getMethod("awtLock")
         val unlock = toolkit.getMethod("awtUnlock")
@@ -50,11 +49,6 @@ internal object LinuxWindowMove {
         }
     }
 }
-
-internal fun hasAwtX11PeerAccess(
-    toolkitModule: Module,
-    callerModule: Module,
-): Boolean = toolkitModule.isExported("sun.awt", callerModule) && toolkitModule.isExported("sun.awt.X11", callerModule)
 
 internal fun startX11WindowMove(
     x11: WindowMoveX11,

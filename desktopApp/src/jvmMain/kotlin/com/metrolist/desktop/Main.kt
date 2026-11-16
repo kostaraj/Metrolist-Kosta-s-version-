@@ -35,7 +35,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -116,7 +114,6 @@ import com.metrolist.desktop.ui.components.LocalCaptionBarInsets
 import com.metrolist.desktop.ui.components.MiniplayerWindow
 import com.metrolist.desktop.ui.components.ShortcutsOverlay
 import com.metrolist.desktop.ui.components.TokenLoginDialog
-import com.metrolist.desktop.ui.components.UpdateArtworkTheme
 import com.metrolist.desktop.ui.components.VideoFullscreenOverlay
 import com.metrolist.desktop.ui.layouts.ExpressLayout
 import com.metrolist.desktop.ui.layouts.FocusedLayout
@@ -147,7 +144,7 @@ import com.metrolist.desktop.utils.configureDesktopJvmErrorFile
 import com.metrolist.desktop.utils.configureLinuxWebKitRenderer
 import com.metrolist.desktop.utils.desktopRenderApiOverride
 import com.metrolist.desktop.utils.isDesktopPlatformSupported
-import com.metrolist.desktop.web.DesktopWebViewError
+import com.metrolist.desktop.utils.resolveDesktopSeedColor
 import com.metrolist.desktop.window.IconResources
 import com.metrolist.desktop.window.LinuxWindowFrame
 import com.metrolist.desktop.window.WindowFrame
@@ -215,7 +212,6 @@ import com.metrolist.shared.ui.utils.desktopMouseScrollFactors
 import com.metrolist.shared.ui.utils.verticalScrollWithDrag
 import com.metrolist.shared.utils.OsUtil
 import com.metrolist.shared.utils.XdgUtils
-import com.metrolist.shared.utils.isCrashReportingAvailable
 import com.metrolist.shared.youtube.di.sharedModule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -262,7 +258,6 @@ fun WindowScope.App(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean = false,
-    integrationsReady: Boolean = false,
 ) {
     val playbackController = remember { DesktopPlaybackController(AppState.scope) }
     val downloadStates = LibraryState.downloadStates
@@ -275,7 +270,7 @@ fun WindowScope.App(
         LocalMouseScrollFactors provides desktopMouseScrollFactors(LocalDensity.current),
         desktopScrollConfig(),
     ) {
-        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux, integrationsReady)
+        AppContent(navigator, onMaximized, toggleWindowFullscreen, checkDarkMode, isLinux)
     }
 }
 
@@ -286,9 +281,11 @@ private fun WindowScope.AppContent(
     toggleWindowFullscreen: () -> Unit,
     checkDarkMode: (Boolean) -> Unit,
     isLinux: Boolean,
-    integrationsReady: Boolean,
 ) {
-    MetrolistTheme {
+    MetrolistTheme(
+        seedColor =
+            resolveDesktopSeedColor(UiState.seedColor),
+    ) {
         val colorScheme = MaterialTheme.colorScheme
         WindowsWindowBackground(colorScheme.background)
         val isExpandedPlayerVisible = PlayerState.currentTrack != null && PlayerState.isExpanded
@@ -302,12 +299,10 @@ private fun WindowScope.AppContent(
         var onboardingComplete by remember { mutableStateOf(Settings.shared.desktopOnboardingComplete) }
         if (!onboardingComplete) {
             DesktopOnboarding { sendCrashReports, openLogin ->
-                if (isCrashReportingAvailable()) {
-                    if (Settings.shared.desktopPendingOnboardingSentryConsent.isNotBlank()) {
-                        Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
-                    }
-                    Settings.shared.sentryEnabled = sendCrashReports
+                if (Settings.shared.desktopPendingOnboardingSentryConsent.isNotBlank()) {
+                    Settings.shared.desktopPendingOnboardingSentryConsent = sendCrashReports.toString()
                 }
+                Settings.shared.sentryEnabled = sendCrashReports
                 Settings.shared.desktopOnboardingComplete = true
                 applicationScope.launch(Dispatchers.IO) { SentryManager.initialize() }
                 if (openLogin) {
@@ -326,7 +321,6 @@ private fun WindowScope.AppContent(
         setSingletonImageLoaderFactory { context ->
             DesktopImageLoader.create(context)
         }
-        UpdateArtworkTheme()
         LaunchedEffect(colorScheme) {
             try {
                 val bg = colorScheme.background.toArgb()
@@ -396,7 +390,6 @@ private fun WindowScope.AppContent(
                     },
             )
             DesktopPageBoundTokenHost(GlobalContext.get().get<DesktopPageBoundTokenRuntime>())
-            DesktopWebViewError()
             if (UiState.showIntegrationsSettings) {
                 IntegrationsOverlay(colorScheme)
             }
@@ -568,21 +561,8 @@ private fun WindowScope.AppContent(
                 SettingsOverlay(colorScheme)
             }
             YouTubeSyncSnackbar(AppState.snackbarHostState)
-            val snackbarScheme = rememberUpdatedState(colorScheme)
-            SnackbarHost(AppState.snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter)) { data ->
-                val scheme = snackbarScheme.value
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = scheme.inverseSurface,
-                    contentColor = scheme.inverseOnSurface,
-                    actionColor = scheme.inversePrimary,
-                    actionContentColor = scheme.inversePrimary,
-                    dismissActionContentColor = scheme.inverseOnSurface,
-                )
-            }
+            SnackbarHost(AppState.snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
         }
-
-        if (integrationsReady) MiniplayerWindow()
 
         if (UiState.showFloatingSearch) {
             FloatingSearchOverlay(
@@ -830,11 +810,9 @@ private fun runDesktopApp(args: Array<String>) {
         settings.desktopOnboardingComplete = File(XdgUtils.getXdgDataHome(), "metrolist/metrolist.db").isFile
         settings.desktopOnboardingInitialized = true
     }
-    if (isCrashReportingAvailable()) {
-        settings.desktopPendingOnboardingSentryConsent.takeIf(String::isNotBlank)?.let { consent ->
-            settings.sentryEnabled = consent.toBooleanStrict()
-            settings.desktopPendingOnboardingSentryConsent = ""
-        }
+    settings.desktopPendingOnboardingSentryConsent.takeIf(String::isNotBlank)?.let { consent ->
+        settings.sentryEnabled = consent.toBooleanStrict()
+        settings.desktopPendingOnboardingSentryConsent = ""
     }
     DesktopLocaleManager.apply(settings.appLanguage)
 
@@ -1120,7 +1098,7 @@ private fun runDesktopApp(args: Array<String>) {
         @Suppress("DEPRECATION")
         val logoPainter = painterResource("logo.svg")
         val iconColor =
-            UiState.seedColor
+            resolveDesktopSeedColor(UiState.seedColor)
 
         val dynamicIcon =
             remember(iconColor) {
@@ -1246,7 +1224,7 @@ private fun runDesktopApp(args: Array<String>) {
             }
             if (!backendReady) {
                 DesktopDensityProvider {
-                    MetrolistTheme(seedColor = UiState.seedColor) {
+                    MetrolistTheme(seedColor = resolveDesktopSeedColor(UiState.seedColor)) {
                         WindowsWindowBackground(MaterialTheme.colorScheme.background)
                         val shell: @Composable () -> Unit = {
                             Surface(
@@ -1547,13 +1525,13 @@ private fun runDesktopApp(args: Array<String>) {
                                     toggleWindowFullscreen = toggleFullscreen,
                                     checkDarkMode = { areWeInDarkMode.value = it },
                                     isLinux = isLinux,
-                                    integrationsReady = integrationsReady,
                                 )
                             }
                         }
                     }
                 }
             }
+            if (integrationsReady) MiniplayerWindow()
         }
 
         if (integrationsReady) ComposeTrayManager.TrayIcon()

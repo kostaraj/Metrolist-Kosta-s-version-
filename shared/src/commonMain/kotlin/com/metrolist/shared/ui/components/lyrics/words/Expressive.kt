@@ -54,8 +54,6 @@ import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.time.TimeSource
 
-private const val MIN_EXPRESSIVE_GLOW_DURATION_MS = 500f
-
 private fun String.containsRtl(): Boolean = isRtlText(this)
 
 private fun String.containsJoinedIndic(): Boolean = any { it in '\u0900'..'\u0DFF' } || isJoiningScript(this)
@@ -302,14 +300,10 @@ internal fun ExpressiveWordAnimation(
                 val dur = ((word.endTime - word.startTime) * 1000.0).toFloat()
                 val wordLenText = word.text.length.coerceAtLeast(1)
                 val impactRatio = dur / wordLenText
-                if (dur < MIN_EXPRESSIVE_GLOW_DURATION_MS) {
-                    0f
-                } else {
-                    (
-                        ((impactRatio - 125f) / 250f).coerceIn(0f, 1f) * 0.6f +
-                            ((dur - MIN_EXPRESSIVE_GLOW_DURATION_MS) / 1500f).coerceIn(0f, 1f) * 0.4f
-                    ).coerceIn(0f, 1f)
-                }
+                (
+                    ((impactRatio - 100f) / 250f).coerceIn(0f, 1f) * 0.6f +
+                        ((dur - 300f) / 1500f).coerceIn(0f, 1f) * 0.4f
+                ).coerceIn(0f, 1f)
             }
         }
 

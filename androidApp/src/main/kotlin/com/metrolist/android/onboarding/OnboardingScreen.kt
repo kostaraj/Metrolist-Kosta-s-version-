@@ -65,7 +65,6 @@ import com.metrolist.shared.ui.settings.SettingsHostChoice
 import com.metrolist.shared.ui.settings.SettingsPageId
 import com.metrolist.shared.ui.settings.SettingsPlatform
 import com.metrolist.shared.ui.settings.SharedSettingsHost
-import com.metrolist.shared.utils.isCrashReportingAvailable
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -88,7 +87,7 @@ internal fun OnboardingScreen(
                 add(OnboardingPage.WELCOME)
                 if (hasLegacyInstallation && !libraryStartedFresh) add(OnboardingPage.MIGRATION)
                 if (hasLegacyInstallation && !libraryStartedFresh) add(OnboardingPage.MIGRATION_COMPLETE)
-                if (isCrashReportingAvailable()) add(OnboardingPage.CRASH_REPORTS)
+                add(OnboardingPage.CRASH_REPORTS)
                 add(OnboardingPage.NOTIFICATIONS)
                 add(OnboardingPage.LANGUAGE_LYRICS)
                 add(OnboardingPage.PLAYBACK)
@@ -140,8 +139,7 @@ internal fun OnboardingScreen(
                 if (startingFresh) {
                     libraryStartedFresh = true
                     error = null
-                    currentPageName =
-                        if (isCrashReportingAvailable()) OnboardingPage.CRASH_REPORTS.name else OnboardingPage.NOTIFICATIONS.name
+                    currentPageName = OnboardingPage.CRASH_REPORTS.name
                 } else {
                     nextPage()
                 }

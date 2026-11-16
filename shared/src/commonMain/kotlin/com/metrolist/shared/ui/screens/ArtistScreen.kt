@@ -193,7 +193,6 @@ import com.metrolist.shared.utils.formatDuration
 import com.metrolist.shared.utils.highResolutionArtworkUrl
 import com.metrolist.shared.utils.isPullToRefreshSupported
 import com.metrolist.shared.utils.monthlyAudienceText
-import com.metrolist.shared.utils.parseAudienceCount
 import com.metrolist.shared.utils.withoutPlaybackCountLabel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -1041,9 +1040,9 @@ private fun ArtistHeaderDetails(
                 ArtistPlaceholderText(MaterialTheme.typography.bodyLarge, fraction = 0.55f)
             }
         } else {
-            parseAudienceCount(artist.subscribers)?.let { count ->
+            artist.subscribers?.takeIf { it.isNotBlank() }?.let { count ->
                 Text(
-                    count.withLabel { stringResource(Res.string.artist_subscriber_count, it) },
+                    stringResource(Res.string.artist_subscriber_count, count),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

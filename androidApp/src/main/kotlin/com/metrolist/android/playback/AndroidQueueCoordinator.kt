@@ -341,7 +341,7 @@ internal class AndroidQueueCoordinator(
                 songs = playableSongs,
                 startIndex = adjustedStartIndex,
                 startPlaying = startPlaying,
-                preparePlayback = true,
+                preparePlayback = startPlaying || fromRemote,
                 startPositionMs = startPositionMs,
                 recommendationsSongsOnly = songsOnly,
             )

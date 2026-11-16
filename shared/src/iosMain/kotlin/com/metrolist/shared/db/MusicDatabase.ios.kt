@@ -46,7 +46,6 @@ internal fun getIosDatabaseBuilder(path: String): RoomDatabase.Builder<MusicData
         .databaseBuilder<MusicDatabase>(name = path)
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
-        .addCallback(LegacyUserLyricsRecovery)
         .addMigrations(
             MIGRATION_36_37,
             MIGRATION_37_38,
@@ -77,6 +76,5 @@ internal fun getIosDatabaseBuilder(path: String): RoomDatabase.Builder<MusicData
             MIGRATION_62_63,
             MIGRATION_63_64,
             MIGRATION_64_65,
-            MIGRATION_65_66,
         )
 }

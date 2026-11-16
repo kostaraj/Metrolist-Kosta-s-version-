@@ -34,7 +34,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.datasource.ByteArrayDataSource
 import androidx.media3.datasource.DataSource
@@ -47,7 +46,6 @@ import com.metrolist.android.playback.SongDownloadManager
 import com.metrolist.android.ui.component.AdaptiveModalBottomSheet
 import com.metrolist.android.ui.download.rememberDownloadPermissionGate
 import com.metrolist.android.ui.screens.PlayerDeviceConnectSheet
-import com.metrolist.android.ui.theme.SystemBarAppearance
 import com.metrolist.android.utils.shareImage
 import com.metrolist.shared.api.artwork.CanvasContentSource
 import com.metrolist.shared.api.artwork.YouTubeCanvasClip
@@ -181,14 +179,9 @@ class AndroidPlayerPlatform(
     override fun PlayerWindowEffects(
         hideSystemBars: Boolean,
         lockLandscape: Boolean,
-        lightStatusBars: Boolean?,
     ) {
         val isTv = LocalIsTv.current
         val hostView = LocalView.current
-        LifecycleResumeEffect(hostView, lightStatusBars) {
-            SystemBarAppearance.playerLightStatusBars = lightStatusBars
-            onPauseOrDispose { SystemBarAppearance.playerLightStatusBars = null }
-        }
         LaunchedEffect(lockLandscape, isTv) {
             if (!isTv) {
                 activity?.requestedOrientation =

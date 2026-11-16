@@ -358,8 +358,7 @@ internal fun settingsSearchResults(
                                 if (
                                     page.id == SettingsPageId.HIDDEN_HOME_ITEMS ||
                                     page.id == SettingsPageId.HIDDEN_LIBRARY_ITEMS ||
-                                    page.id == SettingsPageId.BLOCKED_ARTISTS ||
-                                    page.id == SettingsPageId.BLOCKED_SONGS
+                                    page.id == SettingsPageId.BLOCKED_ARTISTS
                                 ) {
                                     return@forEach
                                 }

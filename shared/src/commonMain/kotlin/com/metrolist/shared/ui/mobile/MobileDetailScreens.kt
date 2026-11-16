@@ -78,7 +78,6 @@ import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.state.PodcastLibrary
 import com.metrolist.shared.state.SongLikeState
 import com.metrolist.shared.state.SongMetadataState
-import com.metrolist.shared.state.setArtistSubscribed
 import com.metrolist.shared.ui.components.AddSongSheetContent
 import com.metrolist.shared.ui.components.CollectionPreviews
 import com.metrolist.shared.ui.components.ContainedLoadingIndicator
@@ -249,7 +248,6 @@ internal fun MobileAlbumScreen(
 @Composable
 internal fun MobileArtistScreen(
     artistId: String,
-    database: MusicDatabase,
     loader: MobileDetailLoader<ArtistPageResult>,
     subscription: ArtistSubscriptionState,
     fallbackTitle: String? = null,
@@ -361,14 +359,7 @@ internal fun MobileArtistScreen(
         onSubscribeClick = {
             subscription.toggle(
                 scope,
-                request = {
-                    database.setArtistSubscribed(
-                        GlobalYouTubeRepository.instance,
-                        artistId,
-                        artist?.title ?: fallbackTitle.orEmpty(),
-                        it,
-                    )
-                },
+                request = { GlobalYouTubeRepository.instance.subscribeChannel(artistId, it) },
                 onError = { onError(errorText) },
             )
         },

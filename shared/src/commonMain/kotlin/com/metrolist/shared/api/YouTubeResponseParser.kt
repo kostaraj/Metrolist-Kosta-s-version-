@@ -7,7 +7,6 @@ import com.metrolist.shared.model.ArtistTiny
 import com.metrolist.shared.model.HomeSection
 import com.metrolist.shared.model.SongItem
 import com.metrolist.shared.model.YTItem
-import com.metrolist.shared.utils.parseAudienceCount
 import io.ktor.client.request.get
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -202,7 +201,10 @@ internal object YouTubeResponseParser {
             ?.takeIf { it.isNotBlank() }
             ?.toLongOrNull()
 
-    internal fun String?.cleanSubscriberCount(): String? = parseAudienceCount(this)?.text
+    internal fun String?.cleanSubscriberCount(): String? =
+        this
+            ?.replace(Regex("\\s+subscribers?$", RegexOption.IGNORE_CASE), "")
+            ?.takeIf { it.isNotBlank() }
 
     internal fun JsonObject?.feedbackToken(): String? =
         this
@@ -662,17 +664,10 @@ internal object YouTubeResponseParser {
         response: BrowseResponse,
         browseIds: MutableMap<String, Pair<String?, String?>>? = null,
         untitledShelfTitle: String? = "Tracks",
-        includeRecommendations: Boolean = true,
     ): ParsedBrowse {
         val sections = mutableMapOf<String, List<YTItem>>()
         val continuationTokens = mutableSetOf<String>()
         val continuationBranches = linkedMapOf<String, ContinuationBranch>()
-
-        fun includeShelf(element: JsonElement): Boolean {
-            if (includeRecommendations) return true
-            val shelf = element.asObject() ?: return true
-            return !shelf.containsKey("musicCarouselShelfRenderer") && !shelf.containsKey("musicCardShelfRenderer")
-        }
 
         fun recordContinuation(
             element: JsonElement?,
@@ -720,7 +715,7 @@ internal object YouTubeResponseParser {
 
         fun processContinuationItems(continuationItems: JsonArray) {
             val items =
-                continuationItems.filter(::includeShelf).mapNotNull { element ->
+                continuationItems.mapNotNull { element ->
                     val item = element.jsonObject
                     val renderer =
                         item["musicResponsiveListItemRenderer"]?.jsonObject
@@ -779,7 +774,7 @@ internal object YouTubeResponseParser {
         listOfNotNull(primarySectionList, secondarySectionList, contents?.sectionListRenderer)
             .distinct()
             .forEach { sectionList ->
-                sectionList["contents"]?.jsonArray?.filter(::includeShelf)?.forEach { sectionElement ->
+                sectionList["contents"]?.jsonArray?.forEach { sectionElement ->
                     val sectionObj = sectionElement.jsonObject
                     if (sectionObj.containsKey("itemSectionRenderer")) {
                         val itemSection = sectionObj["itemSectionRenderer"]?.jsonObject
@@ -803,7 +798,7 @@ internal object YouTubeResponseParser {
                                 ?.contentOrNull
                                 ?: ""
                         val itemContents = mutableListOf<YTItem>()
-                        itemSection?.get("contents")?.jsonArray?.filter(::includeShelf)?.forEach { subElement ->
+                        itemSection?.get("contents")?.jsonArray?.forEach { subElement ->
                             val subObj = subElement.jsonObject
                             val tempSections = mutableMapOf<String, List<YTItem>>()
                             processShelf(subObj, tempSections, browseIds, untitledShelfTitle)
@@ -836,11 +831,11 @@ internal object YouTubeResponseParser {
             ).forEach(::processContinuationShelf)
 
             cont.sectionListContinuation?.let { sectionList ->
-                sectionList["contents"]?.jsonArray?.filter(::includeShelf)?.forEach { element ->
+                sectionList["contents"]?.jsonArray?.forEach { element ->
                     val section = element.jsonObject
                     val itemSection = section["itemSectionRenderer"]?.jsonObject
                     if (itemSection != null) {
-                        itemSection["contents"]?.jsonArray?.filter(::includeShelf)?.forEach { child ->
+                        itemSection["contents"]?.jsonArray?.forEach { child ->
                             val childObject = child.jsonObject
                             val before = sections.values.sumOf { it.size }
                             processShelf(childObject, sections, browseIds, defaultTitle = "Continuation")

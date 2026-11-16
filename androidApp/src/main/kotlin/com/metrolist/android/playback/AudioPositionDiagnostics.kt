@@ -18,13 +18,6 @@ internal class AudioPositionDiagnostics {
     @Volatile var details: Map<String, String> = emptyMap()
         private set
 
-    @Volatile private var audioTrack: AudioTrack? = null
-
-    fun playbackHeadPosition(): Long? =
-        audioTrack?.let { track ->
-            runCatching { Integer.toUnsignedLong(track.playbackHeadPosition) }.getOrNull()
-        }
-
     // Diagnostic only. Hidden APIs can be absent or blocked on the current Android release.
     @SuppressLint("PrivateApi")
     private val latencyMethod = runCatching { AudioTrack::class.java.getMethod("getLatency") }.getOrNull()
@@ -38,7 +31,6 @@ internal class AudioPositionDiagnostics {
             override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
                 val platformOutput = super.getAudioOutput(config)
                 val track = (platformOutput as? AudioTrackAudioOutput)?.audioTrack ?: return platformOutput
-                audioTrack = track
                 val diagnosticOutput =
                     onOutputEvent?.let { DiagnosticAudioOutput(platformOutput, config, it, onOutputSignal = onOutputSignal) }
                         ?: platformOutput
@@ -89,7 +81,6 @@ internal class AudioPositionDiagnostics {
                     override fun release() {
                         released = true
                         track.removeOnRoutingChangedListener(routingListener)
-                        if (audioTrack === track) audioTrack = null
                         details = emptyMap()
                         super.release()
                     }

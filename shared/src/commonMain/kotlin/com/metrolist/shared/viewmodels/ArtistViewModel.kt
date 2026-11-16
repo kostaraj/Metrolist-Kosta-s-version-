@@ -4,7 +4,6 @@ import androidx.compose.runtime.snapshotFlow
 import com.metrolist.shared.api.artistSectionsWithLatestRelease
 import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.artwork.ArtistArtworkFetchResult
-import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.model.AlbumItem
 import com.metrolist.shared.model.ArtistItem
 import com.metrolist.shared.model.SongItem
@@ -12,8 +11,6 @@ import com.metrolist.shared.model.YTItem
 import com.metrolist.shared.settings.BlockedContent
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
-import com.metrolist.shared.state.resolveArtistSubscribed
-import com.metrolist.shared.state.setArtistSubscribed
 import com.metrolist.shared.ui.localizedPageLoadError
 import com.metrolist.shared.utils.Logger
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
@@ -58,7 +55,6 @@ class ArtistViewModel(
     private val artistId: String?,
     private val scope: CoroutineScope,
     private val animatedArtworkService: AnimatedArtworkService,
-    private val database: MusicDatabase,
     private val mutationScope: CoroutineScope = scope,
 ) {
     val subscription = ArtistSubscriptionState()
@@ -101,16 +97,10 @@ class ArtistViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null, loadingSections = emptySet(), failedSections = emptySet()) }
             try {
                 val artistPage = withContext(Dispatchers.Default) { GlobalYouTubeRepository.instance.getArtist(artistId) }
+                if (generation != loadGeneration) return@launch
                 val filteredSections = visibleArtistSections(artistPage.sections, artistId)
                 val artistInfo = filteredSections["header"]?.filterIsInstance<ArtistItem>()?.firstOrNull()
-                val subscribed =
-                    database.resolveArtistSubscribed(
-                        GlobalYouTubeRepository.instance,
-                        artistId,
-                        artistInfo?.isSubscribed == true,
-                    )
-                if (generation != loadGeneration) return@launch
-                subscription.applyBrowse(subscribed, subscriptionRevision)
+                subscription.applyBrowse(artistInfo?.isSubscribed == true, subscriptionRevision)
                 _uiState.update { state ->
                     state.copy(
                         unfilteredSections = artistPage.sections,
@@ -143,13 +133,11 @@ class ArtistViewModel(
     fun loadItemMetadata(items: List<YTItem>) = tracksLoader.loadItemMetadata(items)
 
     fun toggleSubscription(onError: suspend () -> Unit) {
-        val artist = _uiState.value.artistInfo ?: return
+        val channelId = _uiState.value.artistInfo?.id ?: return
         val requested = subscription.beginToggle() ?: return
         val result =
             mutationScope.async(Dispatchers.Main.immediate) {
-                subscription.requestToggle(requested) {
-                    database.setArtistSubscribed(GlobalYouTubeRepository.instance, artist.id, artist.title, it)
-                }
+                subscription.requestToggle(requested) { GlobalYouTubeRepository.instance.subscribeChannel(channelId, it) }
             }
         scope.launch { if (!result.await()) onError() }
     }

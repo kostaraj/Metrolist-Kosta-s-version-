@@ -41,15 +41,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private fun uriScheme(value: String): String? = Regex("^([A-Za-z][A-Za-z0-9+.-]*):").find(value)?.groupValues?.get(1)
 
-internal suspend fun resolveSongByVideoIdOrFallback(
-    videoId: String?,
-    metadataLookup: suspend (String) -> SongItem?,
-    fallback: suspend () -> SongItem?,
-): SongItem? {
-    if (videoId != null) metadataLookup(videoId)?.let { return it }
-    return fallback()
-}
-
 class PlaylistImportManager(
     private val database: MusicDatabase,
     private val repository: YouTubeRepository,
@@ -95,7 +86,7 @@ class PlaylistImportManager(
                             cached[track.matchKey()]?.takeIf {
                                 track.isResolvedLocalReference || track.videoId == it.id || bestTrackMatch(track, listOf(it)) != null
                             }
-                        val song = cachedSong ?: resolveTrack(track, provider)
+                        val song = cachedSong ?: resolveTrack(track)
                         results[index] =
                             song?.let {
                                 val customTitle = track.customTitle?.takeIf(String::isNotBlank)
@@ -417,10 +408,7 @@ class PlaylistImportManager(
         }
     }
 
-    private suspend fun resolveTrack(
-        track: CsvTrack,
-        provider: ImportSourceType?,
-    ): SongItem? {
+    private suspend fun resolveTrack(track: CsvTrack): SongItem? {
         if (track.isResolvedLocalReference) {
             val uri = track.directReference ?: return null
             return SongItem(
@@ -437,30 +425,20 @@ class PlaylistImportManager(
                 isLocal = true,
             )
         }
-        val searchQueries = resolutionSearchQueries(track, provider)
-        if (searchQueries.isEmpty()) return null
+        val searchQuery = resolutionSearchQuery(track) ?: return null
         repeat(RESOLVE_RETRIES) { attempt ->
             try {
-                return resolveSongByVideoIdOrFallback(
-                    track.videoId,
-                    metadataLookup = { videoId -> repository.getSongMetadata(videoId) },
-                ) {
-                    for (searchQuery in searchQueries) {
-                        val match =
-                            bestTrackMatch(
-                                track,
-                                repository
-                                    .searchFiltered(
-                                        searchQuery,
-                                        SearchFilter.SONG,
-                                        allowOfflineFallback = false,
-                                    ).items
-                                    .filterIsInstance<SongItem>(),
-                            )
-                        if (match != null) return@resolveSongByVideoIdOrFallback match
-                    }
-                    null
-                }
+                return track.videoId?.let { repository.getSongMetadata(it) }
+                    ?: bestTrackMatch(
+                        track,
+                        repository
+                            .searchFiltered(
+                                searchQuery,
+                                SearchFilter.SONG,
+                                allowOfflineFallback = false,
+                            ).items
+                            .filterIsInstance<SongItem>(),
+                    )
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -700,16 +678,6 @@ class PlaylistImportManager(
                 return null
             }
             return listOf(track.title, track.artist, track.album).filter(String::isNotBlank).joinToString(" ")
-        }
-
-        internal fun resolutionSearchQueries(
-            track: CsvTrack,
-            provider: ImportSourceType?,
-        ): List<String> {
-            val primary = resolutionSearchQuery(track) ?: return emptyList()
-            if (provider != ImportSourceType.SPOTIFY || track.album.isBlank()) return listOf(primary)
-            val withoutAlbum = listOf(track.title, track.artist).filter(String::isNotBlank).joinToString(" ")
-            return listOf(primary, withoutAlbum).distinct()
         }
 
         fun parseCsv(
