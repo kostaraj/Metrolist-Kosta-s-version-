@@ -13,6 +13,29 @@ class LyricsRomanizerTest {
     }
 
     @Test
+    fun romanizesRussianSoftAndHardSignsAsApostrophes() =
+        runBlocking {
+            val result =
+                LyricsRomanizer.romanize(
+                    fullText = "объём мягкий знак",
+                    line = "объём мягкий знак",
+                    enabledLanguages = setOf("Russian"),
+                    cyrillicByLine = false,
+                )
+
+            assertEquals("ob'yom myagkiy znak", result)
+            assertEquals("'", LyricsRomanizer.romanizeIsolatedWord("ь"))
+            assertEquals("'", LyricsRomanizer.romanizeIsolatedWord("ъ"))
+        }
+
+    @Test
+    fun romanizesAllSmallHiraganaAndKatakanaForms() {
+        assertEquals("aiueoyayuyowakaketsu", LyricsRomanizer.romanizeKana("ぁぃぅぇぉゃゅょゎゕゖっ"))
+        assertEquals("aiueoyayuyowakaketsu", LyricsRomanizer.romanizeKana("ァィゥェォャュョヮヵヶッ"))
+        assertEquals("kushisutonuhahifuhehomurarirurero", LyricsRomanizer.romanizeKana("ㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ"))
+    }
+
+    @Test
     fun oversizedRomanizationAlignmentFallsBackToIsolatedGuides() {
         val guides = List(500) { "guide" }
         val words = List(500) { WordTimestamp("word", 0.0, 1.0) }

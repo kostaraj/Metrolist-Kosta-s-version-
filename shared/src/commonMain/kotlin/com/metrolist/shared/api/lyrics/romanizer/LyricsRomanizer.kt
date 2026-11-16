@@ -141,6 +141,29 @@ object LyricsRomanizer {
             "ぅ" to "u",
             "ぇ" to "e",
             "ぉ" to "o",
+            "ゃ" to "ya",
+            "ゅ" to "yu",
+            "ょ" to "yo",
+            "ゎ" to "wa",
+            "ゕ" to "ka",
+            "ゖ" to "ke",
+            "っ" to "tsu",
+            "ㇰ" to "ku",
+            "ㇱ" to "shi",
+            "ㇲ" to "su",
+            "ㇳ" to "to",
+            "ㇴ" to "nu",
+            "ㇵ" to "ha",
+            "ㇶ" to "hi",
+            "ㇷ" to "fu",
+            "ㇸ" to "he",
+            "ㇹ" to "ho",
+            "ㇺ" to "mu",
+            "ㇻ" to "ra",
+            "ㇼ" to "ri",
+            "ㇽ" to "ru",
+            "ㇾ" to "re",
+            "ㇿ" to "ro",
         )
 
     private val cyrillic =
@@ -215,6 +238,10 @@ object LyricsRomanizer {
             'ї' to "yi",
             'Ґ' to "G",
             'ґ' to "g",
+            'Ь' to "'",
+            'ь' to "'",
+            'Ъ' to "'",
+            'ъ' to "'",
             'Љ' to "Lj",
             'љ' to "lj",
             'Њ' to "Nj",
@@ -735,7 +762,7 @@ object LyricsRomanizer {
         val normalized =
             text
                 .map { char ->
-                    if (char in 'ァ'..'ン') (char.code - 0x60).toChar() else char
+                    if (char in 'ァ'..'ヶ') (char.code - 0x60).toChar() else char
                 }.joinToString("")
         return buildString(normalized.length * 2) {
             var index = 0
@@ -753,7 +780,11 @@ object LyricsRomanizer {
                             ?.toString()
                             ?.let { kana[it] }
                             ?.firstOrNull()
-                    if (next != null) append(next)
+                    if (next != null) {
+                        append(next)
+                    } else {
+                        append("tsu")
+                    }
                     index++
                     continue
                 }
