@@ -631,6 +631,12 @@ class LyricsEditorTest {
         assertEquals(JsonPrimitive("v1"), after["agent"])
         assertEquals(JsonPrimitive(40700), after.getValue("backgroundWords").jsonArray.last().jsonObject["startMs"])
         assertEquals(before.getValue("words"), after.getValue("words"))
+
+        editor.timestamp(41000)
+        assertTrue(editor.current.isValid)
+        val synced = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), synced["agent"])
+        assertEquals(JsonPrimitive(41000), synced["startMs"])
     }
 
 }
