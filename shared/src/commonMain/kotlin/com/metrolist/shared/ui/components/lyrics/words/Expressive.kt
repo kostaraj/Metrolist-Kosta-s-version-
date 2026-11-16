@@ -160,6 +160,47 @@ private class ExpressiveHyphenGroups(
     val groupEndMs: LongArray,
 )
 
+/**
+ * Consecutive timed fragments without a trailing word boundary are syllables
+ * of the same spoken word. Keep the original start/end span for word animation;
+ * the original [words] list remains available for syllable alignment and timing.
+ */
+internal fun groupSyllableFragments(words: List<WordTimestamp>): List<Pair<Int, WordTimestamp>> {
+    if (words.isEmpty()) return emptyList()
+
+    val grouped = mutableListOf<Pair<Int, WordTimestamp>>()
+    var index = 0
+    while (index < words.size) {
+        val first = words[index]
+        var last = index
+        if (!first.isBackground) {
+            while (
+                last < words.lastIndex &&
+                !words[last].hasTrailingSpace &&
+                !words[last + 1].isBackground &&
+                words[last + 1].isLineTimed == first.isLineTimed
+            ) {
+                last++
+            }
+        }
+
+        val fragments = words.subList(index, last + 1)
+        val word =
+            if (fragments.size == 1) {
+                first
+            } else {
+                first.copy(
+                    text = fragments.joinToString(separator = "") { it.text },
+                    endTime = fragments.last().endTime,
+                    hasTrailingSpace = fragments.last().hasTrailingSpace,
+                )
+            }
+        grouped += index to word
+        index = last + 1
+    }
+    return grouped
+}
+
 @Composable
 internal fun ExpressiveWordAnimation(
     mainText: String,
@@ -217,8 +258,8 @@ internal fun ExpressiveWordAnimation(
 
     val (effectiveWords, effectiveToOriginalIdx) =
         remember(words) {
-            words
-                .flatMapIndexed { originalIdx, word ->
+            groupSyllableFragments(words)
+                .flatMap { (originalIdx, word) ->
                     val shouldSplit =
                         word.text.contains('-') && word.text.length > 1 &&
                             (!word.hasTrailingSpace || words.size == 1)
