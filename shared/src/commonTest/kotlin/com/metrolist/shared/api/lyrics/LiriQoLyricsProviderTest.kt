@@ -163,6 +163,64 @@ class LiriQoLyricsProviderTest {
 
 
     @Test
+    fun usesSameSubproviderLineLyricsToGroupSyllablesWithoutChangingTheirTimings() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "apple_music_liriqo",
+                    "syncLevel": "syllable",
+                    "timed": [{
+                      "id": 7,
+                      "text": "be au ti ful song",
+                      "start": 1000,
+                      "end": 4000,
+                      "words": [
+                        {"text": "be", "start": 1000, "end": 1200},
+                        {"text": "au", "start": 1200, "end": 1450},
+                        {"text": "ti", "start": 1450, "end": 1650},
+                        {"text": "ful", "start": 1650, "end": 2200},
+                        {"text": "song", "start": 2500, "end": 4000}
+                      ]
+                    }]
+                  },
+                  "tracks": [{
+                    "provider": "apple_music_liriqo",
+                    "syncLevel": "line",
+                    "timed": [{
+                      "id": 7,
+                      "text": "beautiful song",
+                      "start": 1000,
+                      "end": 4000
+                    }]
+                  }]
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx =
+                    assertNotNull(
+                        LiriQoLyricsProvider(client).getLyricsResults(
+                            "Song",
+                            "Artist",
+                            null,
+                            provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_APPLE_MUSIC,
+                        ).singleOrNull()?.lyrics,
+                    )
+                val line = MlxParser.parse(mlx).lines.single()
+                val words = assertNotNull(line.words)
+
+                assertEquals("beautiful song", line.text)
+                assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
+                assertEquals(listOf(1.0, 1.2, 1.45, 1.65, 2.5), words.map { it.startTime })
+                assertEquals(listOf(false, false, false, true, false), words.map { it.hasTrailingSpace })
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
     fun preservesSyllableTimestampsInsideWordsAndSpacesBetweenWords() =
         runBlocking {
             val response =

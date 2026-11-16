@@ -88,10 +88,19 @@ class LiriQoLyricsProvider(
                 ).joinToString("|")
             }
 
-        return candidates
+        val sourceCandidates = candidates.filter { it.string("provider") == sourceId }
+        // Some upstreams expose a separate line-synced rendition alongside syllable
+        // timings. Keep it as a temporary alignment reference, never as the returned lyric.
+        val lineBoundaryReference = sourceCandidates
+            .filter { it.string("syncLevel")?.equals("line", ignoreCase = true) == true }
             .asSequence()
-            .filter { it.string("provider") == sourceId }
-            .flatMap { track -> parseTrackVariants(track, title, artist, metadata).asSequence() }
+            .mapNotNull(::parseLineBoundaryReference)
+            .firstOrNull()
+            .orEmpty()
+
+        return sourceCandidates
+            .asSequence()
+            .flatMap { track -> parseTrackVariants(track, title, artist, metadata, lineBoundaryReference).asSequence() }
             .distinctBy { it.lyrics to it.provider }
             .sortedByDescending { result ->
                 when (timingKind(result.lyrics)) {
@@ -139,11 +148,23 @@ class LiriQoLyricsProvider(
         }
     }
 
+    private fun parseLineBoundaryReference(track: JsonObject): Map<Long, String>? {
+        val timed = track["timed"] as? JsonArray ?: return null
+        val lines = timed.mapNotNull { element ->
+            val line = element as? JsonObject ?: return@mapNotNull null
+            val id = line.long("id")?.takeIf { it >= 0L } ?: return@mapNotNull null
+            val text = line.string("text")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            id to text
+        }.toMap()
+        return lines.takeIf { it.isNotEmpty() }
+    }
+
     private fun parseTrackVariants(
         track: JsonObject,
         requestedTitle: String,
         requestedArtist: String,
         metadata: JsonObject?,
+        lineBoundaryReference: Map<Long, String>,
     ): List<LyricsWithProvider> {
         val sourceId = track.string("provider") ?: return emptyList()
         val sourceLabel = "LiriQo/${sourceSlug(sourceId)}"
@@ -157,6 +178,7 @@ class LiriQoLyricsProvider(
                 val id = line.long("id")?.takeIf { it >= 0L } ?: 0L
                 val words = line["words"] as? JsonArray ?: track.wordsFor(id)
                 TimedLine(
+                    id,
                     start,
                     end,
                     text,
@@ -167,13 +189,13 @@ class LiriQoLyricsProvider(
 
         if (lines.isNotEmpty()) {
             if (lines.any { it.words.isNotEmpty() }) {
-                val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = true)
+                val wordLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = true, lineBoundaryReference = lineBoundaryReference)
                 if (timingKind(wordLyrics) == LyricsTimingKind.WORD_SYNCED) {
                     return listOf(LyricsWithProvider(wordLyrics, sourceLabel))
                 }
             }
 
-            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false)
+            val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false, lineBoundaryReference = emptyMap())
             return listOf(LyricsWithProvider(lineLyrics, sourceLabel))
         }
 
@@ -202,6 +224,7 @@ class LiriQoLyricsProvider(
         metadata: JsonObject?,
         track: JsonObject,
         includeWords: Boolean,
+        lineBoundaryReference: Map<Long, String>,
     ): String {
         val builder =
             MlxBuilder()
@@ -229,8 +252,9 @@ class LiriQoLyricsProvider(
                 } else {
                     emptyList()
                 }
-            val backgroundSource = BACKGROUND_PARENTHESIS.find(line.text)?.groupValues?.get(1).orEmpty()
-            val mainSource = BACKGROUND_PARENTHESIS.replace(line.text, " ").replace(WHITESPACE, " ").trim()
+            val boundaryText = lineBoundaryReference[line.id] ?: line.text
+            val backgroundSource = BACKGROUND_PARENTHESIS.find(boundaryText)?.groupValues?.get(1).orEmpty()
+            val mainSource = BACKGROUND_PARENTHESIS.replace(boundaryText, " ").replace(WHITESPACE, " ").trim()
             // Parenthesized background vocals can overlap the main vocal. Do not toggle a
             // background state from "(" to ")": timed main-vocal words may occur between
             // two background words. Match the parenthesized phrase to timed words instead.
@@ -388,6 +412,7 @@ class LiriQoLyricsProvider(
     )
 
     private data class TimedLine(
+        val id: Long,
         val startMs: Long,
         val endMs: Long?,
         val text: String,
