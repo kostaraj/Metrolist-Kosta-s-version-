@@ -603,4 +603,34 @@ class LyricsEditorTest {
         assertEquals(0, editor.current.selectionEnd)
         assertTrue(editor.current.text.startsWith("[00:01.24] <00:01.24>Hello <00:02.14>world"))
     }
+    @Test
+    fun backgroundWordTagsAndSingerAlignmentAreEditable() {
+        val raw =
+            "[00:36.576|v1] <00:36.576>I <00:36.773>swore <00:37.011>my " +
+                "<00:37.291>loyalty <00:38.021>to <00:38.256>me, " +
+                "<00:39.032>myself, <00:39.976>and <00:40.245>I " +
+                "[bg:<00:38.677>Me, <00:39.513>myself, <00:40.62>I]"
+        val editor = LyricsEditor(raw)
+
+        assertTrue(editor.current.isValid)
+        assertTrue("|v1]" in editor.current.text)
+        assertTrue("[bg:" in editor.current.text)
+
+        val before = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), before["agent"])
+        assertEquals(
+            listOf(38677L, 39513L, 40620L),
+            before.getValue("backgroundWords").jsonArray.map {
+                it.jsonObject.getValue("startMs").toString().toLong()
+            },
+        )
+
+        editor.edit(editor.current.text.replace("<00:40.62>I]", "<00:40.70>I]"), 0)
+        assertTrue(editor.current.isValid)
+        val after = editor.current.document.getValue("lines").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("v1"), after["agent"])
+        assertEquals(JsonPrimitive(40700), after.getValue("backgroundWords").jsonArray.last().jsonObject["startMs"])
+        assertEquals(before.getValue("words"), after.getValue("words"))
+    }
+
 }
