@@ -349,51 +349,90 @@ class YouTubeRepository(
                 YouTubeSyncState.failed("account") { if (innerTube.sessionSnapshot() == requestSession) getAccountInfo() }
             }
         }
+
+        fun expired(response: HttpResponse): Boolean =
+            isExpiredYouTubeSessionResponse(
+                response.status.value,
+                innerTube.hasSapCookieAuth(requestSession),
+                forbiddenExpiresSession = true,
+            )
+
         return try {
-            var httpResponse = innerTube.accountMenu(YouTubeClient.WEB_REMIX)
+            var client = YouTubeClient.WEB_REMIX
+            var httpResponse = innerTube.accountMenu(client)
             requireCurrentSession(requestSession)
-            if (isExpiredYouTubeSessionResponse(
-                    httpResponse.status.value,
-                    innerTube.hasSapCookieAuth(requestSession),
-                    forbiddenExpiresSession = true,
-                )
-            ) {
+            if (expired(httpResponse)) {
                 httpResponse.bodyAsChannel().cancel()
                 delay(1.seconds)
                 requireCurrentSession(requestSession)
-                httpResponse = innerTube.accountMenu(YouTubeClient.WEB_REMIX)
+                httpResponse = innerTube.accountMenu(client)
                 requireCurrentSession(requestSession)
-                if (isExpiredYouTubeSessionResponse(
-                        httpResponse.status.value,
-                        innerTube.hasSapCookieAuth(requestSession),
-                        forbiddenExpiresSession = true,
-                    )
-                ) {
+                if (expired(httpResponse)) {
                     invalidateExpiredSession(requestSession, publishExpiredSessionNotice)
                     return null
                 }
             }
+
             YtLogger.w(
                 TAG,
-                "Account menu status=${httpResponse.status.value} authUser=${requestSession.authUser} " +
+                "Account menu client=$client status=${httpResponse.status.value} authUser=${requestSession.authUser} " +
                     "hasDataSyncId=${!requestSession.dataSyncId.isNullOrBlank()}",
             )
             if (!httpResponse.status.isSuccess()) {
-                failed()
-                return null
+                httpResponse.bodyAsChannel().cancel()
+                // WEB_REMIX can fail independently of the regular web account-menu client.
+                client = YouTubeClient.WEB
+                httpResponse = innerTube.accountMenu(client)
+                requireCurrentSession(requestSession)
+                YtLogger.w(TAG, "Account menu fallback client=$client status=${httpResponse.status.value}")
+                if (expired(httpResponse)) {
+                    invalidateExpiredSession(requestSession, publishExpiredSessionNotice)
+                    return null
+                }
+                if (!httpResponse.status.isSuccess()) {
+                    httpResponse.bodyAsChannel().cancel()
+                    failed()
+                    return null
+                }
             }
-            val raw = httpResponse.bodyAsTextLimited(SMALL_RESPONSE_LIMIT)
+
+            var raw = httpResponse.bodyAsTextLimited(SMALL_RESPONSE_LIMIT)
             if (innerTube.hasSapCookieAuth(requestSession) && repositoryJson.parseToJsonElement(raw).jsonObject.isYouTubeLoggedOut()) {
                 invalidateExpiredSession(requestSession, publishExpiredSessionNotice)
                 return null
             }
-            val info = withContext(responseDecodeDispatcher) { parseAccountInfoResponse(raw) }
+            var info = withContext(responseDecodeDispatcher) { parseAccountInfoResponse(raw) }
+
+            // A successful WEB_REMIX response may omit the active-account header. Retry
+            // with WEB before reporting a sync failure.
+            if (info == null && client == YouTubeClient.WEB_REMIX) {
+                client = YouTubeClient.WEB
+                httpResponse = innerTube.accountMenu(client)
+                requireCurrentSession(requestSession)
+                YtLogger.w(TAG, "Account menu fallback client=$client status=${httpResponse.status.value}")
+                if (expired(httpResponse)) {
+                    invalidateExpiredSession(requestSession, publishExpiredSessionNotice)
+                    return null
+                }
+                if (!httpResponse.status.isSuccess()) {
+                    httpResponse.bodyAsChannel().cancel()
+                    failed()
+                    return null
+                }
+                raw = httpResponse.bodyAsTextLimited(SMALL_RESPONSE_LIMIT)
+                if (innerTube.hasSapCookieAuth(requestSession) && repositoryJson.parseToJsonElement(raw).jsonObject.isYouTubeLoggedOut()) {
+                    invalidateExpiredSession(requestSession, publishExpiredSessionNotice)
+                    return null
+                }
+                info = withContext(responseDecodeDispatcher) { parseAccountInfoResponse(raw) }
+            }
+
             if (innerTube.sessionSnapshot() != requestSession) throw CancellationException("YouTube session changed")
             if (info != null) {
                 lastAccountInfo = info
                 if (publishExpiredSessionNotice) YouTubeSyncState.succeeded("account")
             } else {
-                YtLogger.w(TAG, "getAccountInfo: active account details unavailable")
+                YtLogger.w(TAG, "getAccountInfo: active account details unavailable after WEB_REMIX and WEB")
                 failed()
             }
             info

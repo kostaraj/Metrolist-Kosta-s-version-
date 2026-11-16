@@ -103,6 +103,46 @@ class YouTubeRepositoryFailureTest {
         }
 
     @Test
+    fun accountLookupFallsBackToWebWhenRemixResponseOmitsActiveAccount() =
+        runBlocking {
+            var requests = 0
+            HttpClient(
+                MockEngine {
+                    requests++
+                    respond(
+                        if (requests == 1) "{}" else ACCOUNT_MENU,
+                        HttpStatusCode.OK,
+                        headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                },
+            ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }.use { client ->
+                val innerTube = InnerTube(client).apply { cookie = "SAPISID=persisted" }
+                assertEquals("Music account", YouTubeRepository(innerTube).getAccountInfo()?.name)
+                assertEquals(2, requests)
+            }
+        }
+
+    @Test
+    fun accountLookupFallsBackToWebWhenRemixRequestFails() =
+        runBlocking {
+            var requests = 0
+            HttpClient(
+                MockEngine {
+                    requests++
+                    respond(
+                        if (requests == 1) "{}" else ACCOUNT_MENU,
+                        if (requests == 1) HttpStatusCode.ServiceUnavailable else HttpStatusCode.OK,
+                        headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                },
+            ) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }.use { client ->
+                val innerTube = InnerTube(client).apply { cookie = "SAPISID=persisted" }
+                assertEquals("Music account", YouTubeRepository(innerTube).getAccountInfo()?.name)
+                assertEquals(2, requests)
+            }
+        }
+
+    @Test
     fun unavailableAccountRevalidationPreservesTheActiveSession() =
         runBlocking {
             for (offline in listOf(false, true)) {
