@@ -95,7 +95,7 @@ class LyricsEditorTest {
     @Test
     fun unchangedJsonRoundTripPreservesEveryFieldAndSubCentisecond() {
         val editor = LyricsEditor(raw)
-        assertEquals("[00:01.234] <00:01.234>Hello <00:02.10>world\n[00:04.00] \n[00:05.00] Last", editor.current.text)
+        assertEquals("[00:01.234] <00:01.234>Hello <00:02.10>world[bg:<00:01.50>Hey]\n[00:04.00] \n[00:05.00] Last", editor.current.text)
         editor.edit(editor.current.text, 12)
         assertEquals(Json.parseToJsonElement(raw), Json.parseToJsonElement(editor.current.json))
         assertFalse(editor.canUndo)
