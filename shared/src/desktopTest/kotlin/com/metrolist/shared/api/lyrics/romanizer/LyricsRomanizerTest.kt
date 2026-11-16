@@ -36,6 +36,19 @@ class LyricsRomanizerTest {
     }
 
     @Test
+    fun combinesSmallKanaWithThePrecedingKana() {
+        assertEquals("cha chu cho", listOf("ちゃ", "ちゅ", "ちょ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("sha shu sho", listOf("しゃ", "しゅ", "しょ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("kya kyu kyo", listOf("きゃ", "きゅ", "きょ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("ye she je che", listOf("いぇ", "しぇ", "じぇ", "ちぇ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("kwa kwe gwa", listOf("くぁ", "くぇ", "ぐぁ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("tsa tsi tse tso", listOf("つぁ", "つぃ", "つぇ", "つぉ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("cha che", listOf("チャ", "チェ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("fya fyu fyo", listOf("ふゃ", "ふゅ", "ふょ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+        assertEquals("e a i u o", listOf("ぇ", "ぁ", "ぃ", "ぅ", "ぉ").joinToString(" ") { LyricsRomanizer.romanizeKana(it) })
+    }
+
+    @Test
     fun oversizedRomanizationAlignmentFallsBackToIsolatedGuides() {
         val guides = List(500) { "guide" }
         val words = List(500) { WordTimestamp("word", 0.0, 1.0) }
