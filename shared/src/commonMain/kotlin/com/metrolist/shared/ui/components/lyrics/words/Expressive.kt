@@ -165,8 +165,21 @@ private class ExpressiveHyphenGroups(
  * of the same spoken word. Keep the original start/end span for word animation;
  * the original [words] list remains available for syllable alignment and timing.
  */
-internal fun groupSyllableFragments(words: List<WordTimestamp>): List<Pair<Int, WordTimestamp>> {
+internal fun groupSyllableFragments(words: List<WordTimestamp>, sourceText: String): List<Pair<Int, WordTimestamp>> {
     if (words.isEmpty()) return emptyList()
+
+    val ranges = mutableListOf<IntRange?>()
+    var searchFrom = 0
+    words.forEach { word ->
+        val start = sourceText.indexOf(word.text, searchFrom, ignoreCase = true)
+        if (start < 0) {
+            ranges += null
+        } else {
+            val end = start + word.text.length
+            ranges += start until end
+            searchFrom = end
+        }
+    }
 
     val grouped = mutableListOf<Pair<Int, WordTimestamp>>()
     var index = 0
@@ -177,8 +190,17 @@ internal fun groupSyllableFragments(words: List<WordTimestamp>): List<Pair<Int, 
             while (
                 last < words.lastIndex &&
                 !words[last].hasTrailingSpace &&
+                words[last].text.lastOrNull()?.isWhitespace() != true &&
+                words[last + 1].text.firstOrNull()?.isWhitespace() != true &&
                 !words[last + 1].isBackground &&
-                words[last + 1].isLineTimed == first.isLineTimed
+                words[last + 1].isLineTimed == first.isLineTimed &&
+                run {
+                    val previousRange = ranges[last]
+                    val nextRange = ranges[last + 1]
+                    previousRange == null || nextRange == null ||
+                        sourceText.substring(previousRange.last + 1, nextRange.first.coerceAtLeast(previousRange.last + 1))
+                            .none(Char::isWhitespace)
+                }
             ) {
                 last++
             }
@@ -258,7 +280,7 @@ internal fun ExpressiveWordAnimation(
 
     val (effectiveWords, effectiveToOriginalIdx) =
         remember(words) {
-            groupSyllableFragments(words)
+            groupSyllableFragments(words, mainText)
                 .flatMap { (originalIdx, word) ->
                     val shouldSplit =
                         word.text.contains('-') && word.text.length > 1 &&
