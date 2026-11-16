@@ -2756,9 +2756,11 @@ class MusicService :
             if (!connected && !song.isLocal && !song.id.startsWith("local_")) return@withContext PlaybackFetchResult()
             val hints = song.toAndroidContentHints(wantVideo = wantVideo)
             Timber.tag(MUSIC_VIDEO_TAG).d(
-                "resource resolve start videoId=%s wantVideo=%s songIsVideo=%s quality=%s maxVideoHeight=%s",
+                "resource resolve start videoId=%s wantVideo=%s hintsWantVideo=%s uploadedHint=%s songIsVideo=%s quality=%s maxVideoHeight=%s",
                 song.id,
                 wantVideo,
+                hints.wantVideo,
+                hints.isUploaded,
                 song.isVideoSong,
                 Settings.shared.musicVideoQuality,
                 hints.maxVideoHeight,

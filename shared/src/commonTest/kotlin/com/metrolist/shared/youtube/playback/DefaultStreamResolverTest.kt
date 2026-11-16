@@ -721,6 +721,57 @@ class DefaultStreamResolverTest {
         }
 
     @Test
+    fun videoResolutionRejectsAudioOnlyExtraction() =
+        runBlocking {
+            val extractor = RecordingStreamExtractor()
+            val resolver =
+                DefaultStreamResolver(
+                    extractor,
+                    InnerTube(HttpClient(MockEngine { respondOk() })),
+                    networkStateFlow = null,
+                )
+            try {
+                val failure =
+                    assertFailsWith<StreamResolveException> {
+                        resolver.resolve("video-only-request", ContentHints(wantVideo = true))
+                    }
+                assertEquals(StreamResolveException.Reason.NO_PLAYABLE_STREAM, failure.reason)
+            } finally {
+                resolver.close()
+            }
+        }
+
+    @Test
+    fun rejectedWebTokensDoNotUseTokenlessAudioFallbackForVideo() =
+        runBlocking {
+            val overrides = mutableListOf<String?>()
+            val extractor =
+                RecordingStreamExtractor(
+                    profiles = listOf("WEB_REMIX" to "WEB_REMIX__po", "VISIONOS" to "VISIONOS_0_1__nopo"),
+                    includeVideo = true,
+                    onExtract = { overrides += it.playbackClientOverrideId },
+                )
+            val resolver = DefaultStreamResolver(extractor, InnerTube(HttpClient(MockEngine { respondOk() })), networkStateFlow = null)
+            try {
+                val hints = ContentHints(wantVideo = true)
+                val initial = resolver.resolve("initial-video", hints)
+                assertTrue(initial.hasVideo)
+
+                resolver.reportPlaybackFailure("initial-video", initial.clientName, 403, initial.profileId, hints)
+                assertTrue(WebPoTokenHealth.tokensRejected())
+
+                overrides.clear()
+                val next = resolver.resolve("next-video", hints)
+                assertTrue(next.hasVideo)
+                assertEquals("WEB_REMIX", next.clientName)
+                assertEquals(listOf(null), overrides)
+                assertEquals(true, extractor.lastHints?.wantVideo)
+            } finally {
+                resolver.close()
+            }
+        }
+
+    @Test
     fun rejectedWebTokensTryTokenlessVisionFirst() =
         runBlocking {
             val overrides = mutableListOf<String?>()

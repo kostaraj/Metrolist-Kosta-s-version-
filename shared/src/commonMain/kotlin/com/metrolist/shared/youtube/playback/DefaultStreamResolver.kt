@@ -722,7 +722,7 @@ class DefaultStreamResolver(
                     hints.maxVideoHeight,
                     counterpartPositionMap,
                 )
-            if (liveResource != null) {
+            if (liveResource != null && (!extractWantVideo || liveResource.hasVideo)) {
                 val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
                 YtLogger.d(TAG, "resolve live stream success client=${liveResource.clientName} elapsed=${elapsed}ms")
                 PlaybackEventLog.info(
@@ -831,7 +831,7 @@ class DefaultStreamResolver(
         // When web PO tokens were just rejected, tokenless VISIONOS 0.1 is the client that keeps playing; try it first.
         // Video needs tokenized streams, so music videos fall back to their audio until tokens work again.
         val tokenlessStream =
-            if (WebPoTokenHealth.tokensRejected() && !isLive && !extractHints.sabrFirst &&
+            if (WebPoTokenHealth.tokensRejected() && !isLive && !extractHints.wantVideo && !extractHints.sabrFirst &&
                 extractHints.playbackClientOverrideId == null &&
                 extractHints.isUploaded != true && WebPoTokenHealth.TOKENLESS_AUDIO_PROFILE !in excludedClients
             ) {
@@ -885,7 +885,7 @@ class DefaultStreamResolver(
                             hints.maxVideoHeight,
                             counterpartPositionMap,
                         )
-                    if (liveResource != null) {
+                    if (liveResource != null && (!extractWantVideo || liveResource.hasVideo)) {
                         val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
                         YtLogger.d(
                             TAG,
@@ -931,7 +931,7 @@ class DefaultStreamResolver(
                     hints.maxVideoHeight,
                     counterpartPositionMap,
                 )
-            if (liveResource != null) {
+            if (liveResource != null && (!extractWantVideo || liveResource.hasVideo)) {
                 val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
                 YtLogger.d(TAG, "resolve live stream fallback success client=${liveResource.clientName} elapsed=${elapsed}ms")
                 PlaybackEventLog.info(
@@ -990,6 +990,17 @@ class DefaultStreamResolver(
                         null
                     },
             )
+
+        if (extractWantVideo && !resource.hasVideo) {
+            YtLogger.w(
+                TAG,
+                "video resolve returned an audio-only resource client=${resource.clientName} profile=${resource.profileId} audioItag=${resource.itag} videoItag=${resource.videoItag}",
+            )
+            throw StreamResolveException(
+                reason = StreamResolveException.Reason.NO_PLAYABLE_STREAM,
+                message = "No playable video stream found for this track.",
+            )
+        }
 
         PlaybackEventLog.info(
             PlaybackEventKind.RESOLVE,
