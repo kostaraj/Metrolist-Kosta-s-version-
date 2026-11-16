@@ -38,7 +38,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
@@ -220,17 +219,10 @@ class LyprioLyricsProvider internal constructor(
                         if (candidate.best == null || quality >= candidate.best!!.quality) {
                             candidate.best = converted
                         }
-                        when (quality) {
-                            WORD_SYNC_QUALITY -> {
-                                if (candidate.wordSynced == null || quality >= candidate.wordSynced!!.quality) {
-                                    candidate.wordSynced = converted
-                                }
-                            }
-                            LINE_SYNC_QUALITY -> {
-                                if (candidate.lineSynced == null || quality >= candidate.lineSynced!!.quality) {
-                                    candidate.lineSynced = converted
-                                }
-                            }
+                        if (quality == LINE_SYNC_QUALITY &&
+                            (candidate.lineSynced == null || quality >= candidate.lineSynced!!.quality)
+                        ) {
+                            candidate.lineSynced = converted
                         }
                     }
                     if (payload.complete) return accumulated(complete = true)
@@ -412,7 +404,6 @@ class LyprioLyricsProvider internal constructor(
     private class SubproviderLyrics {
         var best: ConvertedLyrics? = null
         var lineSynced: ConvertedLyrics? = null
-        var wordSynced: ConvertedLyrics? = null
     }
 
     /**
