@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.media3.common.Player
@@ -43,6 +44,8 @@ import com.metrolist.shared.settings.MusicVideoQuality
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.state.GlobalYouTubeRepository
 import com.metrolist.shared.utils.normalizePlaybackTempo
+import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -434,14 +437,42 @@ class PlayerConnection(
                 connectionJob?.cancel()
                 connectionJob =
                     scope.launch {
-                        s.awaitPlaybackRestore()
-                        observationScope?.cancel()
-                        musicService?.player?.removePlayerListener(readinessListener)
-                        musicService = s
-                        observationScope = CoroutineScope(scope.coroutineContext + Job(scope.coroutineContext[Job]))
-                        observeService(s)
-                        _isConnected.value = true
-                        pendingCommands.connected()
+                        val connectedAt = SystemClock.elapsedRealtime()
+                        PlaybackEventLog.info(PlaybackEventKind.STARTUP, "Playback service binder connected; waiting for restore.")
+                        try {
+                            s.awaitPlaybackRestore()
+                            PlaybackEventLog.info(
+                                PlaybackEventKind.STARTUP,
+                                "Playback service restore wait completed.",
+                                details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - connectedAt).toString()),
+                            )
+                            observationScope?.cancel()
+                            musicService?.player?.removePlayerListener(readinessListener)
+                            musicService = s
+                            observationScope = CoroutineScope(scope.coroutineContext + Job(scope.coroutineContext[Job]))
+                            observeService(s)
+                            _isConnected.value = true
+                            pendingCommands.connected()
+                            PlaybackEventLog.info(
+                                PlaybackEventKind.STARTUP,
+                                "Playback connection ready; pending commands released.",
+                                details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - connectedAt).toString()),
+                            )
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Throwable) {
+                            PlaybackEventLog.error(
+                                PlaybackEventKind.STARTUP,
+                                "Playback connection setup failed.",
+                                details =
+                                    mapOf(
+                                        "elapsedMs" to (SystemClock.elapsedRealtime() - connectedAt).toString(),
+                                        "errorType" to (error::class.simpleName ?: "Throwable"),
+                                    ),
+                                error = error,
+                            )
+                            throw error
+                        }
                     }
             }
 

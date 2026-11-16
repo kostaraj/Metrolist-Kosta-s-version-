@@ -552,11 +552,44 @@ class MusicService :
 
         playbackRestoreJob =
             serviceScope.launch {
-                (application as App).startup.await()
-                if (Settings.shared.hasSavedVolume) player.setVolume(Settings.shared.volume)
-                playbackPersistenceLifecycle.restore { restorePersistedPlayback() }
-                savePlaybackState()
-                AndroidDeviceConnect.manager.remote.attach(syncPlayback.port)
+                val restoreStartedAt = SystemClock.elapsedRealtime()
+                PlaybackEventLog.info(PlaybackEventKind.STARTUP, "Playback service restoration started.")
+                try {
+                    val appStartupStartedAt = SystemClock.elapsedRealtime()
+                    (application as App).startup.await()
+                    PlaybackEventLog.info(
+                        PlaybackEventKind.STARTUP,
+                        "Playback service passed application-startup gate.",
+                        details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - appStartupStartedAt).toString()),
+                    )
+                    if (Settings.shared.hasSavedVolume) player.setVolume(Settings.shared.volume)
+                    val queueRestoreStartedAt = SystemClock.elapsedRealtime()
+                    playbackPersistenceLifecycle.restore { restorePersistedPlayback() }
+                    PlaybackEventLog.info(
+                        PlaybackEventKind.STARTUP,
+                        "Persisted playback restoration completed.",
+                        details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - queueRestoreStartedAt).toString()),
+                    )
+                    savePlaybackState()
+                    AndroidDeviceConnect.manager.remote.attach(syncPlayback.port)
+                    PlaybackEventLog.info(
+                        PlaybackEventKind.STARTUP,
+                        "Playback service restoration completed.",
+                        details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - restoreStartedAt).toString()),
+                    )
+                } catch (error: Throwable) {
+                    PlaybackEventLog.error(
+                        PlaybackEventKind.STARTUP,
+                        "Playback service restoration failed.",
+                        details =
+                            mapOf(
+                                "elapsedMs" to (SystemClock.elapsedRealtime() - restoreStartedAt).toString(),
+                                "errorType" to (error::class.simpleName ?: "Throwable"),
+                            ),
+                        error = error,
+                    )
+                    throw error
+                }
             }
         startPlaybackPersistence()
         startWidgetUpdates()

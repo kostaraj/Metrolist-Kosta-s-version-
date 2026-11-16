@@ -65,6 +65,8 @@ import com.metrolist.shared.state.SongMetadataState
 import com.metrolist.shared.state.coreModule
 import com.metrolist.shared.youtube.di.sharedModule
 import com.metrolist.shared.youtube.playback.AndroidContextProvider
+import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -167,6 +169,7 @@ class App :
     private fun initializeMainProcess() {
         setResourceReaderAndroidContext(applicationContext)
         val appStart = SystemClock.elapsedRealtime()
+        PlaybackEventLog.info(PlaybackEventKind.STARTUP, "Application startup started.")
         val hasPendingRestore = BackupRestoreManager.hasPendingRestore(this)
         restoringBackup = hasPendingRestore
         CoroutineScope(Dispatchers.Main.immediate).launch(start = CoroutineStart.UNDISPATCHED) {
@@ -174,26 +177,77 @@ class App :
                 startup.initialize(
                     restore = {
                         if (hasPendingRestore) {
-                            withContext(Dispatchers.IO) { BackupRestoreManager.applyPendingRestore(this@App) }
-                            Settings.shared.androidLastStorageAudit = 0L
-                            Settings.shared.androidLastTrackedPlaylistSync = 0L
+                            measureStartupStage("backup_restore") {
+                                withContext(Dispatchers.IO) { BackupRestoreManager.applyPendingRestore(this@App) }
+                                Settings.shared.androidLastStorageAudit = 0L
+                                Settings.shared.androidLastTrackedPlaylistSync = 0L
+                            }
                         }
                     },
                     start = {
-                        initializeApp(appStart)
+                        measureStartupStage("initialize_app") { initializeApp(appStart) }
                         infrastructureReady = true
                         withContext(Dispatchers.IO) {
-                            Snapshot.withMutableSnapshot { SongLikeState.initialize() }
-                            AuthManager().restorePersistedSession()
+                            measureStartupStage("song_like_state_initialize") {
+                                Snapshot.withMutableSnapshot { SongLikeState.initialize() }
+                            }
+                            measureStartupStage("restore_persisted_session") {
+                                AuthManager().restorePersistedSession()
+                            }
                         }
-                        if (onboardingManager.isComplete) startDatabaseDependentServices()
+                        if (onboardingManager.isComplete) {
+                            measureStartupStage("start_database_dependent_services") { startDatabaseDependentServices() }
+                        }
                     },
                 )
                 restoringBackup = false
+                PlaybackEventLog.info(
+                    PlaybackEventKind.STARTUP,
+                    "Application startup completed.",
+                    details = mapOf("elapsedMs" to (SystemClock.elapsedRealtime() - appStart).toString()),
+                )
                 if (hasPendingRestore) refreshWidgetsAfterRestore()
             } catch (error: Throwable) {
+                PlaybackEventLog.error(
+                    PlaybackEventKind.STARTUP,
+                    "Application startup failed.",
+                    details =
+                        mapOf(
+                            "elapsedMs" to (SystemClock.elapsedRealtime() - appStart).toString(),
+                            "errorType" to (error::class.simpleName ?: "Throwable"),
+                        ),
+                    error = error,
+                )
                 recovery.capture(error)
             }
+        }
+    }
+
+    private suspend fun measureStartupStage(
+        stage: String,
+        block: suspend () -> Unit,
+    ) {
+        val startedAt = SystemClock.elapsedRealtime()
+        try {
+            block()
+            PlaybackEventLog.info(
+                PlaybackEventKind.STARTUP,
+                "Startup stage completed.",
+                details = mapOf("stage" to stage, "elapsedMs" to (SystemClock.elapsedRealtime() - startedAt).toString()),
+            )
+        } catch (error: Throwable) {
+            PlaybackEventLog.error(
+                PlaybackEventKind.STARTUP,
+                "Startup stage failed.",
+                details =
+                    mapOf(
+                        "stage" to stage,
+                        "elapsedMs" to (SystemClock.elapsedRealtime() - startedAt).toString(),
+                        "errorType" to (error::class.simpleName ?: "Throwable"),
+                    ),
+                error = error,
+            )
+            throw error
         }
     }
 

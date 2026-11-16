@@ -416,6 +416,17 @@ class LyricsRepository(
                 val parsed = LyricsUtils.parseLyrics(candidate.lyrics)
                 if (!usableProviderLyrics(parsed)) {
                     hadProviderFailure = true
+                    PlaybackEventLog.warn(
+                        PlaybackEventKind.LYRICS,
+                        "Lyrics candidate rejected as empty or placeholder content.",
+                        videoId = lookupVideoId,
+                        details =
+                            mapOf(
+                                "provider" to provider.name,
+                                "source" to candidate.provider,
+                                "parsedLines" to parsed.size.toString(),
+                            ),
+                    )
                     continue
                 }
                 val timingKind = lyricsTimingKind(parsed)
@@ -438,6 +449,20 @@ class LyricsRepository(
                     finalResult = candidate
                     bestTimingKind = timingKind
                     bestProviderIndex = providerIndex
+                    PlaybackEventLog.info(
+                        PlaybackEventKind.LYRICS,
+                        "Lyrics candidate selected as the current best result.",
+                        videoId = lookupVideoId,
+                        details =
+                            mapOf(
+                                "provider" to provider.name,
+                                "source" to candidate.provider,
+                                "timingKind" to timingKind.name,
+                                "lineCount" to parsed.size.toString(),
+                                "wordCount" to parsed.sumOf { it.words?.size ?: 0 }.toString(),
+                                "preferWordSynced" to preferWordSynced.toString(),
+                            ),
+                    )
                     currentCoroutineContext().ensureActive()
                     onLyricsAvailable(candidate)
                 }
@@ -576,24 +601,67 @@ class LyricsRepository(
         isVideoContext: Boolean = false,
     ): ProviderLyricsFetch {
         val normalizedVideoId = videoId?.takeIf { it.isNotBlank() }
+        val startedAt = Clock.System.now().toEpochMilliseconds()
+        val timeoutMs = if (provider == LyricsProvider.LYPRIO) LyprioLyricsProvider.SEARCH_TIMEOUT_MS else PROVIDER_TIMEOUT_MS
         return try {
-            withTimeoutOrNull(
-                (if (provider == LyricsProvider.LYPRIO) LyprioLyricsProvider.SEARCH_TIMEOUT_MS else PROVIDER_TIMEOUT_MS).milliseconds,
-            ) {
-                ProviderLyricsFetch(
-                    lyrics =
-                        if (allSources) {
-                            lyricsClient.getLyricsResults(title, artist, duration, album, normalizedVideoId, provider, isVideoContext)
-                        } else {
-                            listOfNotNull(
-                                lyricsClient.getLyrics(title, artist, duration, album, normalizedVideoId, provider, isVideoContext),
-                            )
-                        },
+            val result =
+                withTimeoutOrNull(timeoutMs.milliseconds) {
+                    ProviderLyricsFetch(
+                        lyrics =
+                            if (allSources) {
+                                lyricsClient.getLyricsResults(title, artist, duration, album, normalizedVideoId, provider, isVideoContext)
+                            } else {
+                                listOfNotNull(
+                                    lyricsClient.getLyrics(title, artist, duration, album, normalizedVideoId, provider, isVideoContext),
+                                )
+                            },
+                    )
+                }
+            val elapsedMs = Clock.System.now().toEpochMilliseconds() - startedAt
+            if (result == null) {
+                PlaybackEventLog.warn(
+                    PlaybackEventKind.LYRICS,
+                    "Lyrics provider timed out.",
+                    videoId = normalizedVideoId,
+                    details = mapOf("provider" to provider.name, "elapsedMs" to elapsedMs.toString(), "timeoutMs" to timeoutMs.toString()),
                 )
-            } ?: ProviderLyricsFetch(failed = true)
+                ProviderLyricsFetch(failed = true)
+            } else {
+                val timingKinds =
+                    result.lyrics.map { candidate ->
+                        lyricsTimingKind(LyricsUtils.parseLyrics(candidate.lyrics)).name
+                    }
+                PlaybackEventLog.info(
+                    PlaybackEventKind.LYRICS,
+                    "Lyrics provider fetch completed.",
+                    videoId = normalizedVideoId,
+                    details =
+                        mapOf(
+                            "provider" to provider.name,
+                            "elapsedMs" to elapsedMs.toString(),
+                            "resultCount" to result.lyrics.size.toString(),
+                            "sources" to result.lyrics.map { it.provider }.distinct().joinToString(",").ifBlank { "none" },
+                            "timingKinds" to timingKinds.joinToString(",").ifBlank { "none" },
+                            "failed" to result.failed.toString(),
+                            "videoContext" to isVideoContext.toString(),
+                        ),
+                )
+                result
+            }
         } catch (error: CancellationException) {
             throw error
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            PlaybackEventLog.warn(
+                PlaybackEventKind.LYRICS,
+                "Lyrics provider request failed.",
+                videoId = normalizedVideoId,
+                details =
+                    mapOf(
+                        "provider" to provider.name,
+                        "elapsedMs" to (Clock.System.now().toEpochMilliseconds() - startedAt).toString(),
+                        "errorType" to (error::class.simpleName ?: "Exception"),
+                    ),
+            )
             ProviderLyricsFetch(failed = true)
         }
     }

@@ -23,6 +23,8 @@ enum class PlaybackEventKind {
     NETWORK,
     IMPORT,
     SYNC,
+    STARTUP,
+    LYRICS,
     OTHER,
 }
 
