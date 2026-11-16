@@ -865,7 +865,7 @@ class LyprioLyricsProviderTest {
             val lineSynced =
                 """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":6000,"text":"I found the melancholy"}]}"""
             val wordSynced =
-                """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":6000,"text":"I found the melancholy","words":[{"text":"I ","startMs":1000,"endMs":1300},{"text":"found ","startMs":1300,"endMs":2000},{"text":"the ","startMs":2000,"endMs":2300},{"text":"melan","startMs":2300,"endMs":3900},{"text":"choly","startMs":3900,"endMs":5000}]}]}"""
+                """{"version":2,"song":{},"lines":[{"startMs":1000,"endMs":6000,"text":"I found the melancholy","words":[{"text":"I ","startMs":1000,"endMs":1300},{"text":"found ","startMs":1300,"endMs":2000},{"text":"the ","startMs":2000,"endMs":2300},{"text":"melan ","startMs":2300,"endMs":3900},{"text":"choly","startMs":3900,"endMs":5000}]}]}"""
             val client =
                 HttpClient(
                     MockEngine {
