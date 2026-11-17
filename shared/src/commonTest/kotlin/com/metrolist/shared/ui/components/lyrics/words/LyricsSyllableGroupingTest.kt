@@ -41,21 +41,15 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
-    fun contiguousTimedSyllablesRemoveArtificialSpacesButKeepRealWordPauses() {
+    fun sourceSpacesArePreservedRegardlessOfFragmentTiming() {
         val words =
             listOf(
                 WordTimestamp("call", 1.0, 1.3, hasTrailingSpace = true),
                 WordTimestamp("ing", 1.3, 1.65, hasTrailingSpace = true),
-                WordTimestamp("alone", 1.76, 2.2, hasTrailingSpace = false),
+                WordTimestamp("alone", 1.66, 2.2, hasTrailingSpace = false),
             )
 
-        val normalized = normalizeSyllableFragmentSpacing("call ing alone", words)
-
-        assertEquals("calling alone", normalized)
-        assertEquals(
-            listOf("calling", "alone"),
-            groupSyllableFragments(words, normalized).map { it.second.text },
-        )
+        assertEquals("call ing alone", normalizeSyllableFragmentSpacing("call ing alone", words))
     }
 
     @Test

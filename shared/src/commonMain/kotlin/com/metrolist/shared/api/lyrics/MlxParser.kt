@@ -500,11 +500,9 @@ object MlxParser {
         return completed
     }
 
-    private const val LEGACY_WORD_BOUNDARY_GAP_MS = 80.0
-
     private fun parseLegacyWords(content: String): List<WordTimestamp> {
         val segments = content.split('|')
-        return segments.mapIndexedNotNull { index, segment ->
+        return segments.mapNotNull { segment ->
             val endSeparator = segment.lastIndexOf(':')
             val startSeparator = segment.lastIndexOf(':', endSeparator - 1)
             if (startSeparator < 0 || endSeparator <= startSeparator) return@mapIndexedNotNull null
@@ -514,21 +512,13 @@ object MlxParser {
                 return@mapIndexedNotNull null
             }
             val fragmentText = segment.substring(0, startSeparator)
-            val nextSegment = segments.getOrNull(index + 1)
-            val nextStart = nextSegment
-                ?.substringBeforeLast(':')
-                ?.substringAfterLast(':')
-                ?.toDoubleOrNull()
-            val timingGapMs = nextStart?.let { (it - end) * 1000.0 }
             val hasExplicitTrailingSpace = fragmentText.lastOrNull()?.isWhitespace() == true
-            val hasWordBoundary =
-                hasExplicitTrailingSpace ||
-                    (timingGapMs != null && timingGapMs > LEGACY_WORD_BOUNDARY_GAP_MS)
+            val trimmedText = fragmentText.trimEnd()
             WordTimestamp(
-                fragmentText.trimEnd(),
+                trimmedText,
                 start,
                 end,
-                hasTrailingSpace = hasWordBoundary && !fragmentText.trimEnd().endsWithLyricHyphen(),
+                hasTrailingSpace = hasExplicitTrailingSpace && !trimmedText.endsWithLyricHyphen(),
             )
         }
     }

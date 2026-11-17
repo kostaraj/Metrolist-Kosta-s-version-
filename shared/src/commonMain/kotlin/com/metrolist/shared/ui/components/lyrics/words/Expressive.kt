@@ -109,8 +109,6 @@ internal fun experimentalGlyphProgress(
     return ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
 }
 
-private const val EXPRESSIVE_SYLLABLE_JOIN_MAX_GAP_MS = 80.0
-
 /**
  * Removes whitespace inserted between adjacent timed syllable fragments.
  * A short timing gap is treated as a continuation; a longer pause or
@@ -147,10 +145,7 @@ internal fun normalizeSyllableFragmentSpacing(
         val gap = sourceText.substring(gapStart, gapEnd)
         if (gap.any { !it.isWhitespace() || it == '\n' || it == '\r' }) continue
 
-        val timingGapMs = (next.startTime - previous.endTime) * 1000.0
-        if (timingGapMs in -80.0..EXPRESSIVE_SYLLABLE_JOIN_MAX_GAP_MS) {
-            removals += gapStart until gapEnd
-        }
+        // Preserve source whitespace; word boundaries must not depend on fragment duration.
     }
 
     if (removals.isEmpty()) return sourceText
