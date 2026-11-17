@@ -80,9 +80,9 @@ class GlobalPlaybackNetworkMonitorTest {
 
     @Test
     fun forcedOfflineOverrideCanBeEnabledAndDisabledWithoutLosingActualNetworkState() {
-        val actual = PlaybackNetworkState(scope = "wifi", connected = true, isCellular = false)
         val store = PlaybackNetworkStateStore
-        store.publish(actual)
+        store.setForcedOffline(false)
+        store.publish(PlaybackNetworkState(scope = "wifi", connected = true))
         store.setForcedOffline(true)
         assertFalse(store.current.connected)
         assertEquals("forced-offline", store.current.scope)
