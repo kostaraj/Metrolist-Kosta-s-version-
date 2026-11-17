@@ -170,6 +170,29 @@ class LiriQoLyricsProvider(
     ): List<LyricsWithProvider> {
         val sourceId = track.string("provider") ?: return emptyList()
         val sourceLabel = "LiriQo/${sourceSlug(sourceId)}"
+
+        // Apple Music's raw TTML is the authoritative source for syllable boundaries.
+        // Parse it through the same TTML normalizer used by the direct TTML providers
+        // before considering LiriQo's flattened normalized word array.
+        val rawTtmlLyrics =
+            track.string("ttml")
+                ?.takeIf { sourceId == "apple_music_liriqo" && it.isNotBlank() }
+                ?.let { ttml ->
+                    runCatching {
+                        parseTtmlToMlx(
+                            ttml = ttml,
+                            title = metadata?.string("title") ?: requestedTitle,
+                            artist = metadata?.string("artist") ?: requestedArtist,
+                            source = sourceLabel,
+                            sourceId = track.string("isrc"),
+                        )
+                    }.getOrNull()?.takeIf { it.isNotBlank() }
+                }
+
+        if (rawTtmlLyrics != null && timingKind(rawTtmlLyrics) == LyricsTimingKind.WORD_SYNCED) {
+            return listOf(LyricsWithProvider(rawTtmlLyrics, sourceLabel))
+        }
+
         val timed = track["timed"] as? JsonArray
         val lines =
             timed?.mapIndexedNotNull { index, element ->
@@ -216,6 +239,7 @@ class LiriQoLyricsProvider(
             val plainLyrics = builder.build()
             return listOf(LyricsWithProvider(plainLyrics, sourceLabel))
         }
+        rawTtmlLyrics?.let { return listOf(LyricsWithProvider(it, sourceLabel)) }
         return emptyList()
     }
 
