@@ -79,8 +79,8 @@ class LyricsSyllableGroupingTest {
 
     @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
-        assertEquals(0f, expressiveWordShineStrength(699L))
-        assertEquals(0.42f, expressiveWordShineStrength(700L))
+        assertEquals(0f, expressiveWordShineStrength(749L))
+        assertEquals(0.42f, expressiveWordShineStrength(750L))
         assertEquals(0.42f, expressiveWordShineStrength(999L))
         assertEquals(1f, expressiveWordShineStrength(1_000L))
     }
