@@ -257,6 +257,22 @@ class BetterLyricsProviderTest {
     }
 
     @Test
+    fun ttmlExplicitWordSpaceIsPreservedAcrossShortTimingGap() {
+        val ttml =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml"><body><div><p begin="1s" end="3s">
+                <span begin="1s" end="1.4s">Once</span> <span begin="1.41s" end="1.8s">upon</span> <span begin="1.81s" end="2s">a</span> <span begin="2.01s" end="2.4s">time</span>
+            </p></div></body></tt>
+            """.trimIndent()
+        val line = MlxParser.parse(parseTtmlToMlx(ttml, "title", "artist", "test")).lines.single()
+        val words = assertNotNull(line.words)
+
+        assertEquals("Once upon a time", line.text)
+        assertEquals(listOf("Once", "upon", "a", "time"), words.map { it.text })
+        assertEquals(listOf(true, true, true, false), words.map { it.hasTrailingSpace })
+    }
+
+    @Test
     fun ttmlHyphenatedFragmentsDoNotGainWordSpaces() {
         val ttml =
             """
