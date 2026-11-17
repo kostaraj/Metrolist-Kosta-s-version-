@@ -332,4 +332,6 @@
     <string name="settings_resume_prompt_summary">Ask before resuming the saved queue when the app starts</string>
     <string name="settings_player_layout_summary">Change the arrangement of artwork and playback controls</string>
     <string name="settings_filter_q_summary">Q controls the width or resonance of the selected filter</string>
+    <string name="force_offline_playback">Force offline mode</string>
+    <string name="force_offline_playback_description">Make the player behave as if there is no internet connection. Only downloaded or cached audio can play.</string>
 </resources>

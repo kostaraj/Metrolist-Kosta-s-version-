@@ -536,6 +536,7 @@ class Settings(
     var historyDuration by preference(30f)
     var historyPlaylistsEnabled by preference(HistoryPlaylistsEnabledKey, false)
     var ytmSync by preference(true)
+    var forceOfflinePlayback by preference(false)
     var queueYouTubeHistoryWhenOffline by preference(false)
     var queuedYouTubeHistoryJson by preference(QueuedYouTubeHistoryJsonKey, "")
     var downloadQueueJson by preference(DownloadQueueJsonKey, "")

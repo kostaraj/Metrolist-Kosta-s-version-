@@ -109,26 +109,6 @@ internal fun experimentalGlyphProgress(
     return ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
 }
 
-internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 500L
-internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 650L
-
-internal fun expressiveWordShineStrength(durationMs: Long): Float =
-    when {
-        durationMs >= EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS -> 1f
-        durationMs >= EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS -> 0.42f
-        else -> 0f
-    }
-
-internal fun expressiveGlyphRevealColor(
-    unlitColor: Color,
-    litColor: Color,
-    progress: Float,
-): Color {
-    val normalized = progress.coerceIn(0f, 1f)
-    val eased = normalized * normalized * (3f - 2f * normalized)
-    return lerp(unlitColor, litColor, eased)
-}
-
 private fun DrawScope.drawMaskGradient(
     mask: androidx.compose.ui.graphics.ImageBitmap,
     maskScale: Float,
@@ -209,6 +189,7 @@ internal fun groupSyllableFragments(words: List<WordTimestamp>, sourceText: Stri
         if (!first.isBackground) {
             while (
                 last < words.lastIndex &&
+                !words[last].hasTrailingSpace &&
                 words[last].text.lastOrNull()?.isWhitespace() != true &&
                 words[last + 1].text.firstOrNull()?.isWhitespace() != true &&
                 !words[last + 1].isBackground &&
@@ -216,13 +197,9 @@ internal fun groupSyllableFragments(words: List<WordTimestamp>, sourceText: Stri
                 run {
                     val previousRange = ranges[last]
                     val nextRange = ranges[last + 1]
-                    if (previousRange == null || nextRange == null) {
-                        !words[last].hasTrailingSpace
-                    } else {
-                        val gapStart = (previousRange.last + 1).coerceIn(0, sourceText.length)
-                        val gapEnd = nextRange.first.coerceIn(gapStart, sourceText.length)
-                        sourceText.substring(gapStart, gapEnd).none(Char::isWhitespace)
-                    }
+                    previousRange == null || nextRange == null ||
+                        sourceText.substring(previousRange.last + 1, nextRange.first.coerceAtLeast(previousRange.last + 1))
+                            .none(Char::isWhitespace)
                 }
             ) {
                 last++
@@ -384,7 +361,7 @@ internal fun ExpressiveWordAnimation(
             FloatArray(effectiveWords.size) { wIdx ->
                 val word = effectiveWords[wIdx]
                 val dur = ((word.endTime - word.startTime) * 1000.0).toFloat()
-                if (dur < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS.toFloat()) {
+                if (dur < 500f) {
                     0f
                 } else {
                     val wordLenText = word.text.length.coerceAtLeast(1)
@@ -970,27 +947,26 @@ internal fun ExpressiveWordAnimation(
                             }
 
                             else -> {
-                                val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
-                                val shineStrength = expressiveWordShineStrength(durationMs)
-                                val revealColor = expressiveGlyphRevealColor(unlitColor, litColor, charLp)
-                                if (shineStrength <= 0f) {
-                                    // Short words still fade smoothly from unfocused to highlighted.
-                                    SolidColor(revealColor)
-                                } else {
-                                    val fXL = cWidth * charLp
-                                    val eW = (cWidth * 0.65f).coerceAtLeast(1f)
-                                    val sWL = (fXL - eW).coerceAtLeast(0f)
-                                    val shineColor = lerp(revealColor, litColor, shineStrength)
-                                    val edgeProgress = ((fXL - sWL) / eW).coerceIn(0f, 1f)
-                                    val edgeColor = lerp(shineColor, revealColor, edgeProgress)
-                                    Brush.linearGradient(
-                                        0.0f to shineColor,
-                                        0.98f to edgeColor,
-                                        1.0f to revealColor,
-                                        start = Offset(sWL, 0f),
-                                        end = Offset((fXL + 0.5f).coerceAtLeast(sWL + 0.5f), 0f),
-                                    )
-                                }
+                                val fXL = cWidth * charLp
+                                val eW = (cWidth * 0.65f).coerceAtLeast(1f)
+                                val sWL = (fXL - eW).coerceAtLeast(0f)
+                                val baseColor = expressiveAccent.copy(alpha = wordBaseAlphas[wordIdx])
+                                val edgeProgress = ((fXL - sWL) / eW).coerceIn(0f, 1f)
+                                val brightShineEnabled =
+                                    effWordEndMs[wordIdx] - effWordStartMs[wordIdx] >= 650L
+                                val edgeColor =
+                                    if (brightShineEnabled) {
+                                        lerp(litColor, baseColor, edgeProgress)
+                                    } else {
+                                        baseColor
+                                    }
+                                Brush.linearGradient(
+                                    0.0f to if (brightShineEnabled) litColor else baseColor,
+                                    0.98f to edgeColor,
+                                    1.0f to baseColor,
+                                    start = Offset(sWL, 0f),
+                                    end = Offset((fXL + 0.5f).coerceAtLeast(sWL + 0.5f), 0f),
+                                )
                             }
                         }
                     val mask = glowMaskCache.peek(i)

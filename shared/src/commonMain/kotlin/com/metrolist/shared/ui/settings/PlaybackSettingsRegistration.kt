@@ -18,6 +18,7 @@ import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.settings.KeepScreenOnMode
 import com.metrolist.shared.settings.LoudnessLevel
 import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import com.metrolist.shared.ui.icons.MetrolistIcons
 import com.metrolist.shared.utils.formatPlaybackPitch
 import com.metrolist.shared.utils.formatPlaybackSpeed
@@ -70,6 +71,17 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
             }
         }
         group("audio", stringResource(Res.string.general)) {
+            if (host.platform == SettingsPlatform.ANDROID) {
+                switch(
+                    id = "forceOfflinePlayback",
+                    title = stringResource(Res.string.force_offline_playback),
+                    description = stringResource(Res.string.force_offline_playback_description),
+                    checked = settings.forceOfflinePlayback,
+                ) { enabled ->
+                    settings.forceOfflinePlayback = enabled
+                    PlaybackNetworkStateStore.setForcedOffline(enabled)
+                }
+            }
             choice(
                 id = "audioQuality",
                 title = stringResource(Res.string.audio_quality),

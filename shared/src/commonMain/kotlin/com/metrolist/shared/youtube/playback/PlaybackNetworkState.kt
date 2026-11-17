@@ -17,12 +17,30 @@ data class PlaybackNetworkState(
 
 object PlaybackNetworkStateStore {
     private val _state = MutableStateFlow(PlaybackNetworkState(scope = "", connected = true))
+    private var latestActualState = _state.value
+    private var forcedOffline = false
     val state: StateFlow<PlaybackNetworkState> = _state.asStateFlow()
 
     val current: PlaybackNetworkState
         get() = _state.value
 
+    fun setForcedOffline(enabled: Boolean) {
+        if (forcedOffline == enabled) return
+        forcedOffline = enabled
+        publishEffectiveState()
+    }
+
     fun publish(state: PlaybackNetworkState) {
-        _state.value = state
+        latestActualState = state
+        publishEffectiveState()
+    }
+
+    private fun publishEffectiveState() {
+        _state.value =
+            if (forcedOffline) {
+                latestActualState.copy(scope = "forced-offline", connected = false, isCellular = false)
+            } else {
+                latestActualState
+            }
     }
 }

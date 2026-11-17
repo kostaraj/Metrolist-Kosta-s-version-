@@ -1367,11 +1367,15 @@ internal fun reconstructWords(
             val next = alignedSyllables[idx]
             val gapStart = prev.endOffset
             val gapEnd = next.startOffset
-            val safeGapStart = gapStart.coerceIn(0, formattedMainText.length)
-            val safeGapEnd = gapEnd.coerceIn(safeGapStart, formattedMainText.length)
             val hasSpaceBetween =
-                safeGapEnd > safeGapStart &&
-                    formattedMainText.substring(safeGapStart, safeGapEnd).any(Char::isWhitespace)
+                prev.syllable.hasTrailingSpace ||
+                    prev.syllable.text
+                        .lastOrNull()
+                        ?.isWhitespace() == true ||
+                    next.syllable.text
+                        .firstOrNull()
+                        ?.isWhitespace() == true ||
+                    (gapEnd > gapStart && formattedMainText.substring(gapStart, gapEnd).any { it.isWhitespace() })
             if (hasSpaceBetween) break
             group.add(next)
             idx++

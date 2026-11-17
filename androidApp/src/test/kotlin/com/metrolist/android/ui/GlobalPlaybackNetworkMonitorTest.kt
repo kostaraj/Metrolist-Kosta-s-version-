@@ -1,6 +1,8 @@
 package com.metrolist.android.ui
 
 import android.os.DeadSystemException
+import com.metrolist.shared.youtube.playback.PlaybackNetworkState
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -74,6 +76,22 @@ class GlobalPlaybackNetworkMonitorTest {
         assertTrue(state.isCellular)
         state.lost("wifi")
         assertFalse(state.isCellular)
+    }
+
+    @Test
+    fun forcedOfflineOverrideCanBeEnabledAndDisabledWithoutLosingActualNetworkState() {
+        val actual = PlaybackNetworkState(scope = "wifi", connected = true, isCellular = false)
+        val store = PlaybackNetworkStateStore
+        store.publish(actual)
+        store.setForcedOffline(true)
+        assertFalse(store.current.connected)
+        assertEquals("forced-offline", store.current.scope)
+        store.publish(PlaybackNetworkState(scope = "mobile", connected = true, isCellular = true))
+        assertFalse(store.current.connected)
+        store.setForcedOffline(false)
+        assertTrue(store.current.connected)
+        assertEquals("mobile", store.current.scope)
+        assertTrue(store.current.isCellular)
     }
 
     @Test

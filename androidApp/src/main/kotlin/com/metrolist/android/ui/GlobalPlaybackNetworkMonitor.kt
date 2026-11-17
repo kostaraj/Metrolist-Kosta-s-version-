@@ -10,6 +10,8 @@ import android.os.DeadSystemException
 import android.os.Handler
 import android.os.Looper
 import timber.log.Timber
+import com.metrolist.shared.settings.Settings
+import com.metrolist.shared.youtube.playback.PlaybackNetworkStateStore
 import java.security.MessageDigest
 
 class GlobalPlaybackNetworkMonitor(
@@ -99,6 +101,7 @@ class GlobalPlaybackNetworkMonitor(
 
     fun start() {
         if (started) return
+        PlaybackNetworkStateStore.setForcedOffline(Settings.shared.forceOfflinePlayback)
         withLiveSystem {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 connectivityManager.registerDefaultNetworkCallback(callback, mainHandler)
