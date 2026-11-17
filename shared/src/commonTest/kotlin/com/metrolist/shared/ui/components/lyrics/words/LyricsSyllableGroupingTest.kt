@@ -41,6 +41,35 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun contiguousTimedSyllablesRemoveArtificialSpacesButKeepRealWordPauses() {
+        val words =
+            listOf(
+                WordTimestamp("call", 1.0, 1.3, hasTrailingSpace = true),
+                WordTimestamp("ing", 1.3, 1.65, hasTrailingSpace = true),
+                WordTimestamp("alone", 1.76, 2.2, hasTrailingSpace = false),
+            )
+
+        val normalized = normalizeSyllableFragmentSpacing("call ing alone", words)
+
+        assertEquals("calling alone", normalized)
+        assertEquals(
+            listOf("calling", "alone"),
+            groupSyllableFragments(words, normalized).map { it.second.text },
+        )
+    }
+
+    @Test
+    fun punctuationPreventsContiguousFragmentsFromBeingJoined() {
+        val words =
+            listOf(
+                WordTimestamp("wait,", 1.0, 1.3, hasTrailingSpace = true),
+                WordTimestamp("no", 1.3, 1.6, hasTrailingSpace = false),
+            )
+
+        assertEquals("wait, no", normalizeSyllableFragmentSpacing("wait, no", words))
+    }
+
+    @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
         assertEquals(0f, expressiveWordShineStrength(499L))
         assertEquals(0.42f, expressiveWordShineStrength(500L))

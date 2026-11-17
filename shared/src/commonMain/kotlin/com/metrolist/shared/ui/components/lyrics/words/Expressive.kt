@@ -109,6 +109,61 @@ internal fun experimentalGlyphProgress(
     return ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
 }
 
+private const val EXPRESSIVE_SYLLABLE_JOIN_MAX_GAP_MS = 80.0
+
+/**
+ * Removes whitespace inserted between adjacent timed syllable fragments.
+ * A short timing gap is treated as a continuation; a longer pause or
+ * punctuation keeps the original word boundary intact.
+ */
+internal fun normalizeSyllableFragmentSpacing(
+    sourceText: String,
+    words: List<WordTimestamp>,
+): String {
+    if (sourceText.isEmpty() || words.size < 2) return sourceText
+
+    val ranges = mutableListOf<IntRange>()
+    var searchFrom = 0
+    for (word in words) {
+        val fragment = word.text.stripBidiControls().trim()
+        if (fragment.isEmpty()) return sourceText
+        val start = sourceText.indexOf(fragment, searchFrom, ignoreCase = true)
+        if (start < 0) return sourceText
+        ranges += start until (start + fragment.length)
+        searchFrom = start + fragment.length
+    }
+
+    val removals = mutableListOf<IntRange>()
+    for (index in 0 until words.lastIndex) {
+        val previous = words[index]
+        val next = words[index + 1]
+        if (previous.isBackground || next.isBackground || previous.isLineTimed || next.isLineTimed) continue
+        if (previous.text.lastOrNull()?.isDash() == true) continue
+        if (previous.text.lastOrNull() in setOf(',', '.', '!', '?', ';', ':', '，', '。', '！', '？', '；', '：', '、', '…')) continue
+
+        val gapStart = ranges[index].last + 1
+        val gapEnd = ranges[index + 1].first
+        if (gapEnd <= gapStart) continue
+        val gap = sourceText.substring(gapStart, gapEnd)
+        if (gap.any { !it.isWhitespace() || it == '\\n' || it == '\\r' }) continue
+
+        val timingGapMs = (next.startTime - previous.endTime) * 1000.0
+        if (timingGapMs in -80.0..EXPRESSIVE_SYLLABLE_JOIN_MAX_GAP_MS) {
+            removals += gapStart until gapEnd
+        }
+    }
+
+    if (removals.isEmpty()) return sourceText
+    return buildString(sourceText.length) {
+        var cursor = 0
+        for (range in removals) {
+            append(sourceText, cursor, range.first)
+            cursor = range.last + 1
+        }
+        append(sourceText, cursor, sourceText.length)
+    }
+}
+
 internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 500L
 internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 650L
 
@@ -314,9 +369,13 @@ internal fun ExpressiveWordAnimation(
         if (isActiveLine) animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
     }
 
+    val expressiveMainText = remember(mainText, words) {
+        normalizeSyllableFragmentSpacing(mainText, words)
+    }
+
     val (effectiveWords, effectiveToOriginalIdx) =
-        remember(words) {
-            groupSyllableFragments(words, mainText)
+        remember(words, expressiveMainText) {
+            groupSyllableFragments(words, expressiveMainText)
                 .flatMap { (originalIdx, word) ->
                     val shouldSplit =
                         word.text.contains('-') && word.text.length > 1 &&
@@ -416,7 +475,7 @@ internal fun ExpressiveWordAnimation(
 
         val formattedMainText =
             rememberFormattedMainText(
-                mainText = mainText,
+                mainText = expressiveMainText,
                 words = words,
                 romanizedWords = romanizedWords,
                 romanizedText = romanizedText,
@@ -720,7 +779,7 @@ internal fun ExpressiveWordAnimation(
             modifier =
                 Modifier
                     .lyricsWordCanvasLayout(
-                        mainText = mainText,
+                        mainText = expressiveMainText,
                         textLayoutResult = textLayoutResult,
                         lineCount = lineCount,
                         lineExtraHeight = lineExtraHeight,
