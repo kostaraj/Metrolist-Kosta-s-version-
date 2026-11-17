@@ -532,5 +532,53 @@ class LiriQoLyricsProviderTest {
                 client.close()
             }
         }
-}
 
+    @Test
+    fun prefersOriginalAppleMusicTtmlForNativeSyllableBoundaries() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "apple_music_liriqo",
+                    "syncLevel": "syllable",
+                    "ttml": "<tt xmlns=\\\"http://www.w3.org/ns/ttml\\\"><body><div><p begin=\\\"1s\\\" end=\\\"4s\\\"><span begin=\\\"1s\\\" end=\\\"1.2s\\\">be</span><span begin=\\\"1.2s\\\" end=\\\"1.45s\\\">au</span><span begin=\\\"1.45s\\\" end=\\\"1.65s\\\">ti</span><span begin=\\\"1.65s\\\" end=\\\"2.2s\\\">ful</span> <span begin=\\\"2.5s\\\" end=\\\"4s\\\">song</span></p></div></body></tt>",
+                    "timed": [{
+                      "id": 0,
+                      "text": "beautiful song",
+                      "start": 1000,
+                      "end": 4000,
+                      "words": [
+                        {"text": "beautiful ", "start": 1100, "end": 2400},
+                        {"text": "song", "start": 2500, "end": 4000}
+                      ]
+                    }]
+                  },
+                  "tracks": []
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx =
+                    assertNotNull(
+                        LiriQoLyricsProvider(client).getLyricsResults(
+                            "Song",
+                            "Artist",
+                            null,
+                            provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_APPLE_MUSIC,
+                        ).singleOrNull()?.lyrics,
+                    )
+                val line = MlxParser.parse(mlx).lines.single()
+                val words = assertNotNull(line.words)
+
+                assertEquals("beautiful song", line.text)
+                assertEquals(listOf("be", "au", "ti", "ful", "song"), words.map { it.text })
+                assertEquals(listOf(1.0, 1.2, 1.45, 1.65, 2.5), words.map { it.startTime })
+                assertEquals(listOf(1.2, 1.45, 1.65, 2.2, 4.0), words.map { it.endTime })
+                assertEquals(listOf(false, false, false, true, false), words.map { it.hasTrailingSpace })
+                assertEquals("LiriQo/APPLE_MUSIC", MlxParser.parse(mlx).meta.lyricSource)
+            } finally {
+                client.close()
+            }
+        }
+}
