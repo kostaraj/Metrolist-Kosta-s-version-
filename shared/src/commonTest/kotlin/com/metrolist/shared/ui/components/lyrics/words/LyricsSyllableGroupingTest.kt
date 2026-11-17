@@ -64,6 +64,20 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun unshinedWordsGetEnoughTimeForEachGlyphToRevealSmoothly() {
+        val shortWord = WordTimestamp("stutter", 1.0, 1.2, hasTrailingSpace = false)
+        val duration = EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS * 7
+        val beforeSecondGlyph = experimentalGlyphProgress(shortWord, 1_064L, 1, 7)
+        val atSecondGlyphStart = experimentalGlyphProgress(shortWord, 1_064L, 1, 7)
+        val halfwayThroughSecondGlyph = experimentalGlyphProgress(shortWord, 1_096L, 1, 7)
+
+        assertEquals(0f, beforeSecondGlyph)
+        assertTrue(halfwayThroughSecondGlyph > atSecondGlyphStart)
+        assertTrue(halfwayThroughSecondGlyph < 1f)
+        assertTrue(duration > 500.0)
+    }
+
+    @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
         assertEquals(0f, expressiveWordShineStrength(499L))
         assertEquals(0.42f, expressiveWordShineStrength(500L))

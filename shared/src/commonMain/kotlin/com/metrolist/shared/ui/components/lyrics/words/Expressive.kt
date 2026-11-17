@@ -102,10 +102,19 @@ internal fun experimentalGlyphProgress(
     glyphCount: Int,
 ): Float {
     val sMs = word.startTime * 1000.0
-    val dur = (word.endTime * 1000.0 - sMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS.toDouble())
-    val wProg = (position.toDouble() - sMs) / dur
+    val actualDurationMs = (word.endTime * 1000.0 - sMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS.toDouble())
+    val safeGlyphCount = glyphCount.coerceAtLeast(1)
+    // Short words have no shine, but they still need enough frames for each
+    // glyph's wipe to travel smoothly instead of jumping between letters.
+    val durationMs =
+        if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
+            maxOf(actualDurationMs, safeGlyphCount * EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS)
+        } else {
+            actualDurationMs
+        }
+    val wProg = (position.toDouble() - sMs) / durationMs
     val cInW = glyphIndex.toDouble()
-    val wLen = glyphCount.coerceAtLeast(1).toDouble()
+    val wLen = safeGlyphCount.toDouble()
     return ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
 }
 
@@ -159,6 +168,7 @@ internal fun normalizeSyllableFragmentSpacing(
     }
 }
 
+internal const val EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS = 64.0
 internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 500L
 internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 650L
 
