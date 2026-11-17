@@ -67,6 +67,7 @@ class BetterLyricsProvider(
 }
 
 private const val TTML_PARAMETER_NS = "http://www.w3.org/ns/ttml#parameter"
+private const val TTML_WORD_BOUNDARY_GAP_SECONDS = 0.08
 
 private data class TtmlWord(
     val text: String,
@@ -550,21 +551,38 @@ private fun parseWordSpan(
     if (begin.isEmpty() || end.isEmpty()) return
     val text = span.textContent
     val nextText = (span.nextSibling as? XmlText)?.value.orEmpty()
-    // Whitespace-only nodes containing a line break are XML formatting, not lyric word gaps.
-    val nextIsFormattingWhitespace =
-        nextText.isNotEmpty() &&
-            nextText.all(Char::isWhitespace) &&
-            nextText.any { it == '\n' || it == '\r' }
-    val nextStartsWithSeparator =
-        !nextIsFormattingWhitespace &&
-            nextText.firstOrNull()?.let { it == ' ' || it == '\t' || it == '\u00A0' } == true
+    val nextStartsWithSeparator = nextText.any { it == ' ' || it == '\t' || it == '\u00A0' }
     val textEndsWithSeparator =
         text.lastOrNull()?.let { it == ' ' || it == '\t' || it == '\u00A0' } == true
     val wordText = text.trimEnd(' ', '\t', '\u00A0')
+    val nextSpanBegin = nextTimedSpanBegin(span)
+    val hasTimingGapToNextSpan =
+        nextSpanBegin == null || nextSpanBegin - parseTime(end) > TTML_WORD_BOUNDARY_GAP_SECONDS
     val hasTrailingSpace =
-        (textEndsWithSeparator || nextStartsWithSeparator) &&
+        (textEndsWithSeparator || (nextStartsWithSeparator && hasTimingGapToNextSpan)) &&
             !wordText.endsWithLyricHyphen()
     out.add(TtmlWord(wordText, parseTime(begin) + offset, parseTime(end) + offset, hasTrailingSpace))
+}
+
+private fun nextTimedSpanBegin(span: XmlElement): Double? {
+    var sibling = span.nextSibling
+    while (sibling != null) {
+        when (sibling) {
+            is XmlText -> if (sibling.value.any { !it.isWhitespace() }) return null
+            is XmlElement -> {
+                if (sibling.localName == "span") {
+                    val role = getAttr(sibling, "role")
+                    if (role != "x-bg" && role != "x-translation" && role != "x-roman") {
+                        val begin = timingAttr(sibling, "begin")
+                        val end = timingAttr(sibling, "end")
+                        if (begin.isNotEmpty() && end.isNotEmpty()) return parseTime(begin)
+                    }
+                }
+            }
+        }
+        sibling = sibling.nextSibling
+    }
+    return null
 }
 
 private fun parseBackgroundSpan(
