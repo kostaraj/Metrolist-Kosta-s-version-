@@ -9,6 +9,8 @@ import com.metrolist.shared.model.AgentType
 import com.metrolist.shared.model.LyricsProvider
 import com.metrolist.shared.model.LyricsTimingKind
 import com.metrolist.shared.model.LyricsWithProvider
+import com.metrolist.shared.youtube.playback.PlaybackEventKind
+import com.metrolist.shared.youtube.playback.PlaybackEventLog
 import io.ktor.client.HttpClient
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
@@ -174,9 +176,28 @@ class LiriQoLyricsProvider(
         // Apple Music's raw TTML is the authoritative source for syllable boundaries.
         // Parse it through the same TTML normalizer used by the direct TTML providers
         // before considering LiriQo's flattened normalized word array.
+        val rawTtml = track.string("ttml")
+            ?.takeIf { sourceId == "apple_music_liriqo" && it.isNotBlank() }
+
+        if (sourceId == "apple_music_liriqo") {
+            val diagnosticTtml = rawTtml.orEmpty()
+            val maxDiagnosticChars = 24_000
+            PlaybackEventLog.debug(
+                PlaybackEventKind.LYRICS,
+                "LiriQo Apple Music raw TTML response captured.",
+                details = mapOf(
+                    "provider" to sourceLabel,
+                    "syncLevel" to (track.string("syncLevel") ?: "unknown"),
+                    "ttmlPresent" to diagnosticTtml.isNotEmpty().toString(),
+                    "ttmlLength" to diagnosticTtml.length.toString(),
+                    "ttmlTruncated" to (diagnosticTtml.length > maxDiagnosticChars).toString(),
+                    "ttml" to diagnosticTtml.take(maxDiagnosticChars),
+                ),
+            )
+        }
+
         val rawTtmlLyrics =
-            track.string("ttml")
-                ?.takeIf { sourceId == "apple_music_liriqo" && it.isNotBlank() }
+            rawTtml
                 ?.let { ttml ->
                     runCatching {
                         parseTtmlToMlx(
