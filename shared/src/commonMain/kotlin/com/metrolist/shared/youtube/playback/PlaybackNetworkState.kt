@@ -19,12 +19,16 @@ object PlaybackNetworkStateStore {
     private val _state = MutableStateFlow(PlaybackNetworkState(scope = "", connected = true))
     private var latestActualState = _state.value
     private var forcedOffline = false
+    private val _actualState = MutableStateFlow(latestActualState)
     val state: StateFlow<PlaybackNetworkState> = _state.asStateFlow()
+    val actualState: StateFlow<PlaybackNetworkState> = _actualState.asStateFlow()
 
     val current: PlaybackNetworkState
         get() = _state.value
 
     fun setForcedOffline(enabled: Boolean) {
+        // Automatic offline mode always wins while the real network is unavailable.
+        if (!latestActualState.connected && !enabled) return
         if (forcedOffline == enabled) return
         forcedOffline = enabled
         publishEffectiveState()
@@ -32,6 +36,7 @@ object PlaybackNetworkStateStore {
 
     fun publish(state: PlaybackNetworkState) {
         latestActualState = state
+        _actualState.value = state
         publishEffectiveState()
     }
 

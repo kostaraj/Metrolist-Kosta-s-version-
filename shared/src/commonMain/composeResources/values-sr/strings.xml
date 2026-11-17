@@ -1126,6 +1126,6 @@
     <string name="settings_resume_prompt_summary">Pitaj pre nastavljanja sačuvanog reda pri pokretanju aplikacije</string>
     <string name="settings_player_layout_summary">Promeni raspored omota i kontrola reprodukcije</string>
     <string name="settings_filter_q_summary">Q određuje širinu ili rezonancu izabranog filtera</string>
-    <string name="force_offline_playback">Присилни офлајн режим</string>
-    <string name="force_offline_playback_description">Плејер ће се понашати као да нема интернет везе. Могу се пуштати само преузете или кеширане песме.</string>
+    <string name="force_offline_playback">Офлајн режим</string>
+    <string name="force_offline_playback_description">Користи само преузете или кеширане песме. Аутоматски се укључује када нема интернет везе.</string>
 </resources>

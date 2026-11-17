@@ -14,6 +14,8 @@ package com.metrolist.shared.ui.settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.metrolist.shared.generated.resources.*
 import com.metrolist.shared.settings.KeepScreenOnMode
 import com.metrolist.shared.settings.LoudnessLevel
@@ -31,6 +33,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSettingsHost) {
     val settings = Settings.shared
+    val actualNetworkState by PlaybackNetworkStateStore.actualState.collectAsState()
     val audioQualityChoices =
         listOf(
             SettingsChoice("LOW", stringResource(Res.string.audio_quality_low)),
@@ -76,10 +79,13 @@ internal fun SettingsUiRegistryBuilder.registerPlaybackSettings(host: SharedSett
                     id = "forceOfflinePlayback",
                     title = stringResource(Res.string.force_offline_playback),
                     description = stringResource(Res.string.force_offline_playback_description),
-                    checked = settings.forceOfflinePlayback,
+                    checked = settings.forceOfflinePlayback || !actualNetworkState.connected,
+                    enabled = actualNetworkState.connected,
                 ) { enabled ->
-                    settings.forceOfflinePlayback = enabled
-                    PlaybackNetworkStateStore.setForcedOffline(enabled)
+                    if (actualNetworkState.connected) {
+                        settings.forceOfflinePlayback = enabled
+                        PlaybackNetworkStateStore.setForcedOffline(enabled)
+                    }
                 }
             }
             choice(

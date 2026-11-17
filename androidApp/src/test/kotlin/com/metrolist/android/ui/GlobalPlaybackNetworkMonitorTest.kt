@@ -94,6 +94,22 @@ class GlobalPlaybackNetworkMonitorTest {
         assertTrue(store.current.isCellular)
     }
 
+
+    @Test
+    fun automaticOfflineCannotBeManuallyDisabledUntilNetworkReturns() {
+        val store = PlaybackNetworkStateStore
+        store.setForcedOffline(false)
+        store.publish(PlaybackNetworkState(scope = "wifi", connected = true))
+        store.publish(PlaybackNetworkState(scope = "offline", connected = false))
+        assertFalse(store.actualState.value.connected)
+        assertFalse(store.current.connected)
+        store.setForcedOffline(false)
+        assertFalse(store.current.connected)
+        store.publish(PlaybackNetworkState(scope = "wifi", connected = true))
+        assertTrue(store.actualState.value.connected)
+        assertTrue(store.current.connected)
+    }
+
     @Test
     fun onlySystemServerDeathIsTolerated() {
         withLiveSystem { throw RuntimeException(DeadSystemException()) }
