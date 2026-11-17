@@ -505,11 +505,11 @@ object MlxParser {
         return segments.mapNotNull { segment ->
             val endSeparator = segment.lastIndexOf(':')
             val startSeparator = segment.lastIndexOf(':', endSeparator - 1)
-            if (startSeparator < 0 || endSeparator <= startSeparator) return@mapIndexedNotNull null
-            val start = segment.substring(startSeparator + 1, endSeparator).toDoubleOrNull() ?: return@mapIndexedNotNull null
-            val end = segment.substring(endSeparator + 1).toDoubleOrNull() ?: return@mapIndexedNotNull null
+            if (startSeparator < 0 || endSeparator <= startSeparator) return@mapNotNull null
+            val start = segment.substring(startSeparator + 1, endSeparator).toDoubleOrNull() ?: return@mapNotNull null
+            val end = segment.substring(endSeparator + 1).toDoubleOrNull() ?: return@mapNotNull null
             if (!start.isFinite() || !end.isFinite() || start < 0 || end < start || end >= Long.MAX_VALUE / 1000.0) {
-                return@mapIndexedNotNull null
+                return@mapNotNull null
             }
             val fragmentText = segment.substring(0, startSeparator)
             val hasExplicitTrailingSpace = fragmentText.lastOrNull()?.isWhitespace() == true
