@@ -221,6 +221,8 @@ class LiriQoLyricsProvider(
                 }
             }
 
+            rawTtmlLyrics?.let { return listOf(LyricsWithProvider(it, sourceLabel)) }
+
             val lineLyrics = buildTimedLyrics(lines, sourceLabel, requestedTitle, requestedArtist, metadata, track, includeWords = false, lineBoundaryReference = emptyList())
             return listOf(LyricsWithProvider(lineLyrics, sourceLabel))
         }
@@ -239,7 +241,6 @@ class LiriQoLyricsProvider(
             val plainLyrics = builder.build()
             return listOf(LyricsWithProvider(plainLyrics, sourceLabel))
         }
-        rawTtmlLyrics?.let { return listOf(LyricsWithProvider(it, sourceLabel)) }
         return emptyList()
     }
 
