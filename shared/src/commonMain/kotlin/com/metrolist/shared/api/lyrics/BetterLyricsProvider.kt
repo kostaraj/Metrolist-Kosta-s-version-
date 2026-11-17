@@ -67,7 +67,6 @@ class BetterLyricsProvider(
 }
 
 private const val TTML_PARAMETER_NS = "http://www.w3.org/ns/ttml#parameter"
-private const val TTML_WORD_BOUNDARY_GAP_SECONDS = 0.08
 
 private data class TtmlWord(
     val text: String,
@@ -555,11 +554,10 @@ private fun parseWordSpan(
     val textEndsWithSeparator =
         text.lastOrNull()?.let { it == ' ' || it == '\t' || it == '\u00A0' } == true
     val wordText = text.trimEnd(' ', '\t', '\u00A0')
-    val nextSpanBegin = nextTimedSpanBegin(span)
-    val hasTimingGapToNextSpan =
-        nextSpanBegin == null || nextSpanBegin - parseTime(end) > TTML_WORD_BOUNDARY_GAP_SECONDS
+    // An explicit whitespace text node is authoritative even when adjacent
+    // timed spans have little or no timing gap (common in Apple Music TTML).
     val hasTrailingSpace =
-        (textEndsWithSeparator || (nextStartsWithSeparator && hasTimingGapToNextSpan)) &&
+        (textEndsWithSeparator || nextStartsWithSeparator) &&
             !wordText.endsWithLyricHyphen()
     out.add(TtmlWord(wordText, parseTime(begin) + offset, parseTime(end) + offset, hasTrailingSpace))
 }
