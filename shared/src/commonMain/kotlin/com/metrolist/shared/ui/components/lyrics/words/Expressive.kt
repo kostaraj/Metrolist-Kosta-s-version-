@@ -169,8 +169,8 @@ internal fun normalizeSyllableFragmentSpacing(
 }
 
 internal const val EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS = 64.0
-internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 500L
-internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 650L
+internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 700L
+internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 1_000L
 
 internal fun expressiveWordShineStrength(durationMs: Long): Float =
     when {
