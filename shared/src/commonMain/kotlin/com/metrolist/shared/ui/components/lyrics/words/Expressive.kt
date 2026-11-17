@@ -139,13 +139,13 @@ internal fun normalizeSyllableFragmentSpacing(
         val next = words[index + 1]
         if (previous.isBackground || next.isBackground || previous.isLineTimed || next.isLineTimed) continue
         if (previous.text.lastOrNull()?.isDash() == true) continue
-        if (previous.text.lastOrNull() in setOf(',', '.', '!', '?', ';', ':', '，', '。', '！', '？', '；', '：', '、', '…')) continue
+        if (previous.text.lastOrNull()?.let { it in ",.!?;:，。！？；：、…" } == true) continue
 
         val gapStart = ranges[index].last + 1
         val gapEnd = ranges[index + 1].first
         if (gapEnd <= gapStart) continue
         val gap = sourceText.substring(gapStart, gapEnd)
-        if (gap.any { !it.isWhitespace() || it == '\\n' || it == '\\r' }) continue
+        if (gap.any { !it.isWhitespace() || it == '\n' || it == '\r' }) continue
 
         val timingGapMs = (next.startTime - previous.endTime) * 1000.0
         if (timingGapMs in -80.0..EXPRESSIVE_SYLLABLE_JOIN_MAX_GAP_MS) {
