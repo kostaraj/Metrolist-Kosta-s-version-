@@ -129,6 +129,19 @@ internal fun expressiveGlyphRevealColor(
     return lerp(unlitColor, litColor, eased)
 }
 
+/**
+ * Keeps a visible wipe edge even when a word is too short for a shine effect.
+ * Longer words get a brighter edge, while the wipe itself always runs.
+ */
+internal fun expressiveGlyphWipeEdgeColor(
+    unlitColor: Color,
+    litColor: Color,
+    shineStrength: Float,
+): Color {
+    val edgeProgress = 0.18f + 0.62f * shineStrength.coerceIn(0f, 1f)
+    return expressiveGlyphRevealColor(unlitColor, litColor, edgeProgress)
+}
+
 private fun DrawScope.drawMaskGradient(
     mask: androidx.compose.ui.graphics.ImageBitmap,
     maskScale: Float,
@@ -972,25 +985,19 @@ internal fun ExpressiveWordAnimation(
                             else -> {
                                 val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
                                 val shineStrength = expressiveWordShineStrength(durationMs)
-                                val revealColor = expressiveGlyphRevealColor(unlitColor, litColor, charLp)
-                                if (shineStrength <= 0f) {
-                                    // Short words still fade smoothly from unfocused to highlighted.
-                                    SolidColor(revealColor)
-                                } else {
-                                    val fXL = cWidth * charLp
-                                    val eW = (cWidth * 0.65f).coerceAtLeast(1f)
-                                    val sWL = (fXL - eW).coerceAtLeast(0f)
-                                    val shineColor = lerp(revealColor, litColor, shineStrength)
-                                    val edgeProgress = ((fXL - sWL) / eW).coerceIn(0f, 1f)
-                                    val edgeColor = lerp(shineColor, revealColor, edgeProgress)
-                                    Brush.linearGradient(
-                                        0.0f to shineColor,
-                                        0.98f to edgeColor,
-                                        1.0f to revealColor,
-                                        start = Offset(sWL, 0f),
-                                        end = Offset((fXL + 0.5f).coerceAtLeast(sWL + 0.5f), 0f),
-                                    )
-                                }
+                                val fXL = cWidth * charLp
+                                val eW = (cWidth * 0.65f).coerceAtLeast(1f)
+                                val sWL = (fXL - eW).coerceAtLeast(0f)
+                                // Always sweep from lit to unlit across the glyph. Shine only
+                                // changes the brightness of the passing edge, not whether it wipes.
+                                val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
+                                Brush.linearGradient(
+                                    0.0f to litColor,
+                                    0.98f to edgeColor,
+                                    1.0f to unlitColor,
+                                    start = Offset(sWL, 0f),
+                                    end = Offset((fXL + 0.5f).coerceAtLeast(sWL + 0.5f), 0f),
+                                )
                             }
                         }
                     val mask = glowMaskCache.peek(i)

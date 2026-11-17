@@ -49,14 +49,18 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
-    fun glyphRevealIsContinuousWithoutShine() {
+    fun wipeEdgeRemainsVisibleWithoutShineAndBrightensAtShineThresholds() {
         val unlit = Color(0.2f, 0.2f, 0.2f, 0.35f)
         val lit = Color(0.8f, 0.5f, 0.3f, 1f)
 
-        assertEquals(unlit, expressiveGlyphRevealColor(unlit, lit, 0f))
-        assertEquals(lit, expressiveGlyphRevealColor(unlit, lit, 1f))
-        val middle = expressiveGlyphRevealColor(unlit, lit, 0.5f)
-        assertTrue(middle.alpha > unlit.alpha)
-        assertTrue(middle.alpha < lit.alpha)
+        val noShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(499L))
+        val dimShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(500L))
+        val brightShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(650L))
+
+        assertTrue(noShine.alpha > unlit.alpha)
+        assertTrue(noShine.alpha < lit.alpha)
+        assertTrue(dimShine.alpha > noShine.alpha)
+        assertTrue(brightShine.alpha > dimShine.alpha)
+        assertTrue(brightShine.red > dimShine.red)
     }
 }
