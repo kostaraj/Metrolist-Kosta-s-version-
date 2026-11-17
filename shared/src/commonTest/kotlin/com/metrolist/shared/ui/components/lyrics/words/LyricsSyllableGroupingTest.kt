@@ -79,10 +79,10 @@ class LyricsSyllableGroupingTest {
 
     @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
-        assertEquals(0f, expressiveWordShineStrength(499L))
-        assertEquals(0.42f, expressiveWordShineStrength(500L))
-        assertEquals(0.42f, expressiveWordShineStrength(649L))
-        assertEquals(1f, expressiveWordShineStrength(650L))
+        assertEquals(0f, expressiveWordShineStrength(699L))
+        assertEquals(0.42f, expressiveWordShineStrength(700L))
+        assertEquals(0.42f, expressiveWordShineStrength(999L))
+        assertEquals(1f, expressiveWordShineStrength(1_000L))
     }
 
     @Test
@@ -90,9 +90,9 @@ class LyricsSyllableGroupingTest {
         val unlit = Color(0.2f, 0.2f, 0.2f, 0.35f)
         val lit = Color(0.8f, 0.5f, 0.3f, 1f)
 
-        val noShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(499L))
-        val dimShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(500L))
-        val brightShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(650L))
+        val noShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(699L))
+        val dimShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(700L))
+        val brightShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(1_000L))
 
         assertTrue(noShine.alpha > unlit.alpha)
         assertTrue(noShine.alpha < lit.alpha)
