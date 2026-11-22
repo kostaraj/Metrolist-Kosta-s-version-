@@ -581,4 +581,132 @@ class LiriQoLyricsProviderTest {
                 client.close()
             }
         }
+
+    @Test
+    fun alignsReorderedLineReferencesDespitePunctuationDifferences() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "kugou_legato",
+                    "syncLevel": "syllable",
+                    "timed": [
+                      {
+                        "text": "be au ti ful song!",
+                        "start": 1000, "end": 3000,
+                        "words": [
+                          {"text":"be","start":1000,"end":1200},
+                          {"text":"au","start":1200,"end":1400},
+                          {"text":"ti","start":1400,"end":1600},
+                          {"text":"ful","start":1600,"end":2000},
+                          {"text":"song!","start":2200,"end":3000}
+                        ]
+                      },
+                      {
+                        "text": "go od bye",
+                        "start": 4000, "end": 6000,
+                        "words": [
+                          {"text":"go","start":4000,"end":4500},
+                          {"text":"od","start":4500,"end":5000},
+                          {"text":"bye","start":5000,"end":6000}
+                        ]
+                      }
+                    ]
+                  },
+                  "tracks": [{
+                    "provider": "kugou_legato",
+                    "syncLevel": "line",
+                    "timed": [
+                      {"text":"goodbye!","start":4000,"end":6000},
+                      {"text":"beautiful song,","start":1000,"end":3000}
+                    ]
+                  }]
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx = assertNotNull(
+                    LiriQoLyricsProvider(client).getLyricsResults(
+                        "Song", "Artist", null,
+                        provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_KUGOU,
+                    ).singleOrNull()?.lyrics,
+                )
+                val lines = MlxParser.parse(mlx).lines
+                assertEquals(listOf("beautiful song,", "goodbye!"), lines.map { it.text })
+                assertEquals(
+                    listOf(false, false, false, true, false),
+                    lines[0].words!!.map { it.hasTrailingSpace },
+                )
+                assertEquals(
+                    listOf(false, false, false),
+                    lines[1].words!!.map { it.hasTrailingSpace },
+                )
+                assertEquals(
+                    listOf(1.0, 1.2, 1.4, 1.6, 2.2),
+                    lines[0].words!!.map { it.startTime },
+                )
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test
+    fun alignsReorderedPlainLinesByContentInsteadOfLineIndex() =
+        runBlocking {
+            val response =
+                """
+                {
+                  "primary": {
+                    "provider": "qq_portato",
+                    "syncLevel": "syllable",
+                    "plain": "goodbye\nbeautiful song",
+                    "timed": [
+                      {
+                        "text": "be au ti ful song",
+                        "start": 1000, "end": 3000,
+                        "words": [
+                          {"text":"be","start":1000,"end":1200},
+                          {"text":"au","start":1200,"end":1400},
+                          {"text":"ti","start":1400,"end":1600},
+                          {"text":"ful","start":1600,"end":2000},
+                          {"text":"song","start":2200,"end":3000}
+                        ]
+                      },
+                      {
+                        "text": "go od bye",
+                        "start": 4000, "end": 6000,
+                        "words": [
+                          {"text":"go","start":4000,"end":4500},
+                          {"text":"od","start":4500,"end":5000},
+                          {"text":"bye","start":5000,"end":6000}
+                        ]
+                      }
+                    ]
+                  },
+                  "tracks": []
+                }
+                """.trimIndent()
+            val client = HttpClient(MockEngine { respond(response, HttpStatusCode.OK) })
+            try {
+                val mlx = assertNotNull(
+                    LiriQoLyricsProvider(client).getLyricsResults(
+                        "Song", "Artist", null,
+                        provider = com.metrolist.shared.model.LyricsProvider.LIRIQO_QQ_MUSIC,
+                    ).singleOrNull()?.lyrics,
+                )
+                val lines = MlxParser.parse(mlx).lines
+                assertEquals(listOf("beautiful song", "goodbye"), lines.map { it.text })
+                assertEquals(
+                    listOf(false, false, false, true, false),
+                    lines[0].words!!.map { it.hasTrailingSpace },
+                )
+                assertEquals(
+                    listOf(false, false, false),
+                    lines[1].words!!.map { it.hasTrailingSpace },
+                )
+            } finally {
+                client.close()
+            }
+        }
 }
