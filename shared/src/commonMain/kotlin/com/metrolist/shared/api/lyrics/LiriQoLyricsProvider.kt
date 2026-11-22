@@ -443,12 +443,6 @@ class LiriQoLyricsProvider(
     private fun normalizeForAlignment(text: String): String =
         text.filter(Char::isLetterOrDigit).lowercase()
 
-    private fun sameTextIgnoringWhitespace(first: String, second: String): Boolean =
-        first.filterNot { it.isWhitespace() }.equals(
-            second.filterNot { it.isWhitespace() },
-            ignoreCase = true,
-        )
-
     private fun timingKind(mlx: String): LyricsTimingKind {
         val document = runCatching { MlxParser.parse(mlx) }.getOrNull()
         if (document == null || document.lines.isEmpty()) return LyricsTimingKind.UNSYNCED
