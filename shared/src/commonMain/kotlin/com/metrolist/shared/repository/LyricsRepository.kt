@@ -996,17 +996,21 @@ class LyricsRepository(
         if (Settings.shared.lyricsAiTranslationEnabled && targetLanguage.isNotBlank()) {
             val activationMode = Settings.shared.lyricsAiActivationMode
             val cachedTranslation =
-                loadCachedTranslation(
-                    videoId,
-                    targetLanguage,
-                    translationStyle,
-                    sourceHash,
-                    configKey,
-                    translationLines,
-                    sourceWordsPerLine,
-                    allowNotNeeded = !forceAiTranslation,
-                    allowLegacyTranslation = !allowRemoteTranslation,
-                )
+                if (forceAiTranslation) {
+                    null
+                } else {
+                    loadCachedTranslation(
+                        videoId,
+                        targetLanguage,
+                        translationStyle,
+                        sourceHash,
+                        configKey,
+                        translationLines,
+                        sourceWordsPerLine,
+                        allowNotNeeded = true,
+                        allowLegacyTranslation = !allowRemoteTranslation,
+                    )
+                }
             val aiResult =
                 if (cachedTranslation != null) {
                     cachedTranslation.result
@@ -1016,16 +1020,20 @@ class LyricsRepository(
                     val lockKey = "$videoId|$targetLanguage|$translationStyle|$sourceHash|$configKey"
                     lockFor(lockKey).withLock {
                         val lockedCache =
-                            loadCachedTranslation(
-                                videoId,
-                                targetLanguage,
-                                translationStyle,
-                                sourceHash,
-                                configKey,
-                                translationLines,
-                                sourceWordsPerLine,
-                                allowNotNeeded = !forceAiTranslation,
-                            )
+                            if (forceAiTranslation) {
+                                null
+                            } else {
+                                loadCachedTranslation(
+                                    videoId,
+                                    targetLanguage,
+                                    translationStyle,
+                                    sourceHash,
+                                    configKey,
+                                    translationLines,
+                                    sourceWordsPerLine,
+                                    allowNotNeeded = true,
+                                )
+                            }
                         if (lockedCache != null) {
                             lockedCache.result
                         } else {
@@ -1107,7 +1115,12 @@ class LyricsRepository(
                                     }
                                 mutable[entryIndex] =
                                     entry.copy(
-                                        translatedText = entry.translatedText?.takeIf { it.isNotBlank() } ?: translated,
+                                        translatedText =
+                                            if (forceAiTranslation) {
+                                                translated ?: entry.translatedText
+                                            } else {
+                                                entry.translatedText?.takeIf { it.isNotBlank() } ?: translated
+                                            },
                                         romanizedText =
                                             if (!entry.romanizedText.isNullOrBlank()) {
                                                 entry.romanizedText
