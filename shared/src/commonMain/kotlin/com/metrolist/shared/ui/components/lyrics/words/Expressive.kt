@@ -885,7 +885,6 @@ internal fun ExpressiveWordAnimation(
             val effectiveCount = effectiveWords.size
             for (wIdx in 0 until effectiveCount) {
                 val wStartMs = effWordStartMs[wIdx]
-                val wEndMs = effWordEndMs[wIdx]
                 val animationEndMs = wStartMs + expressiveGlyphRevealDurationMs(effectiveWords[wIdx], effectiveWordGlyphCounts[wIdx])
                 val isSung = smoothPosition > animationEndMs
                 val isAct = smoothPosition in wStartMs..animationEndMs
