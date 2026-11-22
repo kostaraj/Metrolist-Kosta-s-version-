@@ -310,14 +310,9 @@ class LiriQoLyricsProvider(
                 }
             val boundaryText =
                 normalizeHyphenatedLyricSpacing(
-                    lineBoundaryReference.firstOrNull {
-                    line.id != null && it.id == line.id && sameTextIgnoringWhitespace(it.text, line.text)
-                }?.text
-                    ?: lineBoundaryReference.firstOrNull {
-                        it.index == line.index && sameTextIgnoringWhitespace(it.text, line.text)
-                    }?.text
-                    ?: plainLines.getOrNull(line.index)?.takeIf { sameTextIgnoringWhitespace(it, line.text) }
-                    ?: line.text,
+                    findMatchingReference(line, lineBoundaryReference)?.text
+                        ?: findMatchingPlainLine(line, plainLines)
+                        ?: line.text,
                 )
             val backgroundSource = BACKGROUND_PARENTHESIS.find(boundaryText)?.groupValues?.get(1).orEmpty()
             val mainSource = BACKGROUND_PARENTHESIS.replace(boundaryText, " ").replace(WHITESPACE, " ").trim()
@@ -401,6 +396,52 @@ class LiriQoLyricsProvider(
             )
         }
     }
+
+    /**
+     * Resolve the text rendition belonging to a timed line. IDs are the strongest
+     * signal, but providers sometimes omit or regenerate them. In that case match
+     * normalized lyric content across the whole rendition instead of assuming that
+     * both renditions have identical line indexes or ordering.
+     */
+    private fun findMatchingReference(
+        line: TimedLine,
+        references: List<LineBoundaryReference>,
+    ): LineBoundaryReference? {
+        val normalizedLine = normalizeForAlignment(line.text)
+        if (normalizedLine.isEmpty()) return null
+
+        return references.firstOrNull {
+            line.id != null &&
+                it.id == line.id &&
+                normalizeForAlignment(it.text) == normalizedLine
+        } ?: references.firstOrNull {
+            it.index == line.index && normalizeForAlignment(it.text) == normalizedLine
+        } ?: references.firstOrNull {
+            normalizeForAlignment(it.text) == normalizedLine
+        }
+    }
+
+    private fun findMatchingPlainLine(
+        line: TimedLine,
+        plainLines: List<String>,
+    ): String? {
+        val normalizedLine = normalizeForAlignment(line.text)
+        if (normalizedLine.isEmpty()) return null
+
+        return plainLines.getOrNull(line.index)?.takeIf {
+            normalizeForAlignment(it) == normalizedLine
+        } ?: plainLines.firstOrNull {
+            normalizeForAlignment(it) == normalizedLine
+        }
+    }
+
+    /**
+     * Ignore whitespace and punctuation when aligning alternate lyric renditions.
+     * This lets "beautiful song!" match "be au ti ful song," without changing the
+     * original text used to determine actual word boundaries.
+     */
+    private fun normalizeForAlignment(text: String): String =
+        text.filter(Char::isLetterOrDigit).lowercase()
 
     private fun sameTextIgnoringWhitespace(first: String, second: String): Boolean =
         first.filterNot { it.isWhitespace() }.equals(
