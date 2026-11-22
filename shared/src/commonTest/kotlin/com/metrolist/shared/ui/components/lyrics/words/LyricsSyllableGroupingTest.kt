@@ -78,6 +78,16 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun wordCompletionWaitsForTheLastUnshinedGlyph() {
+        val shortWord = WordTimestamp("stutter", 1.0, 1.2, hasTrailingSpace = false)
+        val revealDurationMs = expressiveGlyphRevealDurationMs(shortWord, glyphCount = 7)
+
+        assertEquals(448L, revealDurationMs)
+        assertTrue(experimentalGlyphProgress(shortWord, 1_447L, glyphIndex = 6, glyphCount = 7) < 1f)
+        assertEquals(1f, experimentalGlyphProgress(shortWord, 1_448L, glyphIndex = 6, glyphCount = 7))
+    }
+
+    @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
         assertEquals(0f, expressiveWordShineStrength(749L))
         assertEquals(0.42f, expressiveWordShineStrength(750L))
