@@ -1064,7 +1064,7 @@ class LyricsRepository(
                                                 backgroundLines =
                                                     selected
                                                         .mapNotNull { backgroundSources.getOrNull(it - nonEmpty.size)?.first }
-                                                        .filter { entries[it].backgroundTranslatedText.isNullOrBlank() }
+                                                        .filter { forceAiTranslation || entries[it].backgroundTranslatedText.isNullOrBlank() }
                                                         .toSet(),
                                             ),
                                         )
