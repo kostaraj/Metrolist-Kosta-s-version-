@@ -102,16 +102,8 @@ internal fun experimentalGlyphProgress(
     glyphCount: Int,
 ): Float {
     val sMs = word.startTime * 1000.0
-    val actualDurationMs = (word.endTime * 1000.0 - sMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS.toDouble())
     val safeGlyphCount = glyphCount.coerceAtLeast(1)
-    // Short words have no shine, but they still need enough frames for each
-    // glyph's wipe to travel smoothly instead of jumping between letters.
-    val durationMs =
-        if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
-            maxOf(actualDurationMs, safeGlyphCount * EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS)
-        } else {
-            actualDurationMs
-        }
+    val durationMs = expressiveGlyphRevealDurationMs(word, safeGlyphCount).toDouble()
     val wProg = (position.toDouble() - sMs) / durationMs
     val cInW = glyphIndex.toDouble()
     val wLen = safeGlyphCount.toDouble()
@@ -170,6 +162,24 @@ internal fun normalizeSyllableFragmentSpacing(
 
 internal const val EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS = 64.0
 internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 750L
+
+/**
+ * Returns the shared duration used by both the per-glyph wipe and the word's
+ * completed state. Without this, short unshined words can be marked sung
+ * before their final glyph has finished revealing.
+ */
+internal fun expressiveGlyphRevealDurationMs(word: WordTimestamp, glyphCount: Int): Long {
+    val startMs = (word.startTime * 1000.0).toLong()
+    val endMs = (word.endTime * 1000.0).toLong()
+    val actualDurationMs = (endMs - startMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS)
+    val safeGlyphCount = glyphCount.coerceAtLeast(1)
+    val glyphRevealDurationMs = (safeGlyphCount * EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS).toLong()
+    return if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
+        maxOf(actualDurationMs, glyphRevealDurationMs)
+    } else {
+        actualDurationMs
+    }
+}
 internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 1_000L
 
 internal fun expressiveWordShineStrength(durationMs: Long): Float =
@@ -621,6 +631,22 @@ internal fun ExpressiveWordAnimation(
                 Triple(wordIdxMap, charInWordMap, wordLenMap)
             }
 
+        // Count actual text glyphs, excluding the trailing space associated with a word.
+        // These counts also drive the word completion timer below.
+        val effectiveWordGlyphCounts =
+            remember(charToWordData, graphemeClusters, effectiveWords) {
+                val (wordIdxMap, charInWordMap, _) = charToWordData
+                IntArray(effectiveWords.size) { targetWordIdx ->
+                    var lastGlyphIndex = -1
+                    for (clusterIdx in graphemeClusters.indices) {
+                        if (wordIdxMap[clusterIdx] == targetWordIdx && graphemeClusters[clusterIdx].isNotBlank()) {
+                            lastGlyphIndex = maxOf(lastGlyphIndex, charInWordMap[clusterIdx])
+                        }
+                    }
+                    (lastGlyphIndex + 1).coerceAtLeast(1)
+                }
+            }
+
         val letterStyle =
             remember(lyricStyle) {
                 lyricStyle.copy(textAlign = TextAlign.Start)
@@ -860,7 +886,7 @@ internal fun ExpressiveWordAnimation(
             for (wIdx in 0 until effectiveCount) {
                 val wStartMs = effWordStartMs[wIdx]
                 val wEndMs = effWordEndMs[wIdx]
-                val animationEndMs = wStartMs + lyricsWordAnimationDurationMs(wEndMs - wStartMs)
+                val animationEndMs = wStartMs + expressiveGlyphRevealDurationMs(effectiveWords[wIdx], effectiveWordGlyphCounts[wIdx])
                 val isSung = smoothPosition > animationEndMs
                 val isAct = smoothPosition in wStartMs..animationEndMs
                 val factor =
@@ -890,7 +916,7 @@ internal fun ExpressiveWordAnimation(
                 }
             }
 
-            val (wordIdxMap, charInWordMap, wordLenMap) = charToWordData
+            val (wordIdxMap, charInWordMap, _) = charToWordData
             for (wordIdx in words.indices) {
                 wordWobbles[wordIdx] = experimentalWordWobble(words[wordIdx], smoothPosition)
             }
@@ -948,7 +974,7 @@ internal fun ExpressiveWordAnimation(
                             effectiveWords[wordIdx],
                             smoothPosition,
                             charInWordMap[i],
-                            wordLenMap[i],
+                            effectiveWordGlyphCounts[wordIdx],
                         )
                     } else {
                         0f
