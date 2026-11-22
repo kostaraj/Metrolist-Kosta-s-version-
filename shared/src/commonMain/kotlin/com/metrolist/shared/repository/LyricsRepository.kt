@@ -1046,11 +1046,12 @@ class LyricsRepository(
                                                     selected
                                                         .mapNotNull { nonEmpty.getOrNull(it)?.first }
                                                         .filter {
-                                                            if (translationStyle == "Romanized") {
-                                                                entries[it].romanizedText.isNullOrBlank()
-                                                            } else {
-                                                                entries[it].translatedText.isNullOrBlank()
-                                                            }
+                                                            forceAiTranslation ||
+                                                                if (translationStyle == "Romanized") {
+                                                                    entries[it].romanizedText.isNullOrBlank()
+                                                                } else {
+                                                                    entries[it].translatedText.isNullOrBlank()
+                                                                }
                                                         }.toSet(),
                                                 backgroundLines =
                                                     selected
