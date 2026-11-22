@@ -197,6 +197,26 @@ class MlxParserTest {
     }
 
     @Test
+    fun derivesLegacyWordBoundariesFromLineTextInsteadOfTimingGaps() {
+        val mlx =
+            """
+            [meta]
+            [lyrics]
+            [00:01.000~00:03.000]calling alone
+            <call:1.0:1.3|ing:1.3:1.65|alone:1.66:2.2>
+            """.trimIndent()
+
+        val line = MlxParser.parse(mlx).lines.single()
+        val words = line.words.orEmpty()
+
+        assertEquals("calling alone", line.text)
+        assertEquals(listOf("call", "ing", "alone"), words.map { it.text })
+        assertEquals(listOf(false, false, true), words.map { it.hasTrailingSpace })
+        assertEquals(listOf(1.0, 1.3, 1.66), words.map { it.startTime })
+        assertEquals(listOf(1.3, 1.65, 2.2), words.map { it.endTime })
+    }
+
+    @Test
     fun derivesSyllableWordSpacingFromJsonLineTextWithoutChangingTimings() {
         val mlx =
             """
