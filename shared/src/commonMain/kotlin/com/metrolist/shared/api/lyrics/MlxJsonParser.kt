@@ -165,39 +165,6 @@ internal object MlxJsonParser {
         return json.encodeToString(JsonObject(document + ("lines" to JsonArray(lines))))
     }
 
-    /**
-     * MLX providers may store each syllable as a separate timed fragment while keeping
-     * natural word spacing only in the line-level text. Reapply those spaces when the
-     * fragment text matches the line text, preserving every timing marker.
-     */
-    private fun List<WordTimestamp>.withSpacingFrom(sourceText: String): List<WordTimestamp> {
-        if (isEmpty() || sourceText.isBlank()) return this
-        val compactSource = sourceText.filterNot { it.isWhitespace() }
-        val compactWords = joinToString("") { it.text.filterNot(Char::isWhitespace) }.filterNot { it.isWhitespace() }
-        if (!compactSource.equals(compactWords, ignoreCase = true)) return this
-
-        var searchFrom = 0
-        val starts = mutableListOf<Int>()
-        for (word in this) {
-            val fragment = word.text.trimEnd()
-            val start = sourceText.indexOf(fragment, searchFrom, ignoreCase = true)
-            if (start < 0) return this
-            starts += start
-            searchFrom = start + fragment.length
-        }
-
-        return mapIndexed { index, word ->
-            val fragment = word.text.trimEnd()
-            val wordEnd = starts[index] + fragment.length
-            val nextWordStart = starts.getOrNull(index + 1) ?: wordEnd
-            val hasSeparator =
-                !fragment.endsWithLyricHyphen() &&
-                    nextWordStart > wordEnd &&
-                    sourceText.substring(wordEnd, nextWordStart).any { it.isWhitespace() }
-            word.copy(hasTrailingSpace = hasSeparator)
-        }
-    }
-
     private fun JsonWord.timestamp(background: Boolean = false): WordTimestamp =
         WordTimestamp(
             text = text.removeSuffix(" "),
