@@ -476,6 +476,7 @@ kotlin {
                 implementation(libs.multiplatform.settings.datastore)
 
                 implementation(libs.materialKolor)
+                implementation("io.github.kyant0:backdrop:2.0.1")
 
                 api(libs.shimmer)
 
