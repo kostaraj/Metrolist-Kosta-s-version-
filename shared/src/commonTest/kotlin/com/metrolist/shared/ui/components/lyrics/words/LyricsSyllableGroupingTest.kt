@@ -105,17 +105,34 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
-    fun wipeEdgeRemainsVisibleWithoutShineAndBrightensAtShineThresholds() {
+    fun unshinedGlyphColorRevealRemainsSmoothThroughCompletion() {
         val unlit = Color(0.2f, 0.2f, 0.2f, 0.35f)
         val lit = Color(0.8f, 0.5f, 0.3f, 1f)
 
-        val noShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(699L))
-        val dimShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(700L))
+        val atStart = expressiveGlyphRevealColor(unlit, lit, 0f)
+        val halfway = expressiveGlyphRevealColor(unlit, lit, 0.5f)
+        val almostDone = expressiveGlyphRevealColor(unlit, lit, 0.99f)
+        val complete = expressiveGlyphRevealColor(unlit, lit, 1f)
+
+        assertEquals(unlit, atStart)
+        assertEquals(lit, complete)
+        assertTrue(halfway.alpha > unlit.alpha)
+        assertTrue(halfway.alpha < lit.alpha)
+        assertTrue(almostDone.alpha > halfway.alpha)
+        assertTrue(lit.alpha - almostDone.alpha < 0.001f)
+        assertTrue(lit.red - almostDone.red < 0.001f)
+    }
+
+    @Test
+    fun shineWipeEdgeBrightensFromDimToBrightShine() {
+        val unlit = Color(0.2f, 0.2f, 0.2f, 0.35f)
+        val lit = Color(0.8f, 0.5f, 0.3f, 1f)
+
+        val dimShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(750L))
         val brightShine = expressiveGlyphWipeEdgeColor(unlit, lit, expressiveWordShineStrength(1_000L))
 
-        assertTrue(noShine.alpha > unlit.alpha)
-        assertTrue(noShine.alpha < lit.alpha)
-        assertTrue(dimShine.alpha > noShine.alpha)
+        assertTrue(dimShine.alpha > unlit.alpha)
+        assertTrue(dimShine.alpha < lit.alpha)
         assertTrue(brightShine.alpha > dimShine.alpha)
         assertTrue(brightShine.red > dimShine.red)
     }
