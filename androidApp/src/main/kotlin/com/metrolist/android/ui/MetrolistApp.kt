@@ -1507,7 +1507,7 @@ fun MetrolistApp(
                                                         }
                                                     }
                                                     if (!hasDesktopCaption) {
-                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = navigationState.topLevelRoute == Screen.Home) else Modifier)
+                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home) else Modifier)
                                                     }
                                                 }
                                                 if (useFloatingTopBar) {
