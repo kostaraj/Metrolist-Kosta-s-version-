@@ -438,6 +438,13 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                         description = stringResource(Res.string.appearance_floating_top_bar_description),
                         checked = settings.floatingTopBar,
                     ) { settings.floatingTopBar = it }
+                    switch(
+                        id = "liquidGlass",
+                        title = stringResource(Res.string.appearance_liquid_glass),
+                        description = stringResource(Res.string.appearance_liquid_glass_description),
+                        checked = settings.liquidGlassEnabled,
+                        enabled = settings.floatingNavBar && settings.floatingTopBar,
+                    ) { settings.liquidGlassEnabled = it }
                 }
                 if (host.platform == SettingsPlatform.ANDROID) {
                     switch(
