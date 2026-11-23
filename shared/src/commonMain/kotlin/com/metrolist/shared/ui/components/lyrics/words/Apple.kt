@@ -478,7 +478,6 @@ internal fun AppleWordAnimation(
         LaunchLineColorAnimations(
             animState = animState,
             isActiveLine = isActiveLine,
-            lineStartTime = lineStartTime,
             effectiveEndTimeMs = effectiveEndTimeMs,
             currentPositionProvider = { currentPositionProvider() },
             isFinishingProvider = finishing,
