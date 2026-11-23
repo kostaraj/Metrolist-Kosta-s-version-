@@ -45,7 +45,7 @@ import androidx.compose.ui.graphics.Color
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.highlight.Highlight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,16 +121,16 @@ private fun <T> FloatingNavigationBar(
     val separateItem = items.firstOrNull { it.key == separateKey }
     val backdrop = LocalLiquidGlassBackdrop.current
     val useLiquidGlass = liquidGlass && backdrop != null
-    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f)
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.14f)
     val glassModifier =
         if (useLiquidGlass) {
             Modifier.drawBackdrop(
                 backdrop = backdrop!!,
                 shape = { CircleShape },
                 effects = {
-                    vibrancy()
-                    blur(8.dp.toPx())
-                    lens(24.dp.toPx(), 24.dp.toPx())
+                    colorControls(saturation = 1.2f)
+                    blur(6.dp.toPx())
+                    lens(14.dp.toPx(), 16.dp.toPx(), depthEffect = true)
                 },
                 highlight = { Highlight.Default },
                 onDrawSurface = {
