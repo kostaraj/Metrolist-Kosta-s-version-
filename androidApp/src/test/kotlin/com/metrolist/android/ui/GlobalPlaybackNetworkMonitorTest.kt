@@ -94,7 +94,6 @@ class GlobalPlaybackNetworkMonitorTest {
         assertTrue(store.current.isCellular)
     }
 
-
     @Test
     fun automaticOfflineCannotBeManuallyDisabledUntilNetworkReturns() {
         val store = PlaybackNetworkStateStore
