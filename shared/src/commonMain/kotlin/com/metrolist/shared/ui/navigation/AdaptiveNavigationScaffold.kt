@@ -289,6 +289,7 @@ fun <T> AdaptiveNavigationScaffold(
     modifier: Modifier = Modifier,
     navigationVisible: Boolean = true,
     floatingNavigation: Boolean = false,
+    floatingNavigationLiquidGlass: Boolean = false,
     floatingSeparateKey: T? = null,
     onFloatingNavigationHeightChanged: (Dp) -> Unit = {},
     onFloatingNavigationOccupiedHeightChanged: (Dp) -> Unit = {},
@@ -412,6 +413,7 @@ fun <T> AdaptiveNavigationScaffold(
                                 separateKey = floatingSeparateKey,
                                 itemModifier = itemModifier,
                                 onBarHeightChanged = onFloatingNavigationHeightChanged,
+                                liquidGlass = floatingNavigationLiquidGlass,
                             )
                         }
                     }
