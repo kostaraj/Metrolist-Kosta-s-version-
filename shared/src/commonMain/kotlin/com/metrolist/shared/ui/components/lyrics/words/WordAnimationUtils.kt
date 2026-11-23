@@ -1851,7 +1851,6 @@ internal fun shouldAnimateLineHighlight(
 internal fun LaunchLineColorAnimations(
     animState: LyricAnimationState,
     isActiveLine: Boolean,
-    lineStartTime: Long,
     effectiveEndTimeMs: Long,
     currentPositionProvider: () -> Long,
     isFinishingProvider: () -> Boolean = { false },
@@ -1861,7 +1860,7 @@ internal fun LaunchLineColorAnimations(
             if (!isActiveLine && !isFinishingProvider() && currentPositionProvider() > effectiveEndTimeMs) 1f else 0f
         }
     }
-    val targetSS by remember(isActiveLine, lineStartTime, effectiveEndTimeMs) {
+    val targetSS by remember(isActiveLine, effectiveEndTimeMs) {
         derivedStateOf(structuralEqualityPolicy()) {
             if (shouldAnimateLineHighlight(isActiveLine, currentPositionProvider(), effectiveEndTimeMs, isFinishingProvider())) 1f else 0f
         }
