@@ -64,27 +64,27 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
-    fun unshinedWordsGetEnoughTimeForEachGlyphToRevealSmoothly() {
-        val shortWord = WordTimestamp("stutter", 1.0, 1.2, hasTrailingSpace = false)
-        val duration = EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS * 7
-        val beforeSecondGlyph = experimentalGlyphProgress(shortWord, 1_064L, 1, 7)
-        val atSecondGlyphStart = experimentalGlyphProgress(shortWord, 1_064L, 1, 7)
-        val halfwayThroughSecondGlyph = experimentalGlyphProgress(shortWord, 1_096L, 1, 7)
+    fun unshinedGlyphTransitionsOverlapForMoreRenderedFrames() {
+        val shortWord = WordTimestamp("stutter", 1.0, 1.21, hasTrailingSpace = false)
 
-        assertEquals(0f, beforeSecondGlyph)
-        assertTrue(halfwayThroughSecondGlyph > atSecondGlyphStart)
-        assertTrue(halfwayThroughSecondGlyph < 1f)
-        assertTrue(duration > 500.0)
+        val secondGlyphAtStart = experimentalGlyphProgress(shortWord, 1_030L, glyphIndex = 1, glyphCount = 7)
+        val secondGlyphHalfway = experimentalGlyphProgress(shortWord, 1_110L, glyphIndex = 1, glyphCount = 7)
+        val firstGlyphAtSameTime = experimentalGlyphProgress(shortWord, 1_110L, glyphIndex = 0, glyphCount = 7)
+
+        assertEquals(0f, secondGlyphAtStart)
+        assertEquals(0.5f, secondGlyphHalfway)
+        assertTrue(firstGlyphAtSameTime > secondGlyphHalfway)
+        assertTrue(firstGlyphAtSameTime < 1f)
     }
 
     @Test
-    fun wordCompletionWaitsForTheLastUnshinedGlyph() {
-        val shortWord = WordTimestamp("stutter", 1.0, 1.2, hasTrailingSpace = false)
+    fun wordCompletionWaitsForTheLastOverlappingUnshinedGlyph() {
+        val shortWord = WordTimestamp("stutter", 1.0, 1.21, hasTrailingSpace = false)
         val revealDurationMs = expressiveGlyphRevealDurationMs(shortWord, glyphCount = 7)
 
-        assertEquals(448L, revealDurationMs)
-        assertTrue(experimentalGlyphProgress(shortWord, 1_447L, glyphIndex = 6, glyphCount = 7) < 1f)
-        assertEquals(1f, experimentalGlyphProgress(shortWord, 1_448L, glyphIndex = 6, glyphCount = 7))
+        assertEquals(340L, revealDurationMs)
+        assertTrue(experimentalGlyphProgress(shortWord, 1_339L, glyphIndex = 6, glyphCount = 7) < 1f)
+        assertEquals(1f, experimentalGlyphProgress(shortWord, 1_340L, glyphIndex = 6, glyphCount = 7))
     }
 
     @Test
