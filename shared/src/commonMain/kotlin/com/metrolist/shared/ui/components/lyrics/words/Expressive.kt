@@ -216,8 +216,8 @@ internal fun expressiveGlyphRevealColor(
 }
 
 /**
- * Keeps a visible wipe edge even when a word is too short for a shine effect.
- * Longer words get a brighter edge, while the wipe itself always runs.
+ * Controls the brightness of the moving edge on words that have a shine effect.
+ * Dim and bright shine states share the same wipe; only the edge intensity changes.
  */
 internal fun expressiveGlyphWipeEdgeColor(
     unlitColor: Color,
@@ -1094,7 +1094,7 @@ internal fun ExpressiveWordAnimation(
                                 unlitBrush
                             }
 
-                            isWordSung || charLp > 0.99f -> {
+                            isWordSung -> {
                                 pastBrush
                             }
 
@@ -1105,19 +1105,26 @@ internal fun ExpressiveWordAnimation(
                             else -> {
                                 val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
                                 val shineStrength = expressiveWordShineStrength(durationMs)
-                                val fXL = cWidth * charLp
-                                // Keep the wipe edge a fixed fraction of the glyph width.
-                                // Scaling the gradient to the reveal progress compresses its
-                                // transition and makes the glyph appear to snap fully lit.
-                                val eW = (cWidth * 0.28f).coerceAtLeast(1.5f)
-                                val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
-                                Brush.linearGradient(
-                                    0.0f to litColor,
-                                    0.45f to edgeColor,
-                                    1.0f to unlitColor,
-                                    start = Offset(fXL - eW, 0f),
-                                    end = Offset(fXL + eW, 0f),
-                                )
+                                if (shineStrength <= 0f) {
+                                    // Unshined words use a smooth whole-glyph color transition.
+                                    // A spatial wipe has too little edge contrast here and makes
+                                    // the final solid-color switch look like a sudden pop.
+                                    SolidColor(expressiveGlyphRevealColor(unlitColor, litColor, charLp))
+                                } else if (charLp > 0.99f) {
+                                    pastBrush
+                                } else {
+                                    val fXL = cWidth * charLp
+                                    // Keep the shine wipe edge a fixed fraction of the glyph width.
+                                    val eW = (cWidth * 0.28f).coerceAtLeast(1.5f)
+                                    val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
+                                    Brush.linearGradient(
+                                        0.0f to litColor,
+                                        0.45f to edgeColor,
+                                        1.0f to unlitColor,
+                                        start = Offset(fXL - eW, 0f),
+                                        end = Offset(fXL + eW, 0f),
+                                    )
+                                }
                             }
                         }
                     val mask = glowMaskCache.peek(i)
