@@ -121,18 +121,40 @@ private fun <T> FloatingNavigationBar(
     val separateItem = items.firstOrNull { it.key == separateKey }
     val backdrop = LocalLiquidGlassBackdrop.current
     val useLiquidGlass = liquidGlass && backdrop != null
-    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.14f)
-    val glassModifier =
+    // Match Ever Dialer's Liquid Glass recipe for the navigation pill.
+    // Keep the detached circular action button on the lighter generic-element profile.
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+    val navigationGlassModifier =
         if (useLiquidGlass) {
             Modifier.drawBackdrop(
                 backdrop = backdrop!!,
                 shape = { CircleShape },
                 effects = {
-                    colorControls(saturation = 1.2f)
-                    blur(6.dp.toPx())
-                    lens(14.dp.toPx(), 16.dp.toPx(), depthEffect = true)
+                    colorControls(saturation = 1.4f)
+                    blur(2.dp.toPx())
+                    lens(23.dp.toPx(), 64.dp.toPx(), depthEffect = false)
                 },
                 highlight = { Highlight.Default },
+                shadow = null,
+                onDrawSurface = {
+                    drawRect(glassSurfaceColor)
+                },
+            )
+        } else {
+            Modifier
+        }
+    val separateButtonGlassModifier =
+        if (useLiquidGlass) {
+            Modifier.drawBackdrop(
+                backdrop = backdrop!!,
+                shape = { CircleShape },
+                effects = {
+                    colorControls(saturation = 1f)
+                    blur(2.dp.toPx())
+                    lens(18.dp.toPx(), 48.dp.toPx(), depthEffect = false)
+                },
+                highlight = { Highlight.Default },
+                shadow = null,
                 onDrawSurface = {
                     drawRect(glassSurfaceColor)
                 },
@@ -151,11 +173,12 @@ private fun <T> FloatingNavigationBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = glassModifier.wrapContentWidth().height(FloatingBarHeight).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
+            modifier = navigationGlassModifier.wrapContentWidth().height(FloatingBarHeight).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
             color = if (useLiquidGlass) Color.Transparent else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            shadowElevation = FloatingBarShadow,
+            shadowElevation = if (useLiquidGlass) 0.dp else FloatingBarShadow,
+            tonalElevation = 0.dp,
         ) {
             Row(
                 modifier = Modifier.wrapContentWidth().padding(horizontal = 8.dp),
@@ -186,7 +209,7 @@ private fun <T> FloatingNavigationBar(
             )
             Surface(
                 onClick = { onSelect(separateItem.key) },
-                modifier = Modifier.then(glassModifier).size(FloatingBarHeight).then(itemModifier(separateItem.key)).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier),
+                modifier = Modifier.then(separateButtonGlassModifier).size(FloatingBarHeight).then(itemModifier(separateItem.key)).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier),
                 shape = CircleShape,
                 color = if (useLiquidGlass) Color.Transparent else if (liquidGlass) container.copy(alpha = 0.78f) else container,
                 contentColor = content,
