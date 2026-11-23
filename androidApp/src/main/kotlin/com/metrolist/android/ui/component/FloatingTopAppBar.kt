@@ -53,8 +53,9 @@ private val FloatingBarElementShadow = 4.dp
 private fun liquidGlassModifier(
     backdrop: LayerBackdrop?,
     enabled: Boolean,
-): Modifier =
-    if (enabled && backdrop != null) {
+): Modifier {
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.38f)
+    return if (enabled && backdrop != null) {
         Modifier.drawBackdrop(
             backdrop = backdrop,
             shape = { CircleShape },
@@ -65,11 +66,12 @@ private fun liquidGlassModifier(
             },
             highlight = { Highlight.Default },
             onDrawSurface = {
-                drawRect(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.38f))
+                drawRect(glassSurfaceColor)
             },
         )
     } else {
         Modifier
+    }
 }
 
 /** Modifier that makes any 48dp action (such as the account button) look like a floating circle. */
