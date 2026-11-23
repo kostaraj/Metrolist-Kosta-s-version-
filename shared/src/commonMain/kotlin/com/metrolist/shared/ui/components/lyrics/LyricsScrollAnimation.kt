@@ -120,28 +120,22 @@ internal class LyPlusSpring(
             }
 
             else -> {
-                // Keep the main rise, then use a soft damped jiggle:
-                // dip below rest, rebound above it, make one tiny counter-dip,
-                // and ease smoothly into the resting position.
+                // Keep the main rise, then add a restrained three-part settle:
+                // down just below rest, a tiny lift, and a final return to rest.
                 val u = ((tMs - peakMs) / tailMs).coerceIn(0f, 1f)
                 val undershoot = 0.975f
-                val rebound = 1.010f
-                val tinyCounterDip = 0.997f
+                val tinyOvershoot = 1.006f
                 when {
-                    u < 0.48f -> {
-                        cosineInterpolate(peakValue, undershoot, u / 0.48f)
+                    u < 0.55f -> {
+                        cosineInterpolate(peakValue, undershoot, u / 0.55f)
                     }
 
-                    u < 0.70f -> {
-                        cosineInterpolate(undershoot, rebound, (u - 0.48f) / 0.22f)
-                    }
-
-                    u < 0.86f -> {
-                        cosineInterpolate(rebound, tinyCounterDip, (u - 0.70f) / 0.16f)
+                    u < 0.75f -> {
+                        cosineInterpolate(undershoot, tinyOvershoot, (u - 0.55f) / 0.20f)
                     }
 
                     else -> {
-                        cosineInterpolate(tinyCounterDip, 1f, (u - 0.86f) / 0.14f)
+                        cosineInterpolate(tinyOvershoot, 1f, (u - 0.75f) / 0.25f)
                     }
                 }
             }
