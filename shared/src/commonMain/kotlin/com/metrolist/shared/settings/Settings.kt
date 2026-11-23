@@ -387,6 +387,7 @@ class Settings(
     var slimNavBar by preference(SlimNavBarKey, false)
     var floatingNavBar by preference(FloatingNavBarKey, false)
     var floatingTopBar by preference(FloatingTopBarKey, false)
+    var liquidGlassEnabled by preference(false)
     var floatingSearch by preference(false)
     var voiceSearchEnabled by preference(VoiceSearchEnabledKey, true)
 
