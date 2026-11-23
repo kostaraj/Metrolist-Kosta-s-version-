@@ -298,6 +298,8 @@
     <string name="appearance_misc">Razno</string>
     <string name="appearance_default_open_tab">Podrazumevana otvorena kartica</string>
     <string name="appearance_navigation_tabs">Kartice za navigaciju</string>
+    <string name="appearance_liquid_glass">Liquid Glass</string>
+    <string name="appearance_liquid_glass_description">Koristi providni stakleni izgled na početnom ekranu. Zahteva da plutajuća traka za navigaciju i plutajuća gornja traka budu uključene.</string>
     <string name="appearance_enable_haptic_feedback">Haptičke povratne informacije</string>
     <string name="appearance_auto_playlists">Automatske plejliste</string>
     <string name="player_settings_title">Plejer i zvuk</string>
