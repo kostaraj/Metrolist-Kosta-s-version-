@@ -213,7 +213,8 @@ private fun <T> FloatingNavigationBar(
                 shape = CircleShape,
                 color = if (useLiquidGlass) Color.Transparent else if (liquidGlass) container.copy(alpha = 0.78f) else container,
                 contentColor = content,
-                shadowElevation = FloatingBarShadow,
+                shadowElevation = if (useLiquidGlass) 0.dp else FloatingBarShadow,
+                tonalElevation = 0.dp,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Box(
