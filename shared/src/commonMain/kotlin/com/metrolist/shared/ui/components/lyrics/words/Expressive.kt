@@ -114,7 +114,7 @@ internal fun experimentalGlyphProgress(
         // Keep glyph starts staggered. Scale the fade to the actual spacing so
         // adjacent letters do not begin revealing together on tightly timed words.
         val glyphStepMs = actualDurationMs / safeGlyphCount
-        val transitionMs = minOf(EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS, glyphStepMs * 0.92)
+        val transitionMs = minOf(EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS, glyphStepMs * 0.72)
         val glyphStartMs = sMs + glyphIndex.coerceAtLeast(0) * glyphStepMs
         return ((position.toDouble() - glyphStartMs) / transitionMs)
             .coerceIn(0.0, 1.0)
@@ -192,7 +192,7 @@ internal fun expressiveGlyphRevealDurationMs(word: WordTimestamp, glyphCount: In
     val safeGlyphCount = glyphCount.coerceAtLeast(1)
     return if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
         val glyphStepMs = actualDurationMs.toDouble() / safeGlyphCount
-        val transitionMs = minOf(EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS, glyphStepMs * 0.92)
+        val transitionMs = minOf(EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS, glyphStepMs * 0.72)
         ceil(actualDurationMs + transitionMs - glyphStepMs).toLong()
     } else {
         actualDurationMs
