@@ -42,7 +42,7 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.highlight.Highlight
 import com.metrolist.shared.ui.navigation.LocalLiquidGlassBackdrop
 
@@ -54,15 +54,15 @@ private fun liquidGlassModifier(
     backdrop: LayerBackdrop?,
     enabled: Boolean,
 ): Modifier {
-    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.38f)
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.14f)
     return if (enabled && backdrop != null) {
         Modifier.drawBackdrop(
             backdrop = backdrop,
             shape = { CircleShape },
             effects = {
-                vibrancy()
-                blur(8.dp.toPx())
-                lens(24.dp.toPx(), 24.dp.toPx())
+                colorControls(saturation = 1.2f)
+                blur(6.dp.toPx())
+                lens(10.dp.toPx(), 12.dp.toPx(), depthEffect = true)
             },
             highlight = { Highlight.Default },
             onDrawSurface = {
