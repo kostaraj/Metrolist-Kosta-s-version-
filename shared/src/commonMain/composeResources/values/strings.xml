@@ -1122,6 +1122,10 @@
     <string name="appearance_floating_top_bar">Floating top bar</string>
     <!-- Translators: Supporting text beneath the floating top bar option in the Appearance settings. -->
     <string name="appearance_floating_top_bar_description">Show the top bar as separate floating rounded buttons instead of a bar attached to the top of the screen.</string>
+    <!-- Translators: Option label for the Liquid Glass appearance effect. -->
+    <string name="appearance_liquid_glass">Liquid Glass</string>
+    <!-- Translators: Explain that Liquid Glass requires both floating bars to be enabled. -->
+    <string name="appearance_liquid_glass_description">Use a translucent glass style on the Home screen. Requires both the floating navigation bar and floating top bar to be enabled.</string>
     <!-- Translators: Option or section label for swipe song gesture in the Appearance settings. -->
     <string name="appearance_swipe_song_gesture">Swipe song gesture</string>
     <!-- Translators: Supporting text beneath the swipe song gesture option in the Appearance settings. -->
