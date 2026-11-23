@@ -54,17 +54,18 @@ private fun liquidGlassModifier(
     backdrop: LayerBackdrop?,
     enabled: Boolean,
 ): Modifier {
-    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.14f)
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
     return if (enabled && backdrop != null) {
         Modifier.drawBackdrop(
             backdrop = backdrop,
             shape = { CircleShape },
             effects = {
-                colorControls(saturation = 1.2f)
-                blur(6.dp.toPx())
-                lens(10.dp.toPx(), 12.dp.toPx(), depthEffect = true)
+                colorControls(saturation = 1f)
+                blur(2.dp.toPx())
+                lens(18.dp.toPx(), 48.dp.toPx(), depthEffect = false)
             },
             highlight = { Highlight.Default },
+            shadow = null,
             onDrawSurface = {
                 drawRect(glassSurfaceColor)
             },
@@ -82,7 +83,7 @@ fun Modifier.floatingBarCircle(liquidGlass: Boolean = false): Modifier {
     return this
         .then(liquidGlassModifier(backdrop, liquidGlass))
         .size(FloatingBarElementSize)
-        .shadow(FloatingBarElementShadow, CircleShape)
+        .then(if (useBackdropGlass) Modifier else Modifier.shadow(FloatingBarElementShadow, CircleShape))
         .background(
             if (useBackdropGlass) Color.Transparent
             else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
@@ -113,7 +114,7 @@ fun TopBarIconButton(
                 modifier
                     .then(liquidGlassModifier(backdrop, liquidGlass))
                     .size(FloatingBarElementSize)
-                    .shadow(FloatingBarElementShadow, CircleShape)
+                    .then(if (useBackdropGlass) Modifier else Modifier.shadow(FloatingBarElementShadow, CircleShape))
                     .then(if (liquidGlass && !useBackdropGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
             colors =
@@ -161,7 +162,8 @@ fun FloatingTopAppBar(
             shape = CircleShape,
             color = if (useBackdropGlass) Color.Transparent else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            shadowElevation = FloatingBarElementShadow,
+            shadowElevation = if (useBackdropGlass) 0.dp else FloatingBarElementShadow,
+            tonalElevation = 0.dp,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 20.dp),
