@@ -49,6 +49,7 @@ import com.metrolist.shared.model.WordTimestamp
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.components.lyrics.LYRICS_LINE_HORIZONTAL_PADDING
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
@@ -102,9 +103,22 @@ internal fun experimentalGlyphProgress(
     glyphCount: Int,
 ): Float {
     val sMs = word.startTime * 1000.0
+    val startMs = (word.startTime * 1000.0).toLong()
+    val endMs = (word.endTime * 1000.0).toLong()
+    val actualDurationMs = (endMs - startMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS).toDouble()
     val safeGlyphCount = glyphCount.coerceAtLeast(1)
-    val durationMs = expressiveGlyphRevealDurationMs(word, safeGlyphCount).toDouble()
-    val wProg = (position.toDouble() - sMs) / durationMs
+
+    if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
+        // Keep the original per-word pacing, but let adjacent glyph wipes overlap.
+        // A 160 ms transition gives each glyph enough rendered frames to avoid popping.
+        val glyphStepMs = actualDurationMs / safeGlyphCount
+        val glyphStartMs = sMs + glyphIndex.coerceAtLeast(0) * glyphStepMs
+        return ((position.toDouble() - glyphStartMs) / EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS)
+            .coerceIn(0.0, 1.0)
+            .toFloat()
+    }
+
+    val wProg = (position.toDouble() - sMs) / actualDurationMs
     val cInW = glyphIndex.toDouble()
     val wLen = safeGlyphCount.toDouble()
     return ((wProg - cInW / wLen) * wLen).coerceIn(0.0, 1.0).toFloat()
@@ -160,7 +174,7 @@ internal fun normalizeSyllableFragmentSpacing(
     }
 }
 
-internal const val EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS = 64.0
+internal const val EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS = 160.0
 internal const val EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS = 750L
 
 /**
@@ -173,9 +187,9 @@ internal fun expressiveGlyphRevealDurationMs(word: WordTimestamp, glyphCount: In
     val endMs = (word.endTime * 1000.0).toLong()
     val actualDurationMs = (endMs - startMs).coerceAtLeast(MIN_WORD_ANIMATION_DURATION_MS)
     val safeGlyphCount = glyphCount.coerceAtLeast(1)
-    val glyphRevealDurationMs = (safeGlyphCount * EXPRESSIVE_UNSHINED_GLYPH_REVEAL_MS).toLong()
     return if (actualDurationMs < EXPRESSIVE_DIM_SHINE_MIN_DURATION_MS) {
-        maxOf(actualDurationMs, glyphRevealDurationMs)
+        val glyphStepMs = actualDurationMs.toDouble() / safeGlyphCount
+        ceil(actualDurationMs + EXPRESSIVE_UNSHINED_GLYPH_TRANSITION_MS - glyphStepMs).toLong()
     } else {
         actualDurationMs
     }
