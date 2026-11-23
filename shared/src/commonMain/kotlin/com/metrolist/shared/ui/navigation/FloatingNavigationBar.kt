@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,6 +67,7 @@ internal fun <T> FloatingNavigation(
     separateKey: T?,
     itemModifier: @Composable (T) -> Modifier,
     onBarHeightChanged: (Dp) -> Unit,
+    liquidGlass: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -104,6 +106,7 @@ private fun <T> FloatingNavigationBar(
     onSelect: (T) -> Unit,
     separateKey: T?,
     itemModifier: @Composable (T) -> Modifier,
+    liquidGlass: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val pillItems = items.filter { it.key != separateKey }
@@ -121,9 +124,10 @@ private fun <T> FloatingNavigationBar(
         Surface(
             modifier = Modifier.wrapContentWidth().height(FloatingBarHeight),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            color = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = FloatingBarShadow,
+            modifier = if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier,
         ) {
             Row(
                 modifier = Modifier.wrapContentWidth().padding(horizontal = 8.dp),
@@ -155,9 +159,10 @@ private fun <T> FloatingNavigationBar(
                 onClick = { onSelect(separateItem.key) },
                 modifier = Modifier.size(FloatingBarHeight).then(itemModifier(separateItem.key)),
                 shape = CircleShape,
-                color = container,
+                color = if (liquidGlass) container.copy(alpha = 0.78f) else container,
                 contentColor = content,
                 shadowElevation = FloatingBarShadow,
+                modifier = if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
