@@ -88,6 +88,15 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun shineEnabledGlyphTimingRemainsUnchanged() {
+        val shinyWord = WordTimestamp("longerword", 1.0, 2.0, hasTrailingSpace = false)
+
+        assertEquals(1_000L, expressiveGlyphRevealDurationMs(shinyWord, glyphCount = 10))
+        assertEquals(0.5f, experimentalGlyphProgress(shinyWord, 1_050L, glyphIndex = 0, glyphCount = 10))
+        assertEquals(0.5f, experimentalGlyphProgress(shinyWord, 1_150L, glyphIndex = 1, glyphCount = 10))
+    }
+
+    @Test
     fun dimAndBrightShineThresholdsAreIndependent() {
         assertEquals(0f, expressiveWordShineStrength(749L))
         assertEquals(0.42f, expressiveWordShineStrength(750L))
