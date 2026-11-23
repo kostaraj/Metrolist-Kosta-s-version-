@@ -8,6 +8,7 @@
 package com.metrolist.android.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -32,6 +33,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
@@ -41,11 +44,12 @@ private val FloatingBarElementShadow = 4.dp
 
 /** Modifier that makes any 48dp action (such as the account button) look like a floating circle. */
 @Composable
-fun Modifier.floatingBarCircle(): Modifier =
+fun Modifier.floatingBarCircle(liquidGlass: Boolean = false): Modifier =
     this
         .size(FloatingBarElementSize)
         .shadow(FloatingBarElementShadow, CircleShape)
-        .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+        .background(if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+        .then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier)
 
 /**
  * Icon button used by the top bar. Renders as a plain [IconButton] in the classic top bar,
@@ -55,6 +59,7 @@ fun Modifier.floatingBarCircle(): Modifier =
 fun TopBarIconButton(
     onClick: () -> Unit,
     floating: Boolean,
+    liquidGlass: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -64,11 +69,12 @@ fun TopBarIconButton(
             modifier =
                 modifier
                     .size(FloatingBarElementSize)
-                    .shadow(FloatingBarElementShadow, CircleShape),
+                    .shadow(FloatingBarElementShadow, CircleShape)
+                    .then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
             colors =
                 IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             content = content,
@@ -93,6 +99,7 @@ fun FloatingTopAppBar(
     modifier: Modifier = Modifier,
     subtitle: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit,
+    liquidGlass: Boolean = false,
 ) {
     Row(
         modifier =
@@ -104,9 +111,9 @@ fun FloatingTopAppBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.weight(1f).height(FloatingBarElementSize),
+            modifier = Modifier.weight(1f).height(FloatingBarElementSize).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = FloatingBarElementShadow,
         ) {
