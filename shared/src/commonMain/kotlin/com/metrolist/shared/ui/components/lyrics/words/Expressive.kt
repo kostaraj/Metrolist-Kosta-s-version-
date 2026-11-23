@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.time.TimeSource
+import kotlinx.coroutines.delay
 
 private fun String.containsRtl(): Boolean = isRtlText(this)
 
@@ -394,8 +396,23 @@ internal fun ExpressiveWordAnimation(
     var frameWallTimeMs by remember { mutableLongStateOf(0L) }
 
     val animationVisibility = rememberLyricsAnimationVisibility()
-    LaunchedEffect(isActiveLine, isPlaying, animationVisibility) {
-        if (isActiveLine) animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
+    var isExitAnimationActive by remember { mutableStateOf(false) }
+
+    // Keep the expressive canvas alive briefly after the line loses focus.
+    // The final hyphen-group spring-back needs up to 600 ms to return to rest.
+    LaunchedEffect(isActiveLine) {
+        if (isActiveLine) {
+            isExitAnimationActive = true
+        } else if (isExitAnimationActive) {
+            delay(600)
+            isExitAnimationActive = false
+        }
+    }
+
+    LaunchedEffect(isActiveLine, isExitAnimationActive, isPlaying, animationVisibility) {
+        if (isActiveLine || isExitAnimationActive) {
+            animateLyricsFrames(animationVisibility) { frameWallTimeMs = it }
+        }
     }
 
     val expressiveMainText = remember(mainText, words) {
@@ -834,7 +851,7 @@ internal fun ExpressiveWordAnimation(
                     ).graphicsLayer {
                         clip = false
                         compositingStrategy =
-                            if (isActiveLine) {
+                            if (isActiveLine || isExitAnimationActive) {
                                 CompositingStrategy.Offscreen
                             } else {
                                 CompositingStrategy.Auto
@@ -850,7 +867,7 @@ internal fun ExpressiveWordAnimation(
             val pastBrush = pastBrushCache.get(litColor)
             val unlitBrush = unlitBrushCache.get(unlitColor)
 
-            if (!isActiveLine) {
+            if (!isActiveLine && !isExitAnimationActive) {
                 val inactiveLineColor = lineColor()
                 if (!hasSyllableRomanization) {
                     drawText(
