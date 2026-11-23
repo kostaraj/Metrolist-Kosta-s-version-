@@ -1105,16 +1105,14 @@ internal fun ExpressiveWordAnimation(
                             else -> {
                                 val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
                                 val shineStrength = expressiveWordShineStrength(durationMs)
-                                if (shineStrength <= 0f) {
-                                    // Unshined words use a smooth whole-glyph color transition.
-                                    // A spatial wipe has too little edge contrast here and makes
-                                    // the final solid-color switch look like a sudden pop.
-                                    SolidColor(expressiveGlyphRevealColor(unlitColor, litColor, charLp))
-                                } else if (charLp > 0.99f) {
+                                if (charLp > 0.99f) {
                                     pastBrush
                                 } else {
+                                    // Use the same spatial wipe for every glyph. Words without
+                                    // shine keep a subdued edge, but must not switch to a
+                                    // whole-glyph color fade: that makes letters light up one
+                                    // at a time instead of following the continuous wipe.
                                     val fXL = cWidth * charLp
-                                    // Keep the shine wipe edge a fixed fraction of the glyph width.
                                     val eW = (cWidth * 0.28f).coerceAtLeast(1.5f)
                                     val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
                                     Brush.linearGradient(
