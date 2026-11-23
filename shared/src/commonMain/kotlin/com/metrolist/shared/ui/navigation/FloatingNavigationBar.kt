@@ -40,6 +40,13 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
@@ -112,6 +119,26 @@ private fun <T> FloatingNavigationBar(
 ) {
     val pillItems = items.filter { it.key != separateKey }
     val separateItem = items.firstOrNull { it.key == separateKey }
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val useLiquidGlass = liquidGlass && backdrop != null
+    val glassModifier =
+        if (useLiquidGlass) {
+            Modifier.drawBackdrop(
+                backdrop = backdrop!!,
+                shape = { CircleShape },
+                effects = {
+                    vibrancy()
+                    blur(8.dp.toPx())
+                    lens(24.dp.toPx(), 24.dp.toPx())
+                },
+                highlight = { Highlight.Default },
+                onDrawSurface = {
+                    drawRect(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f))
+                },
+            )
+        } else {
+            Modifier
+        }
 
     Row(
         modifier =
@@ -123,9 +150,9 @@ private fun <T> FloatingNavigationBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.wrapContentWidth().height(FloatingBarHeight).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
+            modifier = glassModifier.wrapContentWidth().height(FloatingBarHeight).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
-            color = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainer,
+            color = if (useLiquidGlass) Color.Transparent else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = FloatingBarShadow,
         ) {
@@ -158,9 +185,9 @@ private fun <T> FloatingNavigationBar(
             )
             Surface(
                 onClick = { onSelect(separateItem.key) },
-                modifier = Modifier.size(FloatingBarHeight).then(itemModifier(separateItem.key)).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier),
+                modifier = Modifier.then(glassModifier).size(FloatingBarHeight).then(itemModifier(separateItem.key)).then(if (liquidGlass && !useLiquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier),
                 shape = CircleShape,
-                color = if (liquidGlass) container.copy(alpha = 0.78f) else container,
+                color = if (useLiquidGlass) Color.Transparent else if (liquidGlass) container.copy(alpha = 0.78f) else container,
                 contentColor = content,
                 shadowElevation = FloatingBarShadow,
             ) {
