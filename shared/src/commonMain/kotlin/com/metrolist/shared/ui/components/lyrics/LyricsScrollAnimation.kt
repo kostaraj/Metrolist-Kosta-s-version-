@@ -120,35 +120,10 @@ internal class LyPlusSpring(
             }
 
             else -> {
-                // Keep the main rise, then add a restrained three-part settle:
-                // down just below rest, a tiny lift, and a final return to rest.
-                val u = ((tMs - peakMs) / tailMs).coerceIn(0f, 1f)
-                val undershoot = 0.975f
-                val tinyOvershoot = 1.006f
-                when {
-                    u < 0.55f -> {
-                        cosineInterpolate(peakValue, undershoot, u / 0.55f)
-                    }
-
-                    u < 0.75f -> {
-                        cosineInterpolate(undershoot, tinyOvershoot, (u - 0.55f) / 0.20f)
-                    }
-
-                    else -> {
-                        cosineInterpolate(tinyOvershoot, 1f, (u - 0.75f) / 0.25f)
-                    }
-                }
+                val u = (tMs - peakMs) / tailMs
+                1f + (peakValue - 1f) * 0.5f * (1f + cos(PI.toFloat() * u))
             }
         }
-
-    private fun cosineInterpolate(
-        start: Float,
-        end: Float,
-        progress: Float,
-    ): Float {
-        val eased = 0.5f * (1f - cos(PI.toFloat() * progress.coerceIn(0f, 1f)))
-        return start + (end - start) * eased
-    }
 }
 
 internal class LyricsScrollStagger(
