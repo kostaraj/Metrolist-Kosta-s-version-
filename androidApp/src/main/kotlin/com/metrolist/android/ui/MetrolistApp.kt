@@ -1438,6 +1438,7 @@ fun MetrolistApp(
                                                     if (navigationState.topLevelRoute == Screen.Home) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
+                                                            liquidGlass = navigationState.topLevelRoute == Screen.Home,
                                                             onClick = { navigator.navigate(Screen.History) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1503,7 +1504,7 @@ fun MetrolistApp(
                                                         }
                                                     }
                                                     if (!hasDesktopCaption) {
-                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle() else Modifier)
+                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = navigationState.topLevelRoute == Screen.Home) else Modifier)
                                                     }
                                                 }
                                                 if (useFloatingTopBar) {
@@ -1511,6 +1512,7 @@ fun MetrolistApp(
                                                         title = topBarTitle,
                                                         subtitle = topBarSubtitle,
                                                         actions = topBarActions,
+                                                        liquidGlass = navigationState.topLevelRoute == Screen.Home,
                                                     )
                                                 } else {
                                                     TopAppBar(
