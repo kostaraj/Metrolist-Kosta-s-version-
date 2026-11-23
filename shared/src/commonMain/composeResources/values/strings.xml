@@ -1125,7 +1125,7 @@
     <!-- Translators: Option label for the Liquid Glass appearance effect. -->
     <string name="appearance_liquid_glass">Liquid Glass</string>
     <!-- Translators: Explain that Liquid Glass requires both floating bars to be enabled. -->
-    <string name="appearance_liquid_glass_description">Use a translucent glass style on the Home screen. Requires both the floating navigation bar and floating top bar to be enabled.</string>
+    <string name="appearance_liquid_glass_description">Use Liquid Glass on the Home screen. Android 12+ supports backdrop blur; Android 13+ also supports lens refraction. Requires both floating bars to be enabled.</string>
     <!-- Translators: Option or section label for swipe song gesture in the Appearance settings. -->
     <string name="appearance_swipe_song_gesture">Swipe song gesture</string>
     <!-- Translators: Supporting text beneath the swipe song gesture option in the Appearance settings. -->
