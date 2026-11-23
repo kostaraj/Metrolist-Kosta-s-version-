@@ -205,6 +205,7 @@ fun MetrolistNavigationScaffold(
         modifier = modifier.background(containerColor),
         navigationVisible = navigationVisible,
         floatingNavigation = useFloatingNavigation,
+        floatingNavigationLiquidGlass = navigationState.topLevelRoute == Screen.Home,
         onFloatingNavigationOccupiedHeightChanged = onFloatingNavigationOccupiedHeightChanged,
         floatingSeparateKey = Screen.Search.takeIf { it in screens },
         navigationSuiteType = navigationSuiteType,
