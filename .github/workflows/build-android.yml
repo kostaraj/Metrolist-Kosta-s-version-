@@ -1,7 +1,10 @@
 name: Build Android
-run-name: "Android ${{ inputs.variant || 'release' }} — Startup & lyrics diagnostics"
+run-name: "Android ${{ inputs.variant || (github.event_name == 'push' && 'debug') || 'release' }} — Startup & lyrics diagnostics"
 
 on:
+  push:
+    branches:
+      - lyrics-animation-rework
   workflow_dispatch:
     inputs:
       variant:
@@ -21,8 +24,8 @@ jobs:
     permissions:
       contents: read
     with:
-      run-verification: ${{ github.event_name == 'pull_request' }}
-      variant: ${{ github.event_name == 'push' && 'benchmark' || inputs.variant || 'debug' }}
+      run-verification: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+      variant: ${{ github.event_name == 'push' && 'debug' || inputs.variant || 'debug' }}
       upload-artifact: ${{ github.event_name != 'pull_request' }}
       require-signing: ${{ inputs.variant == 'release' }}
       cache-read-only: ${{ github.event_name == 'pull_request' }}
