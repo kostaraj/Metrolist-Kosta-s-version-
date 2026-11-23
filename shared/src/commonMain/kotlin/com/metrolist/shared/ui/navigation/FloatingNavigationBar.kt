@@ -192,10 +192,18 @@ private fun <T> FloatingNavigationBar(
                 shadowElevation = FloatingBarShadow,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = if (selected) separateItem.selectedIcon else separateItem.icon,
-                        contentDescription = separateItem.label,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(if (useLiquidGlass) 40.dp else FloatingBarHeight)
+                            .clip(CircleShape)
+                            .background(if (useLiquidGlass && selected) container else Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (selected) separateItem.selectedIcon else separateItem.icon,
+                            contentDescription = separateItem.label,
+                        )
+                    }
                 }
             }
         }
@@ -211,7 +219,7 @@ private fun <T> FloatingNavigationItem(
     liquidGlass: Boolean = false,
 ) {
     val indicator by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (liquidGlass) 0.72f else 1f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0f),
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
         label = "floatingItemIndicator",
     )
     val contentColor by animateColorAsState(
