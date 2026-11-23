@@ -155,6 +155,9 @@ import androidx.navigationevent.compose.NavigationEventDispatcherOwnerHostDefaul
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.metrolist.shared.ui.navigation.LocalLiquidGlassBackdrop
 import com.metrolist.android.App
 import com.metrolist.android.BuildConfig
 import com.metrolist.android.LocalListenTogetherManager
@@ -1340,12 +1343,19 @@ fun MetrolistApp(
                                     }
                                 }
                             }
+                        val liquidGlassBackdrop = rememberLayerBackdrop()
+                        val liquidGlassActive =
+                            Settings.shared.liquidGlassEnabled &&
+                                Settings.shared.floatingNavBar &&
+                                Settings.shared.floatingTopBar &&
+                                navigationState.topLevelRoute == Screen.Home
                         CompositionLocalProvider(
                             LocalContentObscured provides (isInPipMode || contentObscured),
                             LocalFloatingNavBar provides useFloatingNavBar,
                             LocalPlayerExpanded provides isPlayerExpanded,
                             LocalPlayerExpandedOrExpanding provides isPlayerExpandedOrExpanding,
                             LocalImmersiveContent provides immersiveContent,
+                            LocalLiquidGlassBackdrop provides liquidGlassBackdrop,
                         ) {
                             MetrolistNavigationScaffold(
                                 navigator = navigator,
@@ -1561,6 +1571,7 @@ fun MetrolistApp(
                                         Box(
                                             Modifier
                                                 .fillMaxSize()
+                                                .then(if (liquidGlassActive) Modifier.layerBackdrop(liquidGlassBackdrop) else Modifier)
                                                 .consumeWindowInsets(scaffoldPadding)
                                                 .consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)),
                                         ) {
