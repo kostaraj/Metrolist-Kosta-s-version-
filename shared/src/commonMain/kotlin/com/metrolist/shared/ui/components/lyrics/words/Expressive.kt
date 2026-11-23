@@ -1106,17 +1106,17 @@ internal fun ExpressiveWordAnimation(
                                 val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
                                 val shineStrength = expressiveWordShineStrength(durationMs)
                                 val fXL = cWidth * charLp
-                                // Spread the transition over a wider area; a narrow edge and a
-                                // 0.98 stop made each glyph look like it had a hard rectangular cut.
-                                val eW = (cWidth * 1.25f).coerceAtLeast(2f)
-                                val sWL = (fXL - eW).coerceAtLeast(0f)
+                                // Keep the wipe edge a fixed fraction of the glyph width.
+                                // Scaling the gradient to the reveal progress compresses its
+                                // transition and makes the glyph appear to snap fully lit.
+                                val eW = (cWidth * 0.28f).coerceAtLeast(1.5f)
                                 val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
                                 Brush.linearGradient(
                                     0.0f to litColor,
                                     0.45f to edgeColor,
                                     1.0f to unlitColor,
-                                    start = Offset(sWL, 0f),
-                                    end = Offset((fXL + 0.5f).coerceAtLeast(sWL + 0.5f), 0f),
+                                    start = Offset(fXL - eW, 0f),
+                                    end = Offset(fXL + eW, 0f),
                                 )
                             }
                         }
