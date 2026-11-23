@@ -1459,6 +1459,7 @@ fun MetrolistApp(
                                                     ) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
+                                                            liquidGlass = navigationState.topLevelRoute == Screen.Home,
                                                             onClick = { navigator.navigate(Screen.Downloads) },
                                                         ) {
                                                             Icon(
@@ -1470,6 +1471,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.devtoolsUnlocked) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
+                                                            liquidGlass = navigationState.topLevelRoute == Screen.Home,
                                                             onClick = { navigator.navigate(Screen.Devtools) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1488,6 +1490,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.listenTogetherEnabled) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
+                                                            liquidGlass = navigationState.topLevelRoute == Screen.Home,
                                                             onClick = { navigator.navigate(Screen.ListenTogether) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
