@@ -38,18 +38,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.metrolist.shared.ui.navigation.LocalLiquidGlassBackdrop
 
 private val FloatingBarElementSize = 48.dp
 private val FloatingBarElementShadow = 4.dp
 
+@Composable
+private fun liquidGlassModifier(
+    backdrop: LayerBackdrop?,
+    enabled: Boolean,
+): Modifier =
+    if (enabled && backdrop != null) {
+        Modifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { CircleShape },
+            effects = {
+                vibrancy()
+                blur(8.dp.toPx())
+                lens(24.dp.toPx(), 24.dp.toPx())
+            },
+            highlight = { Highlight.Default },
+            onDrawSurface = {
+                drawRect(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.38f))
+            },
+        )
+    } else {
+        Modifier
+}
+
 /** Modifier that makes any 48dp action (such as the account button) look like a floating circle. */
 @Composable
-fun Modifier.floatingBarCircle(liquidGlass: Boolean = false): Modifier =
-    this
+fun Modifier.floatingBarCircle(liquidGlass: Boolean = false): Modifier {
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val useBackdropGlass = liquidGlass && backdrop != null
+    return this
+        .then(liquidGlassModifier(backdrop, liquidGlass))
         .size(FloatingBarElementSize)
         .shadow(FloatingBarElementShadow, CircleShape)
-        .background(if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-        .then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier)
+        .background(
+            if (useBackdropGlass) Color.Transparent
+            else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f)
+            else MaterialTheme.colorScheme.surfaceContainerHigh,
+            CircleShape,
+        )
+        .then(if (liquidGlass && !useBackdropGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier)
+}
 
 /**
  * Icon button used by the top bar. Renders as a plain [IconButton] in the classic top bar,
@@ -64,17 +103,20 @@ fun TopBarIconButton(
     content: @Composable () -> Unit,
 ) {
     if (floating) {
+        val backdrop = LocalLiquidGlassBackdrop.current
+        val useBackdropGlass = liquidGlass && backdrop != null
         FilledTonalIconButton(
             onClick = onClick,
             modifier =
                 modifier
+                    .then(liquidGlassModifier(backdrop, liquidGlass))
                     .size(FloatingBarElementSize)
                     .shadow(FloatingBarElementShadow, CircleShape)
-                    .then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
+                    .then(if (liquidGlass && !useBackdropGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
             colors =
                 IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    containerColor = if (useBackdropGlass) Color.Transparent else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             content = content,
@@ -101,6 +143,8 @@ fun FloatingTopAppBar(
     actions: @Composable RowScope.() -> Unit,
     liquidGlass: Boolean = false,
 ) {
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val useBackdropGlass = liquidGlass && backdrop != null
     Row(
         modifier =
             modifier
@@ -111,9 +155,9 @@ fun FloatingTopAppBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.weight(1f).height(FloatingBarElementSize).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
+            modifier = Modifier.then(liquidGlassModifier(backdrop, liquidGlass)).weight(1f).height(FloatingBarElementSize).then(if (liquidGlass && !useBackdropGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
-            color = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = if (useBackdropGlass) Color.Transparent else if (liquidGlass) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = FloatingBarElementShadow,
         ) {
