@@ -121,6 +121,7 @@ private fun <T> FloatingNavigationBar(
     val separateItem = items.firstOrNull { it.key == separateKey }
     val backdrop = LocalLiquidGlassBackdrop.current
     val useLiquidGlass = liquidGlass && backdrop != null
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f)
     val glassModifier =
         if (useLiquidGlass) {
             Modifier.drawBackdrop(
@@ -133,7 +134,7 @@ private fun <T> FloatingNavigationBar(
                 },
                 highlight = { Highlight.Default },
                 onDrawSurface = {
-                    drawRect(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f))
+                    drawRect(glassSurfaceColor)
                 },
             )
         } else {
