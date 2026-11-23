@@ -1117,10 +1117,10 @@ internal fun ExpressiveWordAnimation(
                                     val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
                                     Brush.linearGradient(
                                         0.0f to litColor,
-                                        0.45f to edgeColor,
+                                        0.383f to edgeColor,
                                         1.0f to unlitColor,
                                         start = Offset(fXL - eW, 0f),
-                                        end = Offset(fXL + eW, 0f),
+                                        end = Offset(fXL + eW * 1.35f, 0f),
                                     )
                                 }
                             }
