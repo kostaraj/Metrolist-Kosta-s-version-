@@ -91,6 +91,7 @@ internal fun <T> FloatingNavigation(
             onSelect = onSelect,
             separateKey = separateKey,
             itemModifier = itemModifier,
+            liquidGlass = liquidGlass,
             modifier =
                 Modifier.onSizeChanged { size ->
                     onBarHeightChanged(with(density) { size.height.toDp() })
