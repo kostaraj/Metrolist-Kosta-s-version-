@@ -1840,6 +1840,13 @@ internal fun rememberWiperPosition(
     return position
 }
 
+internal fun shouldAnimateLineHighlight(
+    isActiveLine: Boolean,
+    currentPositionMs: Long,
+    effectiveEndTimeMs: Long,
+    isFinishing: Boolean,
+): Boolean = (isActiveLine && currentPositionMs <= effectiveEndTimeMs) || isFinishing
+
 @Composable
 internal fun LaunchLineColorAnimations(
     animState: LyricAnimationState,
@@ -1856,7 +1863,7 @@ internal fun LaunchLineColorAnimations(
     }
     val targetSS by remember(isActiveLine, lineStartTime, effectiveEndTimeMs) {
         derivedStateOf(structuralEqualityPolicy()) {
-            if ((isActiveLine && currentPositionProvider() in lineStartTime..effectiveEndTimeMs) || isFinishingProvider()) 1f else 0f
+            if (shouldAnimateLineHighlight(isActiveLine, currentPositionProvider(), effectiveEndTimeMs, isFinishingProvider())) 1f else 0f
         }
     }
 
