@@ -139,6 +139,7 @@ private fun <T> FloatingNavigationBar(
                         selected = item.key == selectedKey,
                         onClick = { onSelect(item.key) },
                         modifier = itemModifier(item.key),
+                        liquidGlass = liquidGlass,
                     )
                 }
             }
@@ -179,9 +180,10 @@ private fun <T> FloatingNavigationItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    liquidGlass: Boolean = false,
 ) {
     val indicator by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0f),
+        if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (liquidGlass) 0.72f else 1f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0f),
         label = "floatingItemIndicator",
     )
     val contentColor by animateColorAsState(
