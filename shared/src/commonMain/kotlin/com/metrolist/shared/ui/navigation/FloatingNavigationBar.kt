@@ -122,12 +122,11 @@ private fun <T> FloatingNavigationBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.wrapContentWidth().height(FloatingBarHeight),
+            modifier = Modifier.wrapContentWidth().height(FloatingBarHeight).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier),
             shape = CircleShape,
             color = if (liquidGlass) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f) else MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = FloatingBarShadow,
-            modifier = if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.38f), MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), Color.White.copy(alpha = 0.08f))), CircleShape) else Modifier,
         ) {
             Row(
                 modifier = Modifier.wrapContentWidth().padding(horizontal = 8.dp),
@@ -157,12 +156,11 @@ private fun <T> FloatingNavigationBar(
             )
             Surface(
                 onClick = { onSelect(separateItem.key) },
-                modifier = Modifier.size(FloatingBarHeight).then(itemModifier(separateItem.key)),
+                modifier = Modifier.size(FloatingBarHeight).then(itemModifier(separateItem.key)).then(if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier),
                 shape = CircleShape,
                 color = if (liquidGlass) container.copy(alpha = 0.78f) else container,
                 contentColor = content,
                 shadowElevation = FloatingBarShadow,
-                modifier = if (liquidGlass) Modifier.border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.42f), MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))), CircleShape) else Modifier,
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
