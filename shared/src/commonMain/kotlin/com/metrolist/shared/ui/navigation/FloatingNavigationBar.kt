@@ -121,8 +121,8 @@ private fun <T> FloatingNavigationBar(
     val separateItem = items.firstOrNull { it.key == separateKey }
     val backdrop = LocalLiquidGlassBackdrop.current
     val useLiquidGlass = liquidGlass && backdrop != null
-    // Match Ever Dialer's Liquid Glass recipe for the navigation pill.
-    // Keep the detached circular action button on the lighter generic-element profile.
+    // Use the softer floating-element profile so text behind the navigation glass
+    // stays legible and does not become excessively magnified or color-shifted.
     val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
     val navigationGlassModifier =
         if (useLiquidGlass) {
@@ -130,9 +130,9 @@ private fun <T> FloatingNavigationBar(
                 backdrop = backdrop!!,
                 shape = { CircleShape },
                 effects = {
-                    colorControls(saturation = 1.4f)
+                    colorControls(saturation = 1f)
                     blur(2.dp.toPx())
-                    lens(23.dp.toPx(), 64.dp.toPx(), depthEffect = false)
+                    lens(18.dp.toPx(), 48.dp.toPx(), depthEffect = false)
                 },
                 highlight = { Highlight.Default },
                 shadow = null,
