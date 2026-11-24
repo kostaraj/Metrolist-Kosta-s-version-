@@ -1485,7 +1485,7 @@ fun MetrolistApp(
                                                     if (navigationState.topLevelRoute == Screen.Home) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
+                                                            liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.History) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1506,7 +1506,7 @@ fun MetrolistApp(
                                                     ) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
+                                                            liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.Downloads) },
                                                         ) {
                                                             Icon(
@@ -1518,7 +1518,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.devtoolsUnlocked) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
+                                                            liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.Devtools) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1537,7 +1537,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.listenTogetherEnabled) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
+                                                            liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.ListenTogether) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1554,7 +1554,7 @@ fun MetrolistApp(
                                                         }
                                                     }
                                                     if (!hasDesktopCaption) {
-                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar) else Modifier)
+                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar) else Modifier)
                                                     }
                                                 }
                                                 if (useFloatingTopBar) {
@@ -1562,7 +1562,7 @@ fun MetrolistApp(
                                                         title = topBarTitle,
                                                         subtitle = topBarSubtitle,
                                                         actions = topBarActions,
-                                                        liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
+                                                        liquidGlass = liquidGlassActive && Settings.shared.floatingTopBar,
                                                     )
                                                 } else {
                                                     TopAppBar(
