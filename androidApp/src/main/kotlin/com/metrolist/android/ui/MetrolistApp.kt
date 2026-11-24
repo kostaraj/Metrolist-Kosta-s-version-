@@ -115,6 +115,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -760,6 +761,9 @@ fun MetrolistApp(
         val useFloatingNavBar =
             Settings.shared.floatingNavBar && !useDesktopUi && !usesDirectionalNavigation &&
                 navigationSuiteType.isNavigationBar
+        val liquidGlassBottomNavigation =
+            Settings.shared.liquidGlassEnabled && !useFloatingNavBar && !useDesktopUi &&
+                !usesDirectionalNavigation && navigationSuiteType.isNavigationBar
         val isImeVisible = WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
         val shouldHideMiniPlayerForIme = isLandscape && isImeVisible
         val shouldShowMiniPlayer = hasMedia
@@ -826,10 +830,10 @@ fun MetrolistApp(
         val navigationBottomInset =
             when {
                 !hasBottomNavigation -> 0.dp
-                useFloatingNavBar -> floatingNavBarHeight
+                useFloatingNavBar || liquidGlassBottomNavigation -> floatingNavBarHeight
                 else -> navigationBarContentInset
             }
-        val navigationConsumesSpace = hasBottomNavigation && !useFloatingNavBar
+        val navigationConsumesSpace = hasBottomNavigation && !useFloatingNavBar && !liquidGlassBottomNavigation
         val miniPlayerHeight =
             if (useDesktopMiniPlayer) {
                 DesktopMiniPlayerHeight
@@ -861,7 +865,12 @@ fun MetrolistApp(
             } else {
                 navigationBarBottomPadding
             }
-        val floatingContentInset = if (useFloatingNavBar && shouldShowNavigationBar) floatingNavBarHeight else 0.dp
+        val floatingContentInset =
+            if ((useFloatingNavBar || liquidGlassBottomNavigation) && shouldShowNavigationBar) {
+                floatingNavBarHeight
+            } else {
+                0.dp
+            }
         val visibleMiniPlayerContentInset =
             (if (shouldRenderMiniPlayer) miniPlayerHeight + miniPlayerBottomSpacing else 0.dp) + floatingContentInset
         val miniPlayerContentInset = {
@@ -1375,10 +1384,7 @@ fun MetrolistApp(
                                 }
                             }
                         val liquidGlassActive =
-                            Settings.shared.liquidGlassEnabled &&
-                                Settings.shared.floatingNavBar &&
-                                Settings.shared.floatingTopBar &&
-                                navigationState.topLevelRoute == Screen.Home
+                            Settings.shared.liquidGlassEnabled && !useDesktopUi && !usesDirectionalNavigation
                         CompositionLocalProvider(
                             LocalContentObscured provides (isInPipMode || contentObscured),
                             LocalFloatingNavBar provides useFloatingNavBar,
@@ -1396,6 +1402,7 @@ fun MetrolistApp(
                                 containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface,
                                 onSearchLongClick = { navigator.navigate(Screen.Recognition) },
                                 floatingNavigation = useFloatingNavBar,
+                                liquidGlassBottomNavigation = liquidGlassBottomNavigation,
                                 onFloatingNavigationOccupiedHeightChanged = {
                                     floatingNavBarHeight = it
                                 },
@@ -1478,7 +1485,7 @@ fun MetrolistApp(
                                                     if (navigationState.topLevelRoute == Screen.Home) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home,
+                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.History) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1499,7 +1506,7 @@ fun MetrolistApp(
                                                     ) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home,
+                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.Downloads) },
                                                         ) {
                                                             Icon(
@@ -1511,7 +1518,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.devtoolsUnlocked) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home,
+                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.Devtools) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1530,7 +1537,7 @@ fun MetrolistApp(
                                                     if (Settings.shared.listenTogetherEnabled) {
                                                         TopBarIconButton(
                                                             floating = useFloatingTopBar,
-                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home,
+                                                            liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
                                                             onClick = { navigator.navigate(Screen.ListenTogether) },
                                                             modifier =
                                                                 Modifier.tvFocusHighlight(
@@ -1547,7 +1554,7 @@ fun MetrolistApp(
                                                         }
                                                     }
                                                     if (!hasDesktopCaption) {
-                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home) else Modifier)
+                                                        appAccountButton(if (useFloatingTopBar) Modifier.floatingBarCircle(liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar) else Modifier)
                                                     }
                                                 }
                                                 if (useFloatingTopBar) {
@@ -1555,7 +1562,7 @@ fun MetrolistApp(
                                                         title = topBarTitle,
                                                         subtitle = topBarSubtitle,
                                                         actions = topBarActions,
-                                                        liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingNavBar && Settings.shared.floatingTopBar && navigationState.topLevelRoute == Screen.Home,
+                                                        liquidGlass = Settings.shared.liquidGlassEnabled && Settings.shared.floatingTopBar,
                                                     )
                                                 } else {
                                                     TopAppBar(
@@ -1605,6 +1612,10 @@ fun MetrolistApp(
                                                     if (liquidGlassActive) {
                                                         Modifier
                                                             .nestedScroll(liquidGlassBackdropScrollConnection)
+                                                            .onGloballyPositioned {
+                                                                // Refresh the recording if the capture region moves or is resized.
+                                                                liquidGlassBackdropRevision.longValue++
+                                                            }
                                                             .layerBackdrop(liquidGlassBackdrop)
                                                     } else {
                                                         Modifier

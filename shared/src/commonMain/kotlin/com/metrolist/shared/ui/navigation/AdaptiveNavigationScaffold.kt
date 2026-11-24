@@ -48,6 +48,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.ShortNavigationBar
@@ -82,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -90,6 +94,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.highlight.Highlight
 import com.metrolist.shared.constants.WideNavigationRailCollapsedWidth
 import com.metrolist.shared.constants.WideNavigationRailExpandedWidth
 import com.metrolist.shared.generated.resources.Res
@@ -290,6 +299,7 @@ fun <T> AdaptiveNavigationScaffold(
     navigationVisible: Boolean = true,
     floatingNavigation: Boolean = false,
     floatingNavigationLiquidGlass: Boolean = false,
+    liquidGlassNavigationBar: Boolean = false,
     floatingSeparateKey: T? = null,
     onFloatingNavigationHeightChanged: (Dp) -> Unit = {},
     onFloatingNavigationOccupiedHeightChanged: (Dp) -> Unit = {},
@@ -354,8 +364,10 @@ fun <T> AdaptiveNavigationScaffold(
                     navigationSuiteType == NavigationSuiteType.WideNavigationRailCollapsed
             )
     val floatingBar = floatingNavigation && navigationSuiteType.isNavigationBar
-    val slimBar = !floatingBar && navigationSuiteType.isShortNavigationBar
-    val customNavigation = desktopRail || floatingBar || slimBar
+    val glassNavigationBar =
+        liquidGlassNavigationBar && !floatingBar && !desktopRail && navigationSuiteType.isNavigationBar
+    val slimBar = !floatingBar && !glassNavigationBar && navigationSuiteType.isShortNavigationBar
+    val customNavigation = desktopRail || floatingBar || slimBar || glassNavigationBar
     val density = LocalDensity.current
 
     // Keep the screen under one lookahead parent when navigation preferences or window size change.
@@ -393,7 +405,11 @@ fun <T> AdaptiveNavigationScaffold(
                         .fillMaxWidth()
                         .then(if (desktopRail) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier),
                 ) {
-                    Box(Modifier.fillMaxSize().then(if (floatingBar || slimBar) Modifier.clipToBounds() else Modifier)) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .then(if (floatingBar || slimBar || glassNavigationBar) Modifier.clipToBounds() else Modifier),
+                    ) {
                         // Custom navigation layouts use the same content color as a Material surface.
                         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
                     }
@@ -415,6 +431,41 @@ fun <T> AdaptiveNavigationScaffold(
                                 onBarHeightChanged = onFloatingNavigationHeightChanged,
                                 liquidGlass = floatingNavigationLiquidGlass,
                             )
+                        }
+                    }
+                    if (glassNavigationBar) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .onSizeChanged { size ->
+                                        onFloatingNavigationOccupiedHeightChanged(with(density) { size.height.toDp() })
+                                    },
+                        ) {
+                            AnimatedVisibility(
+                                visible = navigationVisible,
+                                enter =
+                                    expandVertically(
+                                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
+                                        expandFrom = Alignment.Bottom,
+                                    ),
+                                exit =
+                                    shrinkVertically(
+                                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
+                                        shrinkTowards = Alignment.Bottom,
+                                    ),
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                            ) {
+                                LiquidGlassNavigationBar(
+                                    items = visibleItems,
+                                    selectedKey = selectedKey,
+                                    onSelect = onSelect,
+                                    itemModifier = itemModifier,
+                                    isShort = navigationSuiteType.isShortNavigationBar,
+                                    isCompact = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact,
+                                )
+                            }
                         }
                     }
                 }
@@ -655,6 +706,106 @@ private fun <T> DesktopWideNavigationRail(
                         navigationFooter(isSidebarExpanded)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun <T> LiquidGlassNavigationBar(
+    items: List<AdaptiveNavigationItem<T>>,
+    selectedKey: T?,
+    onSelect: (T) -> Unit,
+    itemModifier: @Composable (T) -> Modifier,
+    isShort: Boolean,
+    isCompact: Boolean,
+) {
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val glassSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+    val glassModifier =
+        if (backdrop != null) {
+            Modifier.drawBackdrop(
+                backdrop = backdrop,
+                shape = { RectangleShape },
+                effects = {
+                    colorControls(saturation = 1.4f)
+                    blur(2.dp.toPx())
+                    lens(23.dp.toPx(), 64.dp.toPx(), depthEffect = false)
+                },
+                highlight = { Highlight.Default },
+                shadow = null,
+                onDrawSurface = { drawRect(glassSurfaceColor) },
+            )
+        } else {
+            Modifier.background(glassSurfaceColor)
+        }
+
+    if (isShort) {
+        ShortNavigationBar(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(ShortNavigationBarDefaults.windowInsets)
+                    .then(glassModifier),
+            containerColor = Color.Transparent,
+            windowInsets = WindowInsets(0),
+            arrangement =
+                if (isCompact) {
+                    ShortNavigationBarArrangement.EqualWeight
+                } else {
+                    ShortNavigationBarArrangement.Centered
+                },
+        ) {
+            items.forEach { item ->
+                val selected = item.key == selectedKey
+                ShortNavigationBarItem(
+                    selected = selected,
+                    onClick = { onSelect(item.key) },
+                    icon = {
+                        Icon(
+                            imageVector = if (selected) item.selectedIcon else item.icon,
+                            contentDescription = item.label,
+                        )
+                    },
+                    label = null,
+                    iconPosition =
+                        if (isCompact) {
+                            NavigationItemIconPosition.Top
+                        } else {
+                            NavigationItemIconPosition.Start
+                        },
+                    modifier = itemModifier(item.key),
+                )
+            }
+        }
+    } else {
+        NavigationBar(
+            modifier = Modifier.fillMaxWidth().then(glassModifier),
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp,
+            windowInsets = NavigationBarDefaults.windowInsets,
+        ) {
+            items.forEach { item ->
+                val selected = item.key == selectedKey
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { onSelect(item.key) },
+                    icon = {
+                        Icon(
+                            imageVector = if (selected) item.selectedIcon else item.icon,
+                            contentDescription = item.label,
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = item.label,
+                            fontFamily = MaterialTheme.typography.labelLarge.fontFamily,
+                        )
+                    },
+                    alwaysShowLabel = true,
+                    modifier = itemModifier(item.key),
+                )
             }
         }
     }
