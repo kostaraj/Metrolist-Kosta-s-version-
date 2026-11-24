@@ -1124,7 +1124,7 @@
     <string name="appearance_floating_top_bar_description">Show the top bar as separate floating rounded buttons instead of a bar attached to the top of the screen.</string>
     <!-- Translators: Option label for the Liquid Glass appearance effect. -->
     <string name="appearance_liquid_glass">Liquid Glass</string>
-    <!-- Translators: Explain that Liquid Glass requires both floating bars to be enabled. -->
+    <!-- Translators: Explain that Liquid Glass can be used with standard or floating navigation layouts. -->
     <string name="appearance_liquid_glass_description">Apply Liquid Glass to the bottom navigation bar and, when enabled, the floating top bar throughout the app. Floating layouts are optional. Android 12+ supports backdrop blur; Android 13+ also supports lens refraction.</string>
     <!-- Translators: Option or section label for swipe song gesture in the Appearance settings. -->
     <string name="appearance_swipe_song_gesture">Swipe song gesture</string>

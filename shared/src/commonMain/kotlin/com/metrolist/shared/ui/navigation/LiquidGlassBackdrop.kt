@@ -4,6 +4,6 @@ import androidx.compose.runtime.compositionLocalOf
 import com.kyant.backdrop.backdrops.LayerBackdrop
 
 /**
- * Shared backdrop captured from the Home screen content and sampled by floating glass controls.
+ * Shared backdrop captured from app content and sampled by Liquid Glass navigation controls.
  */
 val LocalLiquidGlassBackdrop = compositionLocalOf<LayerBackdrop?> { null }
