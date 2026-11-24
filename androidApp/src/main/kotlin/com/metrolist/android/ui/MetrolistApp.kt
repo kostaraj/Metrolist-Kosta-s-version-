@@ -103,6 +103,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -110,6 +111,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -1343,7 +1346,34 @@ fun MetrolistApp(
                                     }
                                 }
                             }
-                        val liquidGlassBackdrop = rememberLayerBackdrop()
+                        // A nested scroll can move LazyColumn/Pager child layers without reliably
+                        // invalidating this outer capture node. Read a scroll revision during capture
+                        // so each real content movement schedules a fresh backdrop recording.
+                        val liquidGlassBackdropRevision = remember { mutableLongStateOf(0L) }
+                        val liquidGlassBackdropDrawContent: ContentDrawScope.() -> Unit =
+                            remember(liquidGlassBackdropRevision) {
+                                {
+                                    liquidGlassBackdropRevision.longValue
+                                    drawContent()
+                                }
+                            }
+                        val liquidGlassBackdrop =
+                            rememberLayerBackdrop(onDraw = liquidGlassBackdropDrawContent)
+                        val liquidGlassBackdropScrollConnection =
+                            remember(liquidGlassBackdropRevision) {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset {
+                                        if (consumed != Offset.Zero) {
+                                            liquidGlassBackdropRevision.longValue++
+                                        }
+                                        return Offset.Zero
+                                    }
+                                }
+                            }
                         val liquidGlassActive =
                             Settings.shared.liquidGlassEnabled &&
                                 Settings.shared.floatingNavBar &&
@@ -1571,7 +1601,15 @@ fun MetrolistApp(
                                         Box(
                                             Modifier
                                                 .fillMaxSize()
-                                                .then(if (liquidGlassActive) Modifier.layerBackdrop(liquidGlassBackdrop) else Modifier)
+                                                .then(
+                                                    if (liquidGlassActive) {
+                                                        Modifier
+                                                            .nestedScroll(liquidGlassBackdropScrollConnection)
+                                                            .layerBackdrop(liquidGlassBackdrop)
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                )
                                                 .consumeWindowInsets(scaffoldPadding)
                                                 .consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)),
                                         ) {
