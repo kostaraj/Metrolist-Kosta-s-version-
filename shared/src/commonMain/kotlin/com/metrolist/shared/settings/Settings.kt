@@ -59,9 +59,9 @@ import com.metrolist.shared.constants.DevtoolsBenchmarkClientsKey
 import com.metrolist.shared.constants.DevtoolsPlaybackClientKey
 import com.metrolist.shared.constants.DevtoolsUnlockedKey
 import com.metrolist.shared.constants.DisableAnimatedArtworkOnMobileDataKey
-import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DiscordAnimatedCoverUploadSecretKey
 import com.metrolist.shared.constants.DiscordAnimatedCoverWorkerUrlKey
+import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey

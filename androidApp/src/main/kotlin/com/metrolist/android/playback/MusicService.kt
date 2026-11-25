@@ -3515,6 +3515,9 @@ class MusicService :
 
         val song =
             player.currentSong.value?.let(SongMetadataState::apply) ?: run {
+                discordAnimatedCoverJob?.cancel()
+                discordAnimatedCoverJob = null
+                discordAnimatedCoverJobKey = null
                 DiscordRpcManager.clear()
                 return
             }

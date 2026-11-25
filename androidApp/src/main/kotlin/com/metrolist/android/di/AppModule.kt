@@ -23,11 +23,11 @@ import com.metrolist.innertubex.extraction.strategy.ContentAwareFallbackStrategy
 import com.metrolist.shared.api.YouTubeRepository
 import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
-import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.daos.DatabaseDao
 import com.metrolist.shared.db.entities.toSongItem
 import com.metrolist.shared.db.getDatabaseBuilder
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.youtube.benchmark.PlaybackBenchmarkEnvironment
 import com.metrolist.shared.youtube.benchmark.PlaybackBenchmarkRunner
 import com.metrolist.shared.youtube.logging.MetrolistInnerTubeLogger
