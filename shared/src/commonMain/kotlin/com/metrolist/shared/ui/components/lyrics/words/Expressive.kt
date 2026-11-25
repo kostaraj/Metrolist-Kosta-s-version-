@@ -1091,8 +1091,6 @@ internal fun ExpressiveWordAnimation(
                         (syllable.startTime * 1000).toLong() +
                             expressiveGlyphRevealDurationMs(syllable, syllableGlyphCount)
                     }
-                val isSyllableSung =
-                    syllableAnimationEndMs?.let { smoothPosition > it } ?: isWordSung
                 clusterCharLp[i] = charLp
 
                 val nudgeScale =
@@ -1130,6 +1128,16 @@ internal fun ExpressiveWordAnimation(
                 val charLp = clusterCharLp[i]
                 val charScaleX = clusterScaleX[i]
                 val charScaleY = clusterScaleY[i]
+                val syllableIdx = clusterSyllableIdx[i]
+                val timedSyllable = alignedSyllables.getOrNull(syllableIdx)?.syllable
+                val syllableGlyphCount = syllableGlyphCounts.getOrElse(syllableIdx) { 1 }
+                val syllableAnimationEndMs =
+                    timedSyllable?.let { syllable ->
+                        (syllable.startTime * 1000).toLong() +
+                            expressiveGlyphRevealDurationMs(syllable, syllableGlyphCount)
+                    }
+                val isSyllableSung =
+                    syllableAnimationEndMs?.let { smoothPosition > it } ?: isWordSung
 
                 var waveOffset = 0f
                 if (wordIdx != -1 && hyphenGroups.hasGroup[wordIdx]) {
