@@ -101,9 +101,13 @@ internal class DiscordAnimatedCoverUploader(
                 ?.toLongOrNull()
                 ?.takeIf { it > 0L }
                 ?: error("Could not read motion-art duration")
-            val clipDurationMs = durationMs.coerceAtMost(MAX_CLIP_DURATION_MS)
-            val frameCount = (clipDurationMs / MIN_FRAME_INTERVAL_MS).toInt().coerceIn(2, MAX_FRAME_COUNT)
-            val frameDurationMs = (clipDurationMs / frameCount).toInt().coerceIn(80, 1_000)
+            // Keep the complete source duration. Increase the sampling interval only
+            // when needed to stay within a bounded frame count.
+            val frameCount = kotlin.math.ceil(durationMs.toDouble() / TARGET_FRAME_INTERVAL_MS)
+                .toInt()
+                .coerceIn(2, MAX_FRAME_COUNT)
+            val frameDurationMs = (durationMs / frameCount).toInt()
+                .coerceIn(1, 16_777_215)
 
             val firstFrame = retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST)
                 ?: error("Could not decode the first motion-art frame")
@@ -117,7 +121,7 @@ internal class DiscordAnimatedCoverUploader(
                 var writtenFrames = 0
                 repeat(frameCount) { index ->
                     currentCoroutineContext().ensureActive()
-                    val timestampMs = minOf((clipDurationMs * index / frameCount), durationMs - 1L)
+                    val timestampMs = minOf((durationMs * index / frameCount), durationMs - 1L)
                     val original = if (index == 0) {
                         firstFrame
                     } else {
@@ -210,8 +214,7 @@ internal class DiscordAnimatedCoverUploader(
     private companion object {
         const val FRAME_SIZE = 256
         const val MAX_FRAME_COUNT = 12
-        const val MIN_FRAME_INTERVAL_MS = 100L
-        const val MAX_CLIP_DURATION_MS = 3_000L
+        const val TARGET_FRAME_INTERVAL_MS = 100L
         const val MAX_SOURCE_BYTES = 32L * 1024L * 1024L
         const val MAX_OUTPUT_BYTES = 15L * 1024L * 1024L
         const val CONNECT_TIMEOUT_MS = 15_000
