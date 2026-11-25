@@ -1250,7 +1250,7 @@ internal fun ExpressiveWordAnimation(
                                         } else {
                                             segmentStart + segmentWidth * charLp - cLeft
                                         }
-                                    val eW = (segmentWidth * 0.08f).coerceIn(1.5f, cWidth * 0.45f)
+                                    val eW = (segmentWidth * 0.08f).coerceAtLeast(1.5f)
                                     val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
                                     if (isRtl) {
                                         Brush.linearGradient(
