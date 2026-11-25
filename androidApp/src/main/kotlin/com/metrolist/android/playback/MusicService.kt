@@ -66,6 +66,7 @@ import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.sabr.findSabrProtocolException
 import com.metrolist.shared.BuildConfig
 import com.metrolist.shared.api.PlaylistPage
+import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
 import com.metrolist.shared.cast.CastConnectionStatus
 import com.metrolist.shared.cast.CastDevice
@@ -275,8 +276,14 @@ class MusicService :
     private val tokenProvider: TokenProvider by inject()
     private val audioCacheManager: AudioCacheManager by inject()
     private val musicVideoResolver: MusicVideoResolver by inject()
+    private val animatedArtworkService: AnimatedArtworkService by inject()
     private val database: MusicDatabase by inject()
     private val widgetManager: MetrolistWidgetManager by inject()
+    private val discordAnimatedCoverUploader by lazy { DiscordAnimatedCoverUploader(applicationContext) }
+    private val discordAnimatedCoverCache = java.util.LinkedHashMap<String, String>(16, 0.75f, true)
+    private val discordAnimatedCoverLastAttempt = mutableMapOf<String, Long>()
+    private var discordAnimatedCoverJob: Job? = null
+    private var discordAnimatedCoverJobKey: String? = null
 
     lateinit var player: AndroidPlaybackPlayer
         private set
@@ -3499,6 +3506,9 @@ class MusicService :
 
     private fun syncDiscordState() {
         if (!externalReportingEnabled || !Settings.shared.enableDiscordIntegration || !player.isPlaying.value) {
+            discordAnimatedCoverJob?.cancel()
+            discordAnimatedCoverJob = null
+            discordAnimatedCoverJobKey = null
             DiscordRpcManager.clear()
             return
         }
@@ -3562,12 +3572,93 @@ class MusicService :
                 unknownAlbum = getString(R.string.discord_unknown_album),
             )
 
+        val workerUrl = settings.discordAnimatedCoverWorkerUrl.trim().trimEnd('/')
+        val uploadSecret = settings.discordAnimatedCoverUploadSecret
+        val cacheKey = "$workerUrl|\${song.id}"
+        val animatedImageUrl = discordAnimatedCoverCache[cacheKey]
         DiscordRpcManager.setActivity(
-            activity = activity,
+            activity = if (animatedImageUrl != null) activity.copy(largeImage = animatedImageUrl) else activity,
             songId = song.id,
             isPlaying = isPlaying,
             status = PresenceStatus.Online,
         )
+        scheduleDiscordAnimatedCoverUpload(
+            songId = song.id,
+            title = songTitle,
+            artist = song.artists.joinToString { it.displayName },
+            album = song.album?.name,
+            workerUrl = workerUrl,
+            uploadSecret = uploadSecret,
+        )
+    }
+
+    private fun scheduleDiscordAnimatedCoverUpload(
+        songId: String,
+        title: String,
+        artist: String,
+        album: String?,
+        workerUrl: String,
+        uploadSecret: String,
+    ) {
+        if (!workerUrl.startsWith("https://") || uploadSecret.isBlank() || title.isBlank() || artist.isBlank()) return
+        val cacheKey = "$workerUrl|$songId"
+        if (discordAnimatedCoverCache.containsKey(cacheKey)) return
+
+        val attemptKey = "$cacheKey|\${uploadSecret.hashCode()}"
+        val now = System.currentTimeMillis()
+        if (discordAnimatedCoverJobKey == attemptKey && discordAnimatedCoverJob?.isActive == true) return
+        val lastAttempt = discordAnimatedCoverLastAttempt[attemptKey]
+        if (lastAttempt != null && now - lastAttempt < 5 * 60 * 1000L) return
+        discordAnimatedCoverLastAttempt[attemptKey] = now
+        while (discordAnimatedCoverLastAttempt.size > 128) {
+            discordAnimatedCoverLastAttempt.remove(discordAnimatedCoverLastAttempt.keys.first())
+        }
+
+        discordAnimatedCoverJob?.cancel()
+        discordAnimatedCoverJobKey = attemptKey
+        discordAnimatedCoverJob =
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    val cover = animatedArtworkService.fetchAnimatedCover(
+                        title = title,
+                        artist = artist,
+                        album = album,
+                        forDiscord = true,
+                    ) ?: return@launch
+                    val uploadedUrl = discordAnimatedCoverUploader.convertAndUpload(
+                        videoUrl = cover.url,
+                        workerUrl = workerUrl,
+                        uploadSecret = uploadSecret,
+                        songId = songId,
+                    )
+                    withContext(Dispatchers.Main.immediate) {
+                        if (uploadedUrl != null &&
+                            Settings.shared.enableDiscordIntegration &&
+                            Settings.shared.discordAnimatedCoverWorkerUrl.trim().trimEnd('/') == workerUrl &&
+                            Settings.shared.discordAnimatedCoverUploadSecret == uploadSecret
+                        ) {
+                            discordAnimatedCoverCache[cacheKey] = uploadedUrl
+                            while (discordAnimatedCoverCache.size > 64) {
+                                discordAnimatedCoverCache.remove(discordAnimatedCoverCache.keys.first())
+                            }
+                            if (player.currentSong.value?.id == songId && player.isPlaying.value) {
+                                syncDiscordState()
+                            }
+                        }
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "Discord animated cover upload failed for song $songId")
+                } finally {
+                    withContext(Dispatchers.Main.immediate) {
+                        if (discordAnimatedCoverJobKey == attemptKey) {
+                            discordAnimatedCoverJobKey = null
+                            discordAnimatedCoverJob = null
+                        }
+                    }
+                }
+            }
     }
 }
 

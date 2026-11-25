@@ -10,6 +10,8 @@ val ListenTogetherServerMetadataKey = "listenTogetherServerMetadata"
 val TokenLoginWarningDismissedKey = "tokenLoginWarningDismissed"
 
 val DiscordPendingAuthSessionKey = "discordPendingAuthSession"
+val DiscordAnimatedCoverUploadSecretKey = "discordAnimatedCoverUploadSecret"
+val DiscordAnimatedCoverWorkerUrlKey = "discordAnimatedCoverWorkerUrl"
 val DesktopWindowPositionKey = "desktopWindowPosition"
 val DesktopWindowPlacementKey = "desktopWindowPlacement"
 

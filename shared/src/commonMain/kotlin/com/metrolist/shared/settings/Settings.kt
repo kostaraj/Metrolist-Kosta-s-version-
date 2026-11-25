@@ -60,6 +60,8 @@ import com.metrolist.shared.constants.DevtoolsPlaybackClientKey
 import com.metrolist.shared.constants.DevtoolsUnlockedKey
 import com.metrolist.shared.constants.DisableAnimatedArtworkOnMobileDataKey
 import com.metrolist.shared.constants.DiscordPendingAuthSessionKey
+import com.metrolist.shared.constants.DiscordAnimatedCoverUploadSecretKey
+import com.metrolist.shared.constants.DiscordAnimatedCoverWorkerUrlKey
 import com.metrolist.shared.constants.DownloadQueueJsonKey
 import com.metrolist.shared.constants.DownloadedCollectionSortDirectionKey
 import com.metrolist.shared.constants.DownloadedCollectionSortKey
@@ -600,6 +602,11 @@ class Settings(
     var discordName by preference("")
     var discordAvatar by preference("")
     var discordPendingAuthSession by preference(DiscordPendingAuthSessionKey, "")
+    var discordAnimatedCoverUploadSecret by preference(DiscordAnimatedCoverUploadSecretKey, "")
+    var discordAnimatedCoverWorkerUrl by preference(
+        DiscordAnimatedCoverWorkerUrlKey,
+        "https://metrolist-cover-upload.kostaraj12345.workers.dev",
+    )
     var discordAccessToken by preference("")
     var discordRefreshToken by preference("")
     var discordExpiresAt by preference(0L)

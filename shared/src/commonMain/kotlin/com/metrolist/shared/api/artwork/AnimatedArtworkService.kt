@@ -364,8 +364,9 @@ class AnimatedArtworkService internal constructor(
         artist: String,
         album: String? = null,
         explicit: Boolean? = null,
+        forDiscord: Boolean = false,
     ): AnimatedCoverResult? {
-        if (!Settings.shared.enableAnimatedCovers || !Settings.shared.isAnimatedArtworkAllowedOnNetwork()) return null
+        if ((!Settings.shared.enableAnimatedCovers && !forDiscord) || !Settings.shared.isAnimatedArtworkAllowedOnNetwork()) return null
 
         cacheLoadJob.join()
 

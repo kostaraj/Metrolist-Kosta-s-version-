@@ -24,6 +24,7 @@ internal val secureSettingsKeys =
         "accountThumbnail",
         "discordAccessToken",
         "discordRefreshToken",
+        "discordAnimatedCoverUploadSecret",
         "listenTogetherDesktopSession",
         "listenTogetherServerUrl",
         "listenTogetherCustomServers",

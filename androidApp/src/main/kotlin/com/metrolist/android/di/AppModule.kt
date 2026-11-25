@@ -21,7 +21,9 @@ import com.metrolist.innertubex.extraction.TokenProvider
 import com.metrolist.innertubex.extraction.YtConfigParserImpl
 import com.metrolist.innertubex.extraction.strategy.ContentAwareFallbackStrategy
 import com.metrolist.shared.api.YouTubeRepository
+import com.metrolist.shared.api.artwork.AnimatedArtworkService
 import com.metrolist.shared.api.musicvideo.MusicVideoResolver
+import com.metrolist.shared.state.GlobalYouTube
 import com.metrolist.shared.db.MusicDatabase
 import com.metrolist.shared.db.daos.DatabaseDao
 import com.metrolist.shared.db.entities.toSongItem
@@ -78,6 +80,8 @@ val appModule =
         single<ImageLoader> {
             androidContext().imageLoader
         }
+
+        single { AnimatedArtworkService(GlobalYouTube.client) }
 
         single<PlayerConnection> {
             PlayerConnection(

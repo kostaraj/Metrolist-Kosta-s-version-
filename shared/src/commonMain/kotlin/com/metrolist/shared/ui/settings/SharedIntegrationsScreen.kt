@@ -514,6 +514,49 @@ private fun buildIntegrationsRegistry(
                 }
             }
         }
+        group(
+            "discordAnimatedCoverUploads",
+            "Animated covers in Discord",
+            description = "Convert motion artwork to animated WebP and upload it to your Cloudflare R2 bucket.",
+            enabled = settings.enableDiscordIntegration,
+        ) {
+            text(
+                id = "discordAnimatedCoverWorkerUrl",
+                title = "Cloudflare Worker URL",
+                description = "The HTTPS address ending in workers.dev.",
+                value = settings.discordAnimatedCoverWorkerUrl,
+                placeholder = "https://your-worker.your-subdomain.workers.dev",
+            ) {
+                settings.discordAnimatedCoverWorkerUrl = it.trim().trimEnd('/')
+                notifyDiscordChanged()
+            }
+            custom("discordAnimatedCoverUploadSecret", "Upload secret") {
+                val secretState = remember(settings.discordAnimatedCoverUploadSecret) {
+                    TextFieldState(settings.discordAnimatedCoverUploadSecret)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Paste the UPLOAD_SECRET value saved in your Cloudflare Worker. It is stored in encrypted app storage.")
+                    OutlinedSecureTextField(
+                        state = secretState,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("UPLOAD_SECRET") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        textObfuscationMode = TextObfuscationMode.Hidden,
+                    )
+                    Button(
+                        onClick = {
+                            settings.discordAnimatedCoverUploadSecret = secretState.text.toString().trim()
+                            settings.flush()
+                            notifyDiscordChanged()
+                            host.onMessage("Cloudflare upload secret saved.")
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text("Save upload secret")
+                    }
+                }
+            }
+        }
     }
 
     builder.page(
