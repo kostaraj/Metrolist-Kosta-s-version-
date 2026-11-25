@@ -3574,7 +3574,7 @@ class MusicService :
 
         val workerUrl = settings.discordAnimatedCoverWorkerUrl.trim().trimEnd('/')
         val uploadSecret = settings.discordAnimatedCoverUploadSecret
-        val cacheKey = "$workerUrl|\${song.id}"
+        val cacheKey = "$workerUrl|${song.id}"
         val animatedImageUrl = discordAnimatedCoverCache[cacheKey]
         DiscordRpcManager.setActivity(
             activity = if (animatedImageUrl != null) activity.copy(largeImage = animatedImageUrl) else activity,
@@ -3604,7 +3604,7 @@ class MusicService :
         val cacheKey = "$workerUrl|$songId"
         if (discordAnimatedCoverCache.containsKey(cacheKey)) return
 
-        val attemptKey = "$cacheKey|\${uploadSecret.hashCode()}"
+        val attemptKey = "$cacheKey|${uploadSecret.hashCode()}"
         val now = System.currentTimeMillis()
         if (discordAnimatedCoverJobKey == attemptKey && discordAnimatedCoverJob?.isActive == true) return
         val lastAttempt = discordAnimatedCoverLastAttempt[attemptKey]
