@@ -121,6 +121,18 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun eachSyllableUsesItsOwnTimestampInsteadOfTheWholeWordSpan() {
+        val first = WordTimestamp("hel", 1.0, 1.3, hasTrailingSpace = false)
+        val second = WordTimestamp("lo", 1.3, 1.8, hasTrailingSpace = false)
+
+        val firstProgress = experimentalGlyphProgress(first, 1_350L, glyphIndex = 2, glyphCount = 3)
+        val secondProgress = experimentalGlyphProgress(second, 1_350L, glyphIndex = 0, glyphCount = 2)
+
+        assertEquals(1f, firstProgress)
+        assertEquals(0f, secondProgress)
+    }
+
+    @Test
     fun shineEnabledGlyphTimingRemainsUnchanged() {
         val shinyWord = WordTimestamp("longerword", 1.0, 2.0, hasTrailingSpace = false)
 

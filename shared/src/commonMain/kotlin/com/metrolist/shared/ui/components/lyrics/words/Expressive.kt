@@ -635,6 +635,30 @@ internal fun ExpressiveWordAnimation(
                 }
             }
 
+        // Map each rendered grapheme back to the original timed syllable. Word groups
+        // remain useful for motion effects, but must never replace syllable timing
+        // for the actual text reveal.
+        val clusterSyllableData =
+            remember(alignedSyllables, graphemeClusters, clusterCharOffsets) {
+                val syllableIdxMap = IntArray(clusterCount) { -1 }
+                val glyphIndexMap = IntArray(clusterCount)
+                val glyphCountBySyllable = IntArray(alignedSyllables.size)
+                alignedSyllables.forEachIndexed { syllableIdx, aligned ->
+                    val start = aligned.startOffset.coerceIn(0, formattedMainText.length)
+                    val end = aligned.endOffset.coerceIn(start, formattedMainText.length)
+                    var glyphIndex = 0
+                    for (clusterIdx in graphemeClusters.indices) {
+                        val offset = clusterCharOffsets[clusterIdx]
+                        if (offset >= start && offset < end && graphemeClusters[clusterIdx].isNotBlank()) {
+                            syllableIdxMap[clusterIdx] = syllableIdx
+                            glyphIndexMap[clusterIdx] = glyphIndex++
+                        }
+                    }
+                    glyphCountBySyllable[syllableIdx] = glyphIndex.coerceAtLeast(1)
+                }
+                Triple(syllableIdxMap, glyphIndexMap, glyphCountBySyllable)
+            }
+
         val charToWordData =
             remember(formattedMainText, effectiveWords, graphemeClusters, clusterCharOffsets) {
                 val wordIdxMap = IntArray(clusterCount) { -1 }
@@ -976,7 +1000,8 @@ internal fun ExpressiveWordAnimation(
                 // The existing per-glyph wipe alone controls when each part becomes lit.
                 val baseAlpha = if (isSung) 1f else unfocusedAlphaVal
                 wordBaseAlphas[wIdx] = baseAlpha
-                wordBaseBrushes[wIdx] = if (isSung) pastBrush else unlitBrush
+                // Completion of a grouped word must not pre-light its later syllables.
+                wordBaseBrushes[wIdx] = unlitBrush
 
                 if (!isSung && factor > 0.001f) {
                     val fadeFactor = (factor * 5f).coerceIn(0f, 1f) * ((1f - factor) * 8f).coerceIn(0f, 1f)
@@ -988,6 +1013,7 @@ internal fun ExpressiveWordAnimation(
             }
 
             val (wordIdxMap, charInWordMap, _) = charToWordData
+            val (clusterSyllableIdx, clusterGlyphIndex, syllableGlyphCounts) = clusterSyllableData
             for (wordIdx in words.indices) {
                 wordWobbles[wordIdx] = experimentalWordWobble(words[wordIdx], smoothPosition)
             }
@@ -1039,17 +1065,34 @@ internal fun ExpressiveWordAnimation(
                     }
                 }
 
+                val syllableIdx = clusterSyllableIdx[i]
+                val timedSyllable = alignedSyllables.getOrNull(syllableIdx)?.syllable
+                val syllableGlyphCount = syllableGlyphCounts.getOrElse(syllableIdx) { 1 }
                 val charLp =
-                    if (wordIdx != -1) {
-                        experimentalGlyphProgress(
-                            effectiveWords[wordIdx],
-                            smoothPosition,
-                            charInWordMap[i],
-                            effectiveWordGlyphCounts[wordIdx],
-                        )
-                    } else {
-                        0f
+                    when {
+                        timedSyllable != null ->
+                            experimentalGlyphProgress(
+                                timedSyllable,
+                                smoothPosition,
+                                clusterGlyphIndex[i],
+                                syllableGlyphCount,
+                            )
+                        wordIdx != -1 ->
+                            experimentalGlyphProgress(
+                                effectiveWords[wordIdx],
+                                smoothPosition,
+                                charInWordMap[i],
+                                effectiveWordGlyphCounts[wordIdx],
+                            )
+                        else -> 0f
                     }
+                val syllableAnimationEndMs =
+                    timedSyllable?.let { syllable ->
+                        (syllable.startTime * 1000).toLong() +
+                            expressiveGlyphRevealDurationMs(syllable, syllableGlyphCount)
+                    }
+                val isSyllableSung =
+                    syllableAnimationEndMs?.let { smoothPosition > it } ?: isWordSung
                 clusterCharLp[i] = charLp
 
                 val nudgeScale =
@@ -1135,7 +1178,7 @@ internal fun ExpressiveWordAnimation(
                                 unlitBrush
                             }
 
-                            isWordSung -> {
+                            isSyllableSung -> {
                                 pastBrush
                             }
 
@@ -1144,7 +1187,9 @@ internal fun ExpressiveWordAnimation(
                             }
 
                             else -> {
-                                val durationMs = effWordEndMs[wordIdx] - effWordStartMs[wordIdx]
+                                val durationMs =
+                                    timedSyllable?.let { ((it.endTime - it.startTime) * 1000).toLong() }
+                                        ?: (effWordEndMs[wordIdx] - effWordStartMs[wordIdx])
                                 val shineStrength = expressiveWordShineStrength(durationMs)
                                 if (charLp > 0.99f) {
                                     pastBrush
