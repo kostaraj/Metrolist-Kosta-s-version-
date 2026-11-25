@@ -2,9 +2,6 @@ package com.metrolist.android.playback
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
 import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -108,56 +105,47 @@ internal class DiscordAnimatedCoverUploader(
             val frameCount = (clipDurationMs / MIN_FRAME_INTERVAL_MS).toInt().coerceIn(2, MAX_FRAME_COUNT)
             val frameDurationMs = (clipDurationMs / frameCount).toInt().coerceIn(80, 1_000)
 
-            writer = AnimatedWebpWriter(destination, FRAME_SIZE, FRAME_SIZE)
-            writer.setLoopCount(0)
-            var writtenFrames = 0
-            repeat(frameCount) { index ->
-                currentCoroutineContext().ensureActive()
-                val timestampMs = minOf((clipDurationMs * index / frameCount), durationMs - 1L)
-                val original = retriever.getFrameAtTime(
-                    timestampMs * 1_000L,
-                    MediaMetadataRetriever.OPTION_CLOSEST,
-                ) ?: return@repeat
-                try {
-                    val frame = centerCropSquare(original, FRAME_SIZE)
+            val firstFrame = retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST)
+                ?: error("Could not decode the first motion-art frame")
+            try {
+                val originalWidth = firstFrame.width
+                val originalHeight = firstFrame.height
+                require(originalWidth > 0 && originalHeight > 0) { "Motion-art frame has invalid dimensions" }
+                writer = AnimatedWebpWriter(destination, originalWidth, originalHeight)
+                writer.setLoopCount(0)
+
+                var writtenFrames = 0
+                repeat(frameCount) { index ->
+                    currentCoroutineContext().ensureActive()
+                    val timestampMs = minOf((clipDurationMs * index / frameCount), durationMs - 1L)
+                    val original = if (index == 0) {
+                        firstFrame
+                    } else {
+                        retriever.getFrameAtTime(
+                            timestampMs * 1_000L,
+                            MediaMetadataRetriever.OPTION_CLOSEST,
+                        ) ?: return@repeat
+                    }
                     try {
-                        writer.addFrame(frame, frameDurationMs)
+                        require(original.width == originalWidth && original.height == originalHeight) {
+                            "Motion-art frames changed dimensions during decoding"
+                        }
+                        writer.addFrame(original, frameDurationMs)
                         writtenFrames++
                     } finally {
-                        frame.recycle()
+                        if (index != 0) original.recycle()
                     }
-                } finally {
-                    original.recycle()
                 }
+                require(writtenFrames >= 2) { "Not enough motion-art frames could be decoded" }
+            } finally {
+                firstFrame.recycle()
             }
-            require(writtenFrames >= 2) { "Not enough motion-art frames could be decoded" }
         } finally {
             runCatching { writer?.close() }
             retriever.release()
         }
         require(destination.isFile && destination.length() in 1..MAX_OUTPUT_BYTES) {
             "Animated WebP exceeded the upload size limit"
-        }
-    }
-
-    private fun centerCropSquare(
-        source: Bitmap,
-        size: Int,
-    ): Bitmap {
-        require(source.width > 0 && source.height > 0) { "Motion-art frame has invalid dimensions" }
-        val side = minOf(source.width, source.height)
-        val left = (source.width - side) / 2
-        val top = (source.height - side) / 2
-        return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { result ->
-            result.setHasAlpha(false)
-            val canvas = Canvas(result)
-            val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
-            canvas.drawBitmap(
-                source,
-                Rect(left, top, left + side, top + side),
-                Rect(0, 0, size, size),
-                paint,
-            )
         }
     }
 
