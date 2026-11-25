@@ -149,6 +149,7 @@ internal class DiscordAnimatedCoverUploader(
         val left = (source.width - side) / 2
         val top = (source.height - side) / 2
         return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { result ->
+            result.setHasAlpha(false)
             val canvas = Canvas(result)
             val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
             canvas.drawBitmap(
@@ -283,10 +284,11 @@ private class AnimatedWebpWriter(
             "Android could not encode a WebP frame"
         }
         val (codec, payload) = extractStillWebpPayload(encoded.toByteArray())
-        val chunkSize = payload.size.toLong() + 24L
+        val bitstreamPadding = payload.size and 1
+        val frameChunkSize = payload.size.toLong() + 24L + bitstreamPadding
 
         writeFourCc("ANMF")
-        writeUInt32(chunkSize)
+        writeUInt32(frameChunkSize)
         writeUInt24(0)
         writeUInt24(0)
         writeUInt24(width - 1)
@@ -296,7 +298,7 @@ private class AnimatedWebpWriter(
         writeFourCc(codec)
         writeUInt32(payload.size.toLong())
         output.write(payload)
-        if ((chunkSize and 1L) != 0L) output.write(0)
+        if (bitstreamPadding != 0) output.write(0)
     }
 
     override fun close() {
