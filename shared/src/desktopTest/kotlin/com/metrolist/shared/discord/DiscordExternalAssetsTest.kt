@@ -69,6 +69,7 @@ class DiscordExternalAssetsTest {
                 client.close()
             }
         }
+
     @Test
     fun animatedWebpExternalUrlsAreKeptDirect() {
         assertEquals(true, "https://cdn.example.com/covers/track.webp".isAnimatedWebpExternalUrl())
