@@ -336,7 +336,12 @@ object DiscordRpcManager {
 
         val largeImageUrl = activity.largeImage
         val smallImageUrl = activity.smallImage
-        val largeCached = largeImageUrl?.let { DiscordExternalAssets.peekCache(it) }
+        // Discord supports animated WebP when it receives the public URL directly.
+        // Resolving it through /external-assets turns it into an uploaded asset and
+        // loses the animated external-image delivery path.
+        val largeIsAnimatedWebp = largeImageUrl?.isAnimatedWebpExternalUrl() == true
+        val largeCached =
+            largeImageUrl?.let { if (largeIsAnimatedWebp) it else DiscordExternalAssets.peekCache(it) }
         val smallCached = smallImageUrl?.let { DiscordExternalAssets.peekCache(it) }
         val allCached = (largeImageUrl == null || largeCached != null) && (smallImageUrl == null || smallCached != null)
 
@@ -346,7 +351,13 @@ object DiscordRpcManager {
 
         val queued = sendPresence(activity, status, activityUrl, largeCached, smallCached, buttons, force)
 
-        if (!currentActivityHadImages || accessToken == null || (samePending && imageResolutionJob?.isActive == true)) return queued
+        val urlsToResolve = buildList {
+            if (!largeIsAnimatedWebp) largeImageUrl?.let(::add)
+            smallImageUrl?.let(::add)
+        }
+        if (urlsToResolve.isEmpty() || !currentActivityHadImages || accessToken == null ||
+            (samePending && imageResolutionJob?.isActive == true)
+        ) return queued
 
         imageResolutionJob =
             scope.launch {
@@ -354,13 +365,13 @@ object DiscordRpcManager {
                 val token = accessToken ?: return@launch
                 val resolved =
                     DiscordExternalAssets.resolveAll(
-                        listOfNotNull(largeImageUrl, smallImageUrl),
+                        urlsToResolve,
                         DISCORD_APP_ID,
                         "Bearer $token",
                         client,
                     )
 
-                val newLarge = largeImageUrl?.let { resolved[it] } ?: largeCached
+                val newLarge = if (largeIsAnimatedWebp) largeImageUrl else largeImageUrl?.let { resolved[it] } ?: largeCached
                 val newSmall = smallImageUrl?.let { resolved[it] } ?: smallCached
 
                 if (newLarge != null || newSmall != null) {
@@ -732,3 +743,9 @@ private fun timestampsClose(
 ): Boolean = first == second || (first != null && second != null && kotlin.math.abs(first - second) < PRESENCE_TIMESTAMP_TOLERANCE_MS)
 
 private const val PRESENCE_TIMESTAMP_TOLERANCE_MS = 250L
+
+
+private fun String.isAnimatedWebpExternalUrl(): Boolean {
+    val path = substringBefore('#').substringBefore('?')
+    return startsWith("https://", ignoreCase = true) && path.endsWith(".webp", ignoreCase = true)
+}
