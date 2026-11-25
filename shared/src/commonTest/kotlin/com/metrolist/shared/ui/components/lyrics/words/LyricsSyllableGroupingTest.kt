@@ -28,6 +28,39 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun japaneseCharacterTimedFragmentsKeepTheirIndividualTimings() {
+        val words =
+            listOf(
+                WordTimestamp("い", 1.0, 1.1),
+                WordTimestamp("ん", 1.1, 1.2),
+                WordTimestamp("りょ", 1.2, 1.4),
+                WordTimestamp("く", 1.4, 1.5),
+            )
+
+        val grouped = groupSyllableFragments(words, "いんりょく")
+
+        assertEquals(words, grouped.map { it.second })
+        assertEquals(listOf(0, 1, 2, 3), grouped.map { it.first })
+    }
+
+    @Test
+    fun noSpaceScriptFragmentsDoNotPreventNearbyLatinSyllablesFromGrouping() {
+        val words =
+            listOf(
+                WordTimestamp("sing", 1.0, 1.2),
+                WordTimestamp("ing", 1.2, 1.4),
+                WordTimestamp("日", 1.4, 1.5),
+                WordTimestamp("本", 1.5, 1.6),
+                WordTimestamp("walk", 1.6, 1.8),
+                WordTimestamp("ing", 1.8, 2.0),
+            )
+
+        val grouped = groupSyllableFragments(words, "singing日本walking")
+
+        assertEquals(listOf("singing", "日", "本", "walking"), grouped.map { it.second.text })
+    }
+
+    @Test
     fun realSpacesStillSeparateWords() {
         val words =
             listOf(

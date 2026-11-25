@@ -5,6 +5,9 @@
 
 package com.metrolist.shared.ui.components.lyrics.words
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -282,9 +285,30 @@ private class ExpressiveHyphenGroups(
 )
 
 /**
+ * Text in these writing systems does not consistently use spaces between words.
+ * A sequence of timed Japanese/Chinese/etc. fragments must therefore remain
+ * separate; otherwise a whole lyric line can be collapsed into one giant word.
+ */
+internal fun usesNonWhitespaceWordBoundaries(text: String): Boolean =
+    text.any { char ->
+        val code = char.code
+        code in 0x3040..0x30FF || // Hiragana and Katakana
+            code in 0x31F0..0x31FF || // Katakana Phonetic Extensions
+            code in 0x3400..0x4DBF || // CJK Extension A
+            code in 0x4E00..0x9FFF || // CJK Unified Ideographs
+            code in 0xF900..0xFAFF || // CJK Compatibility Ideographs
+            code in 0xAC00..0xD7AF || // Hangul syllables
+            code in 0x1100..0x11FF || // Hangul Jamo
+            code in 0x0E00..0x0E7F || // Thai
+            code in 0x0E80..0x0EFF || // Lao
+            code in 0x1000..0x109F || // Myanmar
+            code in 0x1780..0x17FF    // Khmer
+    }
+
+/**
  * Consecutive timed fragments without a trailing word boundary are syllables
- * of the same spoken word. Keep the original start/end span for word animation;
- * the original [words] list remains available for syllable alignment and timing.
+ * of the same spoken word. Preserve fragment timing for scripts that do not
+ * use whitespace as a reliable word separator.
  */
 internal fun groupSyllableFragments(words: List<WordTimestamp>, sourceText: String): List<Pair<Int, WordTimestamp>> {
     if (words.isEmpty()) return emptyList()
@@ -312,6 +336,8 @@ internal fun groupSyllableFragments(words: List<WordTimestamp>, sourceText: Stri
                 last < words.lastIndex &&
                 words[last].text.lastOrNull()?.isWhitespace() != true &&
                 words[last + 1].text.firstOrNull()?.isWhitespace() != true &&
+                !usesNonWhitespaceWordBoundaries(words[last].text) &&
+                !usesNonWhitespaceWordBoundaries(words[last + 1].text) &&
                 !words[last + 1].isBackground &&
                 words[last + 1].isLineTimed == first.isLineTimed &&
                 run {
@@ -399,14 +425,20 @@ internal fun ExpressiveWordAnimation(
 
     val animationVisibility = rememberLyricsAnimationVisibility()
     var isExitAnimationActive by remember { mutableStateOf(false) }
+    val exitHighlightProgress = remember { Animatable(1f) }
 
-    // Keep the expressive canvas alive briefly after the line loses focus.
-    // The final hyphen-group spring-back needs up to 600 ms to return to rest.
+    // Fade the completed highlight as the line leaves focus, while keeping the
+    // canvas alive long enough for the final hyphen-group spring-back.
     LaunchedEffect(isActiveLine) {
         if (isActiveLine) {
             isExitAnimationActive = true
+            exitHighlightProgress.snapTo(1f)
         } else if (isExitAnimationActive) {
-            delay(600)
+            exitHighlightProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            )
+            delay(320)
             isExitAnimationActive = false
         }
     }
@@ -864,8 +896,15 @@ internal fun ExpressiveWordAnimation(
 
             val padOffset = Offset(extraPaddingPx, extraPaddingPx)
             val unfocusedAlphaVal = focusedAlpha()
-            val litColor = litColorCache.get(expressiveAccent, 1f)
             val unlitColor = unlitColorCache.get(expressiveAccent, unfocusedAlphaVal)
+            val fullLitColor = litColorCache.get(expressiveAccent, 1f)
+            val exitProgress =
+                if (isActiveLine) {
+                    1f
+                } else {
+                    exitHighlightProgress.value.coerceIn(0f, 1f)
+                }
+            val litColor = if (exitProgress >= 0.999f) fullLitColor else lerp(unlitColor, fullLitColor, exitProgress)
             val pastBrush = pastBrushCache.get(litColor)
             val unlitBrush = unlitBrushCache.get(unlitColor)
 
@@ -1077,7 +1116,7 @@ internal fun ExpressiveWordAnimation(
                         )
                     }
                 }) {
-                    val glowAlpha = if (wordIdx != -1) wordGlowAlphas[wordIdx] else 0f
+                    val glowAlpha = (if (wordIdx != -1) wordGlowAlphas[wordIdx] else 0f) * exitProgress
                     if (glowAlpha > 0.01f) {
                         val glowMask = glowMaskCache.peekGlow(i)
                         if (glowMask != null) {
