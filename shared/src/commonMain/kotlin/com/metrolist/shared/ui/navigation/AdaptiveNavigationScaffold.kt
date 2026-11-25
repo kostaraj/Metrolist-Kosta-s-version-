@@ -85,7 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -726,7 +726,7 @@ private fun <T> LiquidGlassNavigationBar(
         if (backdrop != null) {
             Modifier.drawBackdrop(
                 backdrop = backdrop,
-                shape = { RectangleShape },
+                shape = { RoundedCornerShape(24.dp) },
                 effects = {
                     colorControls(saturation = 1.4f)
                     blur(2.dp.toPx())
