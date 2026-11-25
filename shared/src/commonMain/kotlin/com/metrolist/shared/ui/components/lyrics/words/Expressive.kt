@@ -201,6 +201,28 @@ internal fun expressiveGlyphRevealDurationMs(word: WordTimestamp, glyphCount: In
         actualDurationMs
     }
 }
+/**
+ * Treat each editor-timed text segment as one animation unit.
+ *
+ * A segment may contain several graphemes (for example, a multi-character
+ * Japanese chunk or an English syllable). Those graphemes must share the
+ * same timing; only separate WordTimestamp entries animate separately.
+ */
+internal fun expressiveTimedSegmentProgress(
+    segment: WordTimestamp,
+    positionMs: Long,
+): Float {
+    val startMs = (segment.startTime * 1000.0).toLong()
+    val endMs = (segment.endTime * 1000.0).toLong()
+    return lyricsWordAnimationProgress(positionMs, startMs, endMs)
+}
+
+internal fun expressiveTimedSegmentEndMs(segment: WordTimestamp): Long {
+    val startMs = (segment.startTime * 1000.0).toLong()
+    val endMs = (segment.endTime * 1000.0).toLong()
+    return startMs + lyricsWordAnimationDurationMs(endMs - startMs)
+}
+
 internal const val EXPRESSIVE_BRIGHT_SHINE_MIN_DURATION_MS = 1_000L
 
 internal fun expressiveWordShineStrength(durationMs: Long): Float =
@@ -635,28 +657,22 @@ internal fun ExpressiveWordAnimation(
                 }
             }
 
-        // Map each rendered grapheme back to the original timed syllable. Word groups
-        // remain useful for motion effects, but must never replace syllable timing
-        // for the actual text reveal.
-        val clusterSyllableData =
+        // Map each rendered grapheme to its editor-timed segment. A segment is
+        // one animation unit; do not split its text into artificial glyph timings.
+        val clusterSyllableIdx =
             remember(alignedSyllables, graphemeClusters, clusterCharOffsets) {
-                val syllableIdxMap = IntArray(clusterCount) { -1 }
-                val glyphIndexMap = IntArray(clusterCount)
-                val glyphCountBySyllable = IntArray(alignedSyllables.size)
-                alignedSyllables.forEachIndexed { syllableIdx, aligned ->
-                    val start = aligned.startOffset.coerceIn(0, formattedMainText.length)
-                    val end = aligned.endOffset.coerceIn(start, formattedMainText.length)
-                    var glyphIndex = 0
-                    for (clusterIdx in graphemeClusters.indices) {
-                        val offset = clusterCharOffsets[clusterIdx]
-                        if (offset >= start && offset < end && graphemeClusters[clusterIdx].isNotBlank()) {
-                            syllableIdxMap[clusterIdx] = syllableIdx
-                            glyphIndexMap[clusterIdx] = glyphIndex++
+                IntArray(clusterCount) { -1 }.also { segmentIdxMap ->
+                    alignedSyllables.forEachIndexed { segmentIdx, aligned ->
+                        val start = aligned.startOffset.coerceIn(0, formattedMainText.length)
+                        val end = aligned.endOffset.coerceIn(start, formattedMainText.length)
+                        for (clusterIdx in graphemeClusters.indices) {
+                            val offset = clusterCharOffsets[clusterIdx]
+                            if (offset >= start && offset < end && graphemeClusters[clusterIdx].isNotBlank()) {
+                                segmentIdxMap[clusterIdx] = segmentIdx
+                            }
                         }
                     }
-                    glyphCountBySyllable[syllableIdx] = glyphIndex.coerceAtLeast(1)
                 }
-                Triple(syllableIdxMap, glyphIndexMap, glyphCountBySyllable)
             }
 
         val charToWordData =
@@ -1013,7 +1029,6 @@ internal fun ExpressiveWordAnimation(
             }
 
             val (wordIdxMap, charInWordMap, _) = charToWordData
-            val (clusterSyllableIdx, clusterGlyphIndex, syllableGlyphCounts) = clusterSyllableData
             for (wordIdx in words.indices) {
                 wordWobbles[wordIdx] = experimentalWordWobble(words[wordIdx], smoothPosition)
             }
@@ -1067,16 +1082,10 @@ internal fun ExpressiveWordAnimation(
 
                 val syllableIdx = clusterSyllableIdx[i]
                 val timedSyllable = alignedSyllables.getOrNull(syllableIdx)?.syllable
-                val syllableGlyphCount = syllableGlyphCounts.getOrElse(syllableIdx) { 1 }
                 val charLp =
                     when {
                         timedSyllable != null ->
-                            experimentalGlyphProgress(
-                                timedSyllable,
-                                smoothPosition,
-                                clusterGlyphIndex[i],
-                                syllableGlyphCount,
-                            )
+                            expressiveTimedSegmentProgress(timedSyllable, smoothPosition)
                         wordIdx != -1 ->
                             experimentalGlyphProgress(
                                 effectiveWords[wordIdx],
@@ -1086,11 +1095,7 @@ internal fun ExpressiveWordAnimation(
                             )
                         else -> 0f
                     }
-                val syllableAnimationEndMs =
-                    timedSyllable?.let { syllable ->
-                        (syllable.startTime * 1000).toLong() +
-                            expressiveGlyphRevealDurationMs(syllable, syllableGlyphCount)
-                    }
+                val syllableAnimationEndMs = timedSyllable?.let { expressiveTimedSegmentEndMs(it) }
                 clusterCharLp[i] = charLp
 
                 val nudgeScale =
@@ -1130,12 +1135,7 @@ internal fun ExpressiveWordAnimation(
                 val charScaleY = clusterScaleY[i]
                 val syllableIdx = clusterSyllableIdx[i]
                 val timedSyllable = alignedSyllables.getOrNull(syllableIdx)?.syllable
-                val syllableGlyphCount = syllableGlyphCounts.getOrElse(syllableIdx) { 1 }
-                val syllableAnimationEndMs =
-                    timedSyllable?.let { syllable ->
-                        (syllable.startTime * 1000).toLong() +
-                            expressiveGlyphRevealDurationMs(syllable, syllableGlyphCount)
-                    }
+                val syllableAnimationEndMs = timedSyllable?.let { expressiveTimedSegmentEndMs(it) }
                 val isSyllableSung =
                     syllableAnimationEndMs?.let { smoothPosition > it } ?: isWordSung
 
@@ -1182,7 +1182,9 @@ internal fun ExpressiveWordAnimation(
                     }
                     val glyphBrush: Brush =
                         when {
-                            wordIdx == -1 -> {
+                            // Timed segments must still reveal when word grouping did not
+                            // produce a separate word hit (common with no-space scripts).
+                            timedSyllable == null && wordIdx == -1 -> {
                                 unlitBrush
                             }
 
@@ -1191,13 +1193,13 @@ internal fun ExpressiveWordAnimation(
                             }
 
                             charLp <= 0f -> {
-                                wordBaseBrushes[wordIdx] ?: unlitBrush
+                                if (wordIdx != -1) wordBaseBrushes[wordIdx] ?: unlitBrush else unlitBrush
                             }
 
                             else -> {
                                 val durationMs =
                                     timedSyllable?.let { ((it.endTime - it.startTime) * 1000).toLong() }
-                                        ?: (effWordEndMs[wordIdx] - effWordStartMs[wordIdx])
+                                        ?: if (wordIdx != -1) (effWordEndMs[wordIdx] - effWordStartMs[wordIdx]) else 0L
                                 val shineStrength = expressiveWordShineStrength(durationMs)
                                 if (charLp > 0.99f) {
                                     pastBrush

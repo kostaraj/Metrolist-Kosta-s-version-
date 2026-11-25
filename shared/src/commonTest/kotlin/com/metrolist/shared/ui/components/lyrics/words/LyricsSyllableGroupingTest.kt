@@ -133,6 +133,18 @@ class LyricsSyllableGroupingTest {
     }
 
     @Test
+    fun charactersInsideOneEditorTimedSegmentShareTheSameAnimationProgress() {
+        val groupedJapaneseSegment = WordTimestamp("りょ", 1.0, 1.5, hasTrailingSpace = false)
+
+        // The renderer uses one progress value for the whole timed segment,
+        // regardless of how many graphemes the segment contains.
+        assertEquals(0f, expressiveTimedSegmentProgress(groupedJapaneseSegment, 900L))
+        assertEquals(0.5f, expressiveTimedSegmentProgress(groupedJapaneseSegment, 1_250L))
+        assertEquals(1f, expressiveTimedSegmentProgress(groupedJapaneseSegment, 1_500L))
+        assertEquals(1_500L, expressiveTimedSegmentEndMs(groupedJapaneseSegment))
+    }
+
+    @Test
     fun shineEnabledGlyphTimingRemainsUnchanged() {
         val shinyWord = WordTimestamp("longerword", 1.0, 2.0, hasTrailingSpace = false)
 
