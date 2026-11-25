@@ -443,7 +443,7 @@ fun <T> AdaptiveNavigationScaffold(
                                         onFloatingNavigationOccupiedHeightChanged(with(density) { size.height.toDp() })
                                     },
                         ) {
-                            AnimatedVisibility(
+                            this@Column.AnimatedVisibility(
                                 visible = navigationVisible,
                                 enter =
                                     expandVertically(
