@@ -148,8 +148,8 @@ internal class DiscordAnimatedCoverUploader(
             runCatching { writer?.close() }
             retriever.release()
         }
-        require(destination.isFile && destination.length() in 1..MAX_OUTPUT_BYTES) {
-            "Animated WebP exceeded the upload size limit"
+        require(destination.isFile && destination.length() > 0L) {
+            "Animated WebP output is empty"
         }
     }
 
@@ -216,7 +216,6 @@ internal class DiscordAnimatedCoverUploader(
         const val MAX_FRAME_COUNT = 12
         const val TARGET_FRAME_INTERVAL_MS = 100L
         const val MAX_SOURCE_BYTES = 32L * 1024L * 1024L
-        const val MAX_OUTPUT_BYTES = 15L * 1024L * 1024L
         const val CONNECT_TIMEOUT_MS = 15_000
         const val READ_TIMEOUT_MS = 20_000
         const val UPLOAD_TIMEOUT_MS = 30_000
