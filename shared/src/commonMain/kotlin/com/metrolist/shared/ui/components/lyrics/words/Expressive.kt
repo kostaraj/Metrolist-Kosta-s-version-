@@ -846,6 +846,38 @@ internal fun ExpressiveWordAnimation(
             }
         }
 
+        // Resolve each timed segment's horizontal extent per rendered line.
+        // Every glyph uses the same segment-wide wipe position, rather than
+        // restarting the gradient inside each individual glyph.
+        val clusterSegmentBounds =
+            remember(clusterStatics, clusterSyllableIdx, lineCount) {
+                val starts = FloatArray(clusterCount)
+                val ends = FloatArray(clusterCount)
+                val boundsBySegmentLine = mutableMapOf<Long, Pair<Float, Float>>()
+                for (i in 0 until clusterCount) {
+                    val segmentIdx = clusterSyllableIdx[i]
+                    if (segmentIdx < 0 || !clusterStatics.visible[i]) continue
+                    val lineIdx = clusterStatics.lineIdx[i]
+                    val key = (segmentIdx.toLong() shl 32) or (lineIdx.toLong() and 0xffffffffL)
+                    val left = clusterStatics.left[i]
+                    val right = left + clusterStatics.width[i]
+                    val previous = boundsBySegmentLine[key]
+                    boundsBySegmentLine[key] =
+                        if (previous == null) left to right
+                        else minOf(previous.first, left) to maxOf(previous.second, right)
+                }
+                for (i in 0 until clusterCount) {
+                    val segmentIdx = clusterSyllableIdx[i]
+                    if (segmentIdx < 0 || !clusterStatics.visible[i]) continue
+                    val lineIdx = clusterStatics.lineIdx[i]
+                    val key = (segmentIdx.toLong() shl 32) or (lineIdx.toLong() and 0xffffffffL)
+                    val bounds = boundsBySegmentLine[key] ?: continue
+                    starts[i] = bounds.first
+                    ends[i] = bounds.second
+                }
+                starts to ends
+            }
+
         val romanLines = remember(romanClusters, lineCount) { groupRomanClustersByLine(romanClusters, lineCount) }
         val romanStatics =
             remember(
@@ -1208,16 +1240,35 @@ internal fun ExpressiveWordAnimation(
                                     // shine keep a subdued edge, but must not switch to a
                                     // whole-glyph color fade: that makes letters light up one
                                     // at a time instead of following the continuous wipe.
-                                    val fXL = cWidth * charLp
-                                    val eW = (cWidth * 0.28f).coerceAtLeast(1.5f)
+                                    val segmentStart = clusterSegmentBounds.first[i]
+                                    val segmentEnd = clusterSegmentBounds.second[i]
+                                    val segmentWidth = (segmentEnd - segmentStart).coerceAtLeast(cWidth)
+                                    val isRtl = lineIsRtl[clusterStatics.lineIdx[i]]
+                                    val wipeX =
+                                        if (isRtl) {
+                                            segmentEnd - segmentWidth * charLp - cLeft
+                                        } else {
+                                            segmentStart + segmentWidth * charLp - cLeft
+                                        }
+                                    val eW = (segmentWidth * 0.08f).coerceIn(1.5f, cWidth * 0.45f)
                                     val edgeColor = expressiveGlyphWipeEdgeColor(unlitColor, litColor, shineStrength)
-                                    Brush.linearGradient(
-                                        0.0f to litColor,
-                                        0.383f to edgeColor,
-                                        1.0f to unlitColor,
-                                        start = Offset(fXL - eW, 0f),
-                                        end = Offset(fXL + eW * 1.35f, 0f),
-                                    )
+                                    if (isRtl) {
+                                        Brush.linearGradient(
+                                            0.0f to unlitColor,
+                                            0.617f to edgeColor,
+                                            1.0f to litColor,
+                                            start = Offset(wipeX - eW, 0f),
+                                            end = Offset(wipeX + eW * 1.35f, 0f),
+                                        )
+                                    } else {
+                                        Brush.linearGradient(
+                                            0.0f to litColor,
+                                            0.383f to edgeColor,
+                                            1.0f to unlitColor,
+                                            start = Offset(wipeX - eW, 0f),
+                                            end = Offset(wipeX + eW * 1.35f, 0f),
+                                        )
+                                    }
                                 }
                             }
                         }
