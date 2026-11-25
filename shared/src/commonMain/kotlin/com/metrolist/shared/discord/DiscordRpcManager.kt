@@ -745,7 +745,7 @@ private fun timestampsClose(
 private const val PRESENCE_TIMESTAMP_TOLERANCE_MS = 250L
 
 
-private fun String.isAnimatedWebpExternalUrl(): Boolean {
+internal fun String.isAnimatedWebpExternalUrl(): Boolean {
     val path = substringBefore('#').substringBefore('?')
     return startsWith("https://", ignoreCase = true) && path.endsWith(".webp", ignoreCase = true)
 }
