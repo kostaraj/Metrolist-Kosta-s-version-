@@ -1011,7 +1011,9 @@ fun PlayerScreen(
 
                     if (isPlayerContentVisible && !isInPipMode && !isFullscreen) {
                         Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (queueCoversPlayer) 0f else 1f }) {
-                            if ((selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS || !uiState.isLyricsVisible) &&
+                            val useFallbackPlayerBackground =
+                                selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS || !uiState.isLyricsVisible
+                            if (useFallbackPlayerBackground &&
                                 playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK && currentSong?.displayThumbnail != null) {
                                 PlayerBackgroundArtwork(currentSong.displayThumbnail!!, artworkCrossfade) { backgroundUrl ->
                                     PlayerBlurredArtworkBackground(
@@ -1020,7 +1022,7 @@ fun PlayerScreen(
                                         isLyricsVisible = uiState.isLyricsVisible,
                                     )
                                 }
-                            } else if ((selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS || !uiState.isLyricsVisible) &&
+                            } else if (useFallbackPlayerBackground &&
                                 playerBackground == PlayerBackgroundStyle.LIQUID && currentSong?.displayThumbnail != null &&
                                 !(showFullscreenThumbnailBackground && !uiState.isLyricsVisible && !showVideoSurface)
                             ) {
@@ -1042,7 +1044,7 @@ fun PlayerScreen(
                                         currentCanvasLayer?.takeIf {
                                             selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && artworkAllowedOnNetwork
                                         }?.let { layer ->
-                                            { canvasModifier ->
+                                            { canvasModifier: Modifier ->
                                                 canvasLayers.Render(
                                                     current = layer,
                                                     playing = uiState.isPlaying,
@@ -1055,8 +1057,9 @@ fun PlayerScreen(
                                         },
                                 )
                             }
+                            val hasSelectedCanvas = currentCanvasLayer != null && artworkAllowedOnNetwork
                             if (playerBackground != PlayerBackgroundStyle.SOLID &&
-                                !(selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && currentCanvasLayer != null && artworkAllowedOnNetwork)
+                                !(selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && hasSelectedCanvas)
                             ) {
                                 val hasArtwork =
                                     playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK ||
