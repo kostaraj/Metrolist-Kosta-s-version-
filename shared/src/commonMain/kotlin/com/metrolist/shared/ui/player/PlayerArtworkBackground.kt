@@ -142,11 +142,11 @@ internal fun PlayerBackgroundArtwork(
 @Composable
 internal fun LyricsPlayerBackground(
     playerBackground: PlayerBackgroundStyle,
-    fallbackBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.BLURRED_ARTWORK,
     thumbnailUrl: String?,
     backgroundColor: Color,
     gradientColorStops: Array<Pair<Float, Color>>,
     alpha: Float,
+    fallbackBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.BLURRED_ARTWORK,
     artworkCrossfade: PlayerArtworkCrossfade = PlayerArtworkCrossfade(),
     canvasContent: (@Composable (Modifier) -> Unit)? = null,
 ) {
