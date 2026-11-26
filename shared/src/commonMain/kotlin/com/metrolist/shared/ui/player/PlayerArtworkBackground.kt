@@ -49,6 +49,7 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -141,13 +142,45 @@ internal fun PlayerBackgroundArtwork(
 @Composable
 internal fun LyricsPlayerBackground(
     playerBackground: PlayerBackgroundStyle,
+    fallbackBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.BLURRED_ARTWORK,
     thumbnailUrl: String?,
     backgroundColor: Color,
     gradientColorStops: Array<Pair<Float, Color>>,
     alpha: Float,
     artworkCrossfade: PlayerArtworkCrossfade = PlayerArtworkCrossfade(),
+    canvasContent: (@Composable (Modifier) -> Unit)? = null,
 ) {
     if (alpha <= 0f) return
+
+    if (playerBackground == PlayerBackgroundStyle.BLURRED_CANVAS) {
+        if (canvasContent != null) {
+            Box(
+                modifier = Modifier.fillMaxSize().clipToBounds().alpha(alpha),
+            ) {
+                canvasContent(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = 1.04f
+                            scaleY = 1.04f
+                        }.blur(8.dp),
+                )
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.14f)),
+                )
+            }
+            return
+        }
+        return LyricsPlayerBackground(
+            playerBackground = fallbackBackground,
+            fallbackBackground = fallbackBackground,
+            thumbnailUrl = thumbnailUrl,
+            backgroundColor = backgroundColor,
+            gradientColorStops = gradientColorStops,
+            alpha = alpha,
+            artworkCrossfade = artworkCrossfade,
+        )
+    }
 
     when (playerBackground) {
         PlayerBackgroundStyle.BLURRED_ARTWORK -> {
