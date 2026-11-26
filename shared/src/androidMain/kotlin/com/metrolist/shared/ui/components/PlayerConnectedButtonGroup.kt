@@ -205,9 +205,9 @@ actual fun PlayerConnectedButtonGroup(
                             },
                         colors =
                             ToggleButtonDefaults.colors(
-                                containerColor = playerInactiveControlContainerColor(),
+                                containerColor = playerLiquidGlassContainerColor(playerInactiveControlContainerColor()),
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                checkedContainerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.primary),
                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
                         modifier =
@@ -215,7 +215,11 @@ actual fun PlayerConnectedButtonGroup(
                                 Modifier.animateWidth(interactionSource, 12.dp).navigationPopupSource().widthIn(min = buttonWidth)
                             } else {
                                 Modifier.animateWidth(interactionSource, 12.dp).navigationPopupSource().width(buttonWidth)
-                            }.tvFocusHighlight(shapes.shape, bringIntoView = false),
+                            }.tvFocusHighlight(shapes.shape, bringIntoView = false)
+                                .playerLiquidGlass(
+                                    shapes.shape,
+                                    if (action.checked == true) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f),
+                                ),
                     ) {
                         if (action.text != null) {
                             Text(
