@@ -386,108 +386,108 @@ fun <T> AdaptiveNavigationScaffold(
         primaryActionContent = { if (!customNavigation) navigationHeader(navigationSuiteType) },
     ) {
         CompositionLocalProvider(LocalLiquidGlassBackdrop provides liquidGlassBackdrop) {
-        Row(Modifier.fillMaxSize()) {
-            if (desktopRail) {
-                DesktopWideNavigationRail(
-                    items = items,
-                    visibleItems = visibleItems,
-                    selectedKey = selectedKey,
-                    onSelect = onSelect,
-                    navigationHeader = navigationHeader,
-                    navigationFooter = navigationFooter,
-                    isSidebarExpanded = isSidebarExpanded,
-                    isSidebarExpandable = isSidebarExpandable,
-                    onToggleSidebar = onToggleSidebar,
-                    isEditing = isEditing,
-                    onReorderFinished = onReorderFinished,
-                    onToggleVisibility = onToggleVisibility,
-                )
-            }
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .then(if (desktopRail) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier),
-                ) {
+            Row(Modifier.fillMaxSize()) {
+                if (desktopRail) {
+                    DesktopWideNavigationRail(
+                        items = items,
+                        visibleItems = visibleItems,
+                        selectedKey = selectedKey,
+                        onSelect = onSelect,
+                        navigationHeader = navigationHeader,
+                        navigationFooter = navigationFooter,
+                        isSidebarExpanded = isSidebarExpanded,
+                        isSidebarExpandable = isSidebarExpandable,
+                        onToggleSidebar = onToggleSidebar,
+                        isEditing = isEditing,
+                        onReorderFinished = onReorderFinished,
+                        onToggleVisibility = onToggleVisibility,
+                    )
+                }
+                Column(Modifier.weight(1f).fillMaxHeight()) {
                     Box(
                         Modifier
-                            .fillMaxSize()
-                            .then(if (floatingBar || slimBar || glassNavigationBar) Modifier.clipToBounds() else Modifier)
-                            .layerBackdrop(liquidGlassBackdrop),
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .then(if (desktopRail) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier),
                     ) {
-                        // Custom navigation layouts use the same content color as a Material surface.
-                        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
-                    }
-                    if (floatingBar) {
-                        // Keep reporting zero height after the exit removes the animated bar.
                         Box(
-                            modifier =
-                                Modifier.align(Alignment.BottomCenter).onSizeChanged { size ->
-                                    onFloatingNavigationOccupiedHeightChanged(with(density) { size.height.toDp() })
-                                },
+                            Modifier
+                                .fillMaxSize()
+                                .then(if (floatingBar || slimBar || glassNavigationBar) Modifier.clipToBounds() else Modifier)
+                                .layerBackdrop(liquidGlassBackdrop),
                         ) {
-                            FloatingNavigation(
-                                items = visibleItems,
-                                selectedKey = selectedKey,
-                                onSelect = onSelect,
-                                navigationVisible = navigationVisible,
-                                separateKey = floatingSeparateKey,
-                                itemModifier = itemModifier,
-                                onBarHeightChanged = onFloatingNavigationHeightChanged,
-                                liquidGlass = floatingNavigationLiquidGlass,
-                            )
+                            // Custom navigation layouts use the same content color as a Material surface.
+                            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
                         }
-                    }
-                    if (glassNavigationBar) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .onSizeChanged { size ->
+                        if (floatingBar) {
+                            // Keep reporting zero height after the exit removes the animated bar.
+                            Box(
+                                modifier =
+                                    Modifier.align(Alignment.BottomCenter).onSizeChanged { size ->
                                         onFloatingNavigationOccupiedHeightChanged(with(density) { size.height.toDp() })
                                     },
-                        ) {
-                            this@Column.AnimatedVisibility(
-                                visible = navigationVisible,
-                                enter =
-                                    expandVertically(
-                                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
-                                        expandFrom = Alignment.Bottom,
-                                    ),
-                                exit =
-                                    shrinkVertically(
-                                        animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
-                                        shrinkTowards = Alignment.Bottom,
-                                    ),
-                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
                             ) {
-                                LiquidGlassNavigationBar(
+                                FloatingNavigation(
                                     items = visibleItems,
                                     selectedKey = selectedKey,
                                     onSelect = onSelect,
+                                    navigationVisible = navigationVisible,
+                                    separateKey = floatingSeparateKey,
                                     itemModifier = itemModifier,
-                                    isShort = navigationSuiteType.isShortNavigationBar,
-                                    isCompact = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact,
+                                    onBarHeightChanged = onFloatingNavigationHeightChanged,
+                                    liquidGlass = floatingNavigationLiquidGlass,
                                 )
                             }
                         }
+                        if (glassNavigationBar) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .onSizeChanged { size ->
+                                            onFloatingNavigationOccupiedHeightChanged(with(density) { size.height.toDp() })
+                                        },
+                            ) {
+                                this@Column.AnimatedVisibility(
+                                    visible = navigationVisible,
+                                    enter =
+                                        expandVertically(
+                                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
+                                            expandFrom = Alignment.Bottom,
+                                        ),
+                                    exit =
+                                        shrinkVertically(
+                                            animationSpec = spring(dampingRatio = 0.9f, stiffness = 700f),
+                                            shrinkTowards = Alignment.Bottom,
+                                        ),
+                                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                                ) {
+                                    LiquidGlassNavigationBar(
+                                        items = visibleItems,
+                                        selectedKey = selectedKey,
+                                        onSelect = onSelect,
+                                        itemModifier = itemModifier,
+                                        isShort = navigationSuiteType.isShortNavigationBar,
+                                        isCompact = navigationSuiteType == NavigationSuiteType.ShortNavigationBarCompact,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (slimBar) {
+                        SlimNavigationBar(
+                            items = visibleItems,
+                            selectedKey = selectedKey,
+                            onSelect = onSelect,
+                            navigationVisible = navigationVisible,
+                            containerColor = containerColor,
+                            itemModifier = itemModifier,
+                            navigationSuiteType = navigationSuiteType,
+                        )
                     }
                 }
-                if (slimBar) {
-                    SlimNavigationBar(
-                        items = visibleItems,
-                        selectedKey = selectedKey,
-                        onSelect = onSelect,
-                        navigationVisible = navigationVisible,
-                        containerColor = containerColor,
-                        itemModifier = itemModifier,
-                        navigationSuiteType = navigationSuiteType,
-                    )
-                }
             }
-        }
         }
     }
 }
