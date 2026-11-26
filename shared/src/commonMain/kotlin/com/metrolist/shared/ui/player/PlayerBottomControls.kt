@@ -271,7 +271,7 @@ internal fun PlayerBottomControls(
                             .playerControlBlend(),
                     colors =
                         IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = playerInactiveControlContainerColor(),
+                            containerColor = playerLiquidGlassContainerColor(playerInactiveControlContainerColor()),
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         ),
                 ) {
