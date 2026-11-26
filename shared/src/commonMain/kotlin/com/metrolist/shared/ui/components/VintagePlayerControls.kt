@@ -150,7 +150,7 @@ fun VintagePlayerControls(
                             contentColor = sideButtonColor.copy(alpha = 0.6f),
                             checkedContentColor = MaterialTheme.colorScheme.primary,
                         ),
-                    modifier = Modifier.tvFocusHighlight(CircleShape),
+                    modifier = Modifier.tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape, if (isShuffled) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)),
                     shapes = IconButtonDefaults.toggleableShapes(),
                 ) {
                     Icon(
@@ -165,7 +165,7 @@ fun VintagePlayerControls(
                 onClick = { onSkipPrevious?.invoke() },
                 enabled = enabled && onSkipPrevious != null,
                 colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
-                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape),
+                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -185,6 +185,7 @@ fun VintagePlayerControls(
                         .size(playButtonSize)
                         .scale(scale.value)
                         .tvFocusHighlight(CircleShape)
+                        .playerLiquidGlass(CircleShape)
                         .then(
                             if (playPauseFocusRequester != null) Modifier.focusRequester(playPauseFocusRequester) else Modifier,
                         ),
@@ -216,7 +217,7 @@ fun VintagePlayerControls(
                 onClick = { onSkipNext?.invoke() },
                 enabled = enabled && onSkipNext != null,
                 colors = IconButtonDefaults.iconButtonColors(contentColor = sideButtonColor),
-                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape),
+                modifier = primaryButtonModifier.size(buttonSize).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -240,7 +241,7 @@ fun VintagePlayerControls(
                                     sideButtonColor.copy(alpha = 0.6f)
                                 },
                         ),
-                    modifier = Modifier.tvFocusHighlight(CircleShape).semantics { stateDescription = repeatDescription },
+                    modifier = Modifier.tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape, if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)).semantics { stateDescription = repeatDescription },
                     shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
