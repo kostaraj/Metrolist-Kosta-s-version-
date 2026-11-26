@@ -183,6 +183,8 @@ internal fun LyricsPlayerBackground(
     }
 
     when (playerBackground) {
+        PlayerBackgroundStyle.BLURRED_CANVAS -> Unit
+
         PlayerBackgroundStyle.BLURRED_ARTWORK -> {
             if (thumbnailUrl != null) {
                 PlayerBackgroundArtwork(thumbnailUrl, artworkCrossfade) { currentUrl ->
@@ -417,6 +419,7 @@ internal fun FullscreenThumbnailBackground(
 
                 PlayerBackgroundStyle.SOLID,
                 PlayerBackgroundStyle.BLURRED_ARTWORK,
+                PlayerBackgroundStyle.BLURRED_CANVAS,
                 -> {}
             }
         }
