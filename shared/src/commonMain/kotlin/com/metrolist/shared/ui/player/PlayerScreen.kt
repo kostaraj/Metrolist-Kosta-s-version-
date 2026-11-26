@@ -1009,7 +1009,8 @@ fun PlayerScreen(
 
                     if (isPlayerContentVisible && !isInPipMode && !isFullscreen) {
                         Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (queueCoversPlayer) 0f else 1f }) {
-                            if (playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK && currentSong?.displayThumbnail != null) {
+                            if ((selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS || !uiState.isLyricsVisible) &&
+                                playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK && currentSong?.displayThumbnail != null) {
                                 PlayerBackgroundArtwork(currentSong.displayThumbnail!!, artworkCrossfade) { backgroundUrl ->
                                     PlayerBlurredArtworkBackground(
                                         thumbnailUrl = backgroundUrl,
@@ -1017,7 +1018,8 @@ fun PlayerScreen(
                                         isLyricsVisible = uiState.isLyricsVisible,
                                     )
                                 }
-                            } else if (playerBackground == PlayerBackgroundStyle.LIQUID && currentSong?.displayThumbnail != null &&
+                            } else if ((selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS || !uiState.isLyricsVisible) &&
+                                playerBackground == PlayerBackgroundStyle.LIQUID && currentSong?.displayThumbnail != null &&
                                 !(showFullscreenThumbnailBackground && !uiState.isLyricsVisible && !showVideoSurface)
                             ) {
                                 LiquidBackground(
