@@ -119,7 +119,7 @@ fun VintageClassicControls(
             IconButton(
                 onClick = onToggleRepeat,
                 colors = iconColors,
-                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape).alpha(if (repeatMode == 0) 0.5f else 1f),
+                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape).alpha(if (repeatMode == 0) 0.5f else 1f),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -135,7 +135,7 @@ fun VintageClassicControls(
                 onClick = { onSkipPrevious?.invoke() },
                 enabled = onSkipPrevious != null,
                 colors = iconColors,
-                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape),
+                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -155,7 +155,8 @@ fun VintageClassicControls(
                 Modifier
                     .size(buttonSize)
                     .clip(RoundedCornerShape(playPauseRoundness))
-                    .background(buttonColor)
+                    .playerLiquidGlass(RoundedCornerShape(playPauseRoundness), buttonColor.copy(alpha = 0.32f))
+                    .background(if (playerLiquidGlassEnabled()) Color.Transparent else buttonColor)
                     .tvFocusHighlight(RoundedCornerShape(playPauseRoundness), color = onButtonColor)
                     .then(
                         if (playPauseFocusRequester != null) Modifier.focusRequester(playPauseFocusRequester) else Modifier,
@@ -188,7 +189,7 @@ fun VintageClassicControls(
                 onClick = { onSkipNext?.invoke() },
                 enabled = onSkipNext != null,
                 colors = iconColors,
-                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape),
+                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -206,7 +207,7 @@ fun VintageClassicControls(
                     IconButtonDefaults.iconButtonColors(
                         contentColor = if (isLiked) MaterialTheme.colorScheme.error else contentColor,
                     ),
-                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape),
+                modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
                 shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
@@ -292,7 +293,8 @@ private fun VintageCircleButton(
                 .size(40.dp)
                 .navigationPopupSource()
                 .clip(RoundedCornerShape(24.dp))
-                .background(buttonColor)
+                .playerLiquidGlass(RoundedCornerShape(24.dp), buttonColor.copy(alpha = 0.32f))
+                .background(if (playerLiquidGlassEnabled()) Color.Transparent else buttonColor)
                 .tvFocusHighlight(CircleShape, color = onButtonColor)
                 .semantics { contentDescription = description }
                 .navigationPopupSource()
@@ -433,7 +435,7 @@ private fun VintageBottomBarItem(
                     horizontal = if (spec.showLabels) spec.itemPadding else 6.dp,
                     vertical = 8.dp,
                 ),
-            modifier = modifier.tvFocusHighlight(CircleShape),
+            modifier = modifier.tvFocusHighlight(CircleShape).playerLiquidGlass(RoundedCornerShape(50)),
             shapes = ButtonDefaults.shapes(),
         ) {
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(VintageBottomBarIconSize))
@@ -454,7 +456,7 @@ private fun VintageBottomBarItem(
                     contentColor = contentColor,
                     disabledContentColor = contentColor.copy(alpha = 0.38f),
                 ),
-            modifier = modifier.tvFocusHighlight(CircleShape),
+            modifier = modifier.tvFocusHighlight(CircleShape).playerLiquidGlass(CircleShape),
             shapes = IconButtonDefaults.shapes(),
         ) {
             Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp))
@@ -484,7 +486,8 @@ fun VintageAudioVideoModeSwitcher(
                 .width(96.dp)
                 .height(36.dp)
                 .clip(capsuleShape)
-                .background(trackColor)
+                .playerLiquidGlass(capsuleShape)
+                .background(playerLiquidGlassContainerColor(trackColor))
                 .padding(2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -534,7 +537,8 @@ private fun VintageAudioVideoModeItem(
         modifier =
             modifier
                 .clip(shape)
-                .background(if (selected) selectedColor else Color.Transparent)
+                .playerLiquidGlass(shape, if (selected) selectedColor.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f))
+                .background(if (selected && !playerLiquidGlassEnabled()) selectedColor else Color.Transparent)
                 .tvFocusHighlight(shape, color = iconTint)
                 .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center,
