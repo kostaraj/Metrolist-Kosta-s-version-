@@ -171,17 +171,18 @@ fun MiniPlayer(
     val isVideoSong = song.isVideoSong
     val cornerRadius = if (isModern) modernMiniPlayerHeight(LocalDensity.current) / 2 else 16.dp
 
+    val liquidGlassEnabled = playerLiquidGlassEnabled()
     val bgStyle = Settings.shared.miniPlayerBackgroundStyle
-    val useSolidBlack = bgStyle == "SOLID_BLACK"
-    val useBlur = bgStyle == "BLURRED_ARTWORK" && song.thumbnail != null
-    val useGradient = bgStyle == "GRADIENT"
+    val useSolidBlack = bgStyle == "SOLID_BLACK" && !liquidGlassEnabled
+    val useBlur = bgStyle == "BLURRED_ARTWORK" && song.thumbnail != null && !liquidGlassEnabled
+    val useGradient = bgStyle == "GRADIENT" && !liquidGlassEnabled
     val baseSeedColor = MaterialTheme.colorScheme.primary
     val artworkSeedColor = if (useGradient && active) rememberArtworkSeedColor(song.thumbnail) else null
     val effectiveSeedColor = artworkSeedColor ?: baseSeedColor
     val gradientColors = remember(effectiveSeedColor) { getGradientColors(effectiveSeedColor) }
 
-    val backgroundColor = if (useSolidBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val contentColor = if (useSolidBlack || useBlur || useGradient) Color.White else MaterialTheme.colorScheme.onSurface
+    val backgroundColor = if (liquidGlassEnabled) Color.Transparent else if (useSolidBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = if (liquidGlassEnabled) MaterialTheme.colorScheme.onSurface else if (useSolidBlack || useBlur || useGradient) Color.White else MaterialTheme.colorScheme.onSurface
     val secondaryContentColor = if (useBlur) contentColor else contentColor.copy(alpha = 0.7f)
     val buttonBorderColor = contentColor.copy(alpha = 0.25f)
 
@@ -479,6 +480,7 @@ fun MiniPlayer(
                                 onTogglePlay()
                             },
                             enabled = playbackEnabled,
+                            modifier = Modifier.playerLiquidGlass(CircleShape),
                             shapes = IconButtonDefaults.shapes(),
                         ) {
                             if (isLoading && active) {
@@ -501,9 +503,10 @@ fun MiniPlayer(
                             enabled = canSkipNext,
                             colors =
                                 IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer),
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 ),
+                            modifier = Modifier.playerLiquidGlass(CircleShape),
                             shapes = IconButtonDefaults.shapes(),
                         ) {
                             Icon(
