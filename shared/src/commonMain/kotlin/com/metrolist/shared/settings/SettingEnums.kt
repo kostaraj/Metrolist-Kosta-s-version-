@@ -57,12 +57,12 @@ enum class PlayerThumbnailStyle {
 }
 
 enum class PlayerBackgroundStyle {
-    BLURRED_CANVAS,
     BLURRED_ARTWORK,
     SOLID,
     GRADIENT,
     ANIMATED_GRADIENT,
     LIQUID,
+    BLURRED_CANVAS,
 }
 
 enum class ThemePaletteStyle {
