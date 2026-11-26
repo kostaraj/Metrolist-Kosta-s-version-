@@ -57,6 +57,7 @@ enum class PlayerThumbnailStyle {
 }
 
 enum class PlayerBackgroundStyle {
+    BLURRED_CANVAS,
     BLURRED_ARTWORK,
     SOLID,
     GRADIENT,
