@@ -84,6 +84,8 @@ import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.settings.displayName
 import com.metrolist.shared.settings.expressiveMiniPlayerButtons
 import com.metrolist.shared.ui.components.PlayerSheetSurface
+import com.metrolist.shared.ui.components.playerLiquidGlass
+import com.metrolist.shared.ui.components.playerLiquidGlassEnabled
 import com.metrolist.shared.ui.components.WavyCircularProgressIndicator
 import com.metrolist.shared.ui.components.currentSongArtworkShape
 import com.metrolist.shared.ui.components.images.AsyncImage
@@ -207,7 +209,7 @@ fun ExpressiveMiniPlayer(
         onClick = onExpand,
         cornerRadius = ExpressiveMiniPlayerCornerRadius,
         expressive = true,
-        color = containerColor,
+        color = if (playerLiquidGlassEnabled()) Color.Transparent else containerColor,
         elevation = 3.dp,
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 10.dp, end = 12.dp)) {
@@ -434,7 +436,8 @@ private fun ExpressiveMiniButton(
                 .size(36.dp)
                 .tvFocusHighlight(CircleShape, scale = 1f)
                 .clip(CircleShape)
-                .background(background)
+                .playerLiquidGlass(CircleShape, background.copy(alpha = 0.32f))
+                .background(if (playerLiquidGlassEnabled()) Color.Transparent else background)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
