@@ -75,6 +75,7 @@ import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.formatSleepTimerRemaining
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.playerInactiveControlContainerColor
+import com.metrolist.shared.ui.components.playerLiquidGlass
 import com.metrolist.shared.ui.haptics.HapticEvent
 import com.metrolist.shared.ui.haptics.rememberMetrolistHaptics
 import com.metrolist.shared.ui.icons.MetrolistIcons
@@ -239,7 +240,7 @@ internal fun PlayerBottomControls(
                                 playerConnection?.setVolume(lastAudibleVolume.coerceAtLeast(0.25f))
                             }
                         },
-                        modifier = Modifier.size(touchTarget),
+                        modifier = Modifier.size(touchTarget).playerLiquidGlass(CircleShape),
                         shapes = IconButtonDefaults.shapes(),
                     ) {
                         Icon(
