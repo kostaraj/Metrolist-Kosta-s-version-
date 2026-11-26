@@ -84,7 +84,7 @@ private fun MiniPlayerActionButton(
 ) {
     OutlinedIconButton(
         onClick = onClick,
-        modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape, scale = 1.08f, borderWidth = 4.dp),
+        modifier = Modifier.size(48.dp).tvFocusHighlight(CircleShape, scale = 1.08f, borderWidth = 4.dp).playerLiquidGlass(CircleShape),
         shapes = IconButtonDefaults.shapes(shape = CircleShape),
         border = BorderStroke(1.dp, borderColor),
         colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = contentColor),
