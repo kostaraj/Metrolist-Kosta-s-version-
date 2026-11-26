@@ -5465,4 +5465,7 @@
     <string name="ai_setup_key_limits">Review key limits</string>
     <string name="force_offline_playback">Offline mode</string>
     <string name="force_offline_playback_description">Use only downloaded or cached audio. Automatically enabled when there is no internet connection.</string>
+    <string name="blurred_canvas">Blurred canvas</string>
+    <string name="canvas_background_fallback">When no canvas is available</string>
+    <string name="canvas_background_fallback_description">Choose which player background to use when the selected Canvas source is unavailable.</string>
 </resources>
