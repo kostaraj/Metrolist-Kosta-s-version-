@@ -347,6 +347,7 @@ class Settings(
     val isPlayerCastButtonVisible: Boolean
         get() = castEnabled && showPlayerCastButton
     var playerBackgroundStyle by preference(PlayerBackgroundStyle.SOLID)
+    var lyricsCanvasFallbackBackgroundStyle by preference(PlayerBackgroundStyle.BLURRED_ARTWORK)
     var sliderStyle by preference(SliderStyle.DEFAULT)
     var sliderTrackThicknessDp by preference(SliderTrackThicknessDpKey, 5f)
     var playbackSpeed by preference(PlaybackSpeedKey, 1f)
