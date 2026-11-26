@@ -757,6 +757,7 @@ fun PlayerScreen(
             } else {
                 when (playerBackground) {
                     PlayerBackgroundStyle.BLURRED_ARTWORK,
+                    PlayerBackgroundStyle.BLURRED_CANVAS,
                     PlayerBackgroundStyle.LIQUID,
                     -> if (currentSong?.displayThumbnail != null) Color.White else MaterialTheme.colorScheme.onSurface
 
@@ -807,6 +808,7 @@ fun PlayerScreen(
     val backgroundColor =
         when (playerBackground) {
             PlayerBackgroundStyle.BLURRED_ARTWORK,
+            PlayerBackgroundStyle.BLURRED_CANVAS,
             PlayerBackgroundStyle.GRADIENT,
             PlayerBackgroundStyle.ANIMATED_GRADIENT,
             PlayerBackgroundStyle.SOLID,
@@ -1053,7 +1055,9 @@ fun PlayerScreen(
                                         },
                                 )
                             }
-                            if (playerBackground != PlayerBackgroundStyle.SOLID && selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS) {
+                            if (playerBackground != PlayerBackgroundStyle.SOLID &&
+                                !(selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && currentCanvasLayer != null && artworkAllowedOnNetwork)
+                            ) {
                                 val hasArtwork =
                                     playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK ||
                                         playerBackground == PlayerBackgroundStyle.LIQUID
