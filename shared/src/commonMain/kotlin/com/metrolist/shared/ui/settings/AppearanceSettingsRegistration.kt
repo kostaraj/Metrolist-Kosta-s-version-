@@ -585,6 +585,7 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
             }
         val playerBackgroundChoices =
             buildList {
+                add(SettingsChoice(PlayerBackgroundStyle.BLURRED_CANVAS.name, stringResource(Res.string.blurred_canvas)))
                 add(SettingsChoice(PlayerBackgroundStyle.BLURRED_ARTWORK.name, stringResource(Res.string.blurred_artwork)))
                 add(SettingsChoice(PlayerBackgroundStyle.SOLID.name, stringResource(Res.string.settings_solid)))
                 add(SettingsChoice(PlayerBackgroundStyle.GRADIENT.name, stringResource(Res.string.gradient)))
@@ -592,6 +593,9 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                 add(SettingsChoice(PlayerBackgroundStyle.LIQUID.name, stringResource(Res.string.liquid)))
             }
         val selectedBackground = settings.playerBackgroundStyle
+        val canvasFallbackChoices = playerBackgroundChoices.filter { it.id != PlayerBackgroundStyle.BLURRED_CANVAS.name }
+        val selectedCanvasFallback = settings.lyricsCanvasFallbackBackgroundStyle
+            .takeIf { it != PlayerBackgroundStyle.BLURRED_CANVAS } ?: PlayerBackgroundStyle.BLURRED_ARTWORK
         val selectedSliderStyle =
             when (settings.sliderStyle) {
                 SliderStyle.LINEAR -> SliderStyle.SLIM
@@ -683,6 +687,16 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
                     choices = playerBackgroundChoices,
                     selectedChoiceId = selectedBackground.name,
                 ) { settings.playerBackgroundStyle = PlayerBackgroundStyle.valueOf(it) }
+                if (selectedBackground == PlayerBackgroundStyle.BLURRED_CANVAS) {
+                    choice(
+                        id = "lyricsCanvasFallbackBackground",
+                        title = stringResource(Res.string.canvas_background_fallback),
+                        description = stringResource(Res.string.canvas_background_fallback_description),
+                        valueLabel = canvasFallbackChoices.first { it.id == selectedCanvasFallback.name }.label,
+                        choices = canvasFallbackChoices,
+                        selectedChoiceId = selectedCanvasFallback.name,
+                    ) { settings.lyricsCanvasFallbackBackgroundStyle = PlayerBackgroundStyle.valueOf(it) }
+                }
             }
             group("progress", stringResource(Res.string.progress_bar)) {
                 choice(
