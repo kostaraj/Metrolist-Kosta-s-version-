@@ -21,6 +21,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -152,6 +153,7 @@ fun BottomSheet(
     val motionScheme = MaterialTheme.motionScheme
     val motion = remember(motionScheme) { PlayerSheetMotion(motionScheme) }
     val expandedColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 1f)
+    val liquidGlassSheetEnabled = morphCollapsedContainer && playerLiquidGlassEnabled()
     val expandedAlpha = if (morphCollapsedContainer) motion::expandedAlpha else contentAlpha
     val miniPlayerAlpha = if (morphCollapsedContainer) motion::collapsedAlpha else collapsedContentAlpha
 
@@ -278,7 +280,9 @@ fun BottomSheet(
                         }
                     shadowElevation = if (style != null) style.elevation.toPx() * (1f - state.progress.coerceIn(0f, 1f)) else 0f
                     clip = true
-                }.onGloballyPositioned { container?.coordinates = it }
+                }.then(
+                    if (liquidGlassSheetEnabled) Modifier.playerLiquidGlass(RoundedCornerShape(24.dp)) else Modifier,
+                ).onGloballyPositioned { container?.coordinates = it }
                 .drawWithContent {
                     val style = container?.style
                     val bounds = container?.bounds
@@ -293,7 +297,7 @@ fun BottomSheet(
                                 collapsedHeaderHeight.toPx(),
                             ).createOutline(size, layoutDirection, this)
                         }
-                    if (morphCollapsedContainer) {
+                    if (morphCollapsedContainer && !liquidGlassSheetEnabled) {
                         val color = if (style != null) lerp(style.color.copy(alpha = 1f), expandedColor, progress) else expandedColor
                         drawOutline(outline, color)
                     }
