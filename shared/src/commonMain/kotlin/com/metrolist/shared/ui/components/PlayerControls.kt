@@ -123,7 +123,7 @@ fun Modifier.playerControlBlend(): Modifier {
     return graphicsLayer {
         blendMode = if (playerBackground != PlayerBackgroundStyle.SOLID && darkTheme) BlendMode.Screen else BlendMode.SrcOver
         compositingStrategy = CompositingStrategy.Offscreen
-    }
+    }.playerLiquidGlass(RoundedCornerShape(50))
 }
 
 @Composable
@@ -238,7 +238,7 @@ fun PlayerPrimaryControls(
             interactionSource = prevInteractionSource,
             colors =
                 ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.8f),
+                    containerColor = playerLiquidGlassContainerColor(sideButtonContainerColor.copy(alpha = 0.8f)),
                     contentColor = sideButtonContentColor,
                 ),
             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
@@ -264,7 +264,7 @@ fun PlayerPrimaryControls(
             interactionSource = playPauseInteractionSource,
             colors =
                 ButtonDefaults.filledTonalButtonColors(
-                    containerColor = centerButtonContainerColor,
+                    containerColor = playerLiquidGlassContainerColor(centerButtonContainerColor),
                     contentColor = centerButtonContentColor,
                 ),
             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
@@ -275,6 +275,7 @@ fun PlayerPrimaryControls(
                     .widthIn(min = minPlayWidth)
                     .weight(playPauseWeight)
                     .tvFocusHighlight(playShape, scale = 1f, color = centerButtonContentColor)
+                    .playerLiquidGlass(playShape)
                     .then(
                         if (playPauseFocusRequester != null) {
                             Modifier.focusRequester(playPauseFocusRequester)
@@ -369,7 +370,7 @@ fun PlayerPrimaryControls(
             interactionSource = nextInteractionSource,
             colors =
                 ButtonDefaults.filledTonalButtonColors(
-                    containerColor = sideButtonContainerColor.copy(alpha = 0.85f),
+                    containerColor = playerLiquidGlassContainerColor(sideButtonContainerColor.copy(alpha = 0.85f)),
                     contentColor = sideButtonContentColor,
                 ),
             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
@@ -401,6 +402,7 @@ fun PlayerLikeShareButtons(
 ) {
     val isTv = LocalIsTv.current
     val darkTheme = Settings.shared.getCurrentThemeIsDark()
+    val liquidGlassEnabled = playerLiquidGlassEnabled()
 
     var isCopied by remember { mutableStateOf(false) }
     var copyJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -446,16 +448,16 @@ fun PlayerLikeShareButtons(
 
     val buttonColors =
         ToggleButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (darkTheme) 0.5f else 1f),
+            containerColor = if (liquidGlassEnabled) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (darkTheme) 0.5f else 1f),
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            checkedContainerColor = if (liquidGlassEnabled) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer,
             checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     val likeButtonColors =
         ToggleButtonDefaults.colors(
-            containerColor = playerInactiveControlContainerColor(),
+            containerColor = if (liquidGlassEnabled) Color.Transparent else playerInactiveControlContainerColor(),
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            checkedContainerColor = MaterialTheme.colorScheme.primary,
+            checkedContainerColor = if (liquidGlassEnabled) Color.Transparent else MaterialTheme.colorScheme.primary,
             checkedContentColor = MaterialTheme.colorScheme.onPrimary,
         )
 
@@ -479,12 +481,13 @@ fun PlayerLikeShareButtons(
                         val shareShape = ButtonGroupDefaults.connectedLeadingButtonShape
                         Surface(
                             shape = shareShape,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            color = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer),
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier =
                                 Modifier
                                     .size(width = buttonWidth, height = groupHeight)
                                     .animateWidth(shareInteractionSource, 12.dp)
+                                    .playerLiquidGlass(shareShape)
                                     .pointerInput(Unit) {
                                         awaitPointerEventScope {
                                             while (true) {
@@ -564,6 +567,10 @@ fun PlayerLikeShareButtons(
                             Modifier
                                 .size(width = buttonWidth, height = groupHeight)
                                 .animateWidth(likeInteractionSource, 12.dp)
+                                .playerLiquidGlass(
+                                    if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
+                                    if (isLiked) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f),
+                                )
                                 .tvFocusHighlight(
                                     if (isTv) RoundedCornerShape(50) else ButtonGroupDefaults.connectedTrailingButtonShape,
                                     scale = 1f,
@@ -607,6 +614,7 @@ fun PlayerLikeShareButtons(
                 modifier =
                     Modifier
                         .size(buttonWidth, groupHeight)
+                        .playerLiquidGlass(RoundedCornerShape(50))
                         .semantics { contentDescription = moreDesc }
                         .navigationPopupSource(),
             ) {
