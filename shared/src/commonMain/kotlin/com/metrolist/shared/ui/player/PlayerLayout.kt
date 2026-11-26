@@ -692,11 +692,11 @@ private fun LandscapePlayerModeSwitcher(
         stringResource(Res.string.video)
     val colors =
         ToggleButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
             contentColor = textColor,
-            checkedContainerColor = MaterialTheme.colorScheme.primary,
+            checkedContainerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.primary),
             checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
             disabledContentColor = textColor,
         )
 
@@ -713,7 +713,7 @@ private fun LandscapePlayerModeSwitcher(
             contentPadding = PaddingValues(0.dp),
             colors = colors,
             modifier =
-                Modifier.size(width = 46.dp, height = buttonHeight).tvFocusHighlight(
+                Modifier.size(width = 46.dp, height = buttonHeight).playerLiquidGlass(RoundedCornerShape(50)).tvFocusHighlight(
                     staticConnectedLeadingButtonShapes().shape,
                     color = if (songSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                 ),
@@ -739,7 +739,7 @@ private fun LandscapePlayerModeSwitcher(
             contentPadding = PaddingValues(0.dp),
             colors = colors,
             modifier =
-                Modifier.size(width = 46.dp, height = buttonHeight).tvFocusHighlight(
+                Modifier.size(width = 46.dp, height = buttonHeight).playerLiquidGlass(RoundedCornerShape(50)).tvFocusHighlight(
                     staticConnectedTrailingButtonShapes().shape,
                     color = if (isVideoActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
                 ),
@@ -773,7 +773,7 @@ private fun LandscapePlayerCollapseButton(
         shapes = IconButtonDefaults.shapes(shape = CircleShape),
         colors =
             IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 contentColor = textColor.copy(alpha = 0.7f),
             ),
         modifier = modifier.size(buttonSize).tvFocusHighlight(CircleShape).playerControlBlend(),
@@ -799,12 +799,9 @@ private fun LandscapePlayerCastButton(
         shapes = IconButtonDefaults.shapes(shape = CircleShape),
         colors =
             IconButtonDefaults.filledIconButtonColors(
-                containerColor =
-                    if (isCasting) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
+                containerColor = playerLiquidGlassContainerColor(
+                    if (isCasting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                ),
                 contentColor =
                     if (isCasting) {
                         MaterialTheme.colorScheme.onPrimary
@@ -936,7 +933,7 @@ internal fun LandscapePlayerContent(
                 shapes = IconButtonDefaults.shapes(shape = CircleShape),
                 colors =
                     IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer),
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ),
                 modifier =
