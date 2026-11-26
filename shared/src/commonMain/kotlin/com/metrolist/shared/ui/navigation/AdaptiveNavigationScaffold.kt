@@ -94,8 +94,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
@@ -371,9 +369,6 @@ fun <T> AdaptiveNavigationScaffold(
     val slimBar = !floatingBar && !glassNavigationBar && navigationSuiteType.isShortNavigationBar
     val customNavigation = desktopRail || floatingBar || slimBar || glassNavigationBar
     val density = LocalDensity.current
-    // Capture the actual page content so glass bars can refract text and imagery beneath them.
-    val liquidGlassBackdrop = rememberLayerBackdrop()
-
     // Keep the screen under one lookahead parent when navigation preferences or window size change.
     NavigationSuiteScaffold(
         navigationItems = navigationItems,
@@ -385,8 +380,7 @@ fun <T> AdaptiveNavigationScaffold(
         navigationItemVerticalArrangement = navigationItemVerticalArrangement,
         primaryActionContent = { if (!customNavigation) navigationHeader(navigationSuiteType) },
     ) {
-        CompositionLocalProvider(LocalLiquidGlassBackdrop provides liquidGlassBackdrop) {
-            Row(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize()) {
                 if (desktopRail) {
                     DesktopWideNavigationRail(
                         items = items,
@@ -413,8 +407,7 @@ fun <T> AdaptiveNavigationScaffold(
                         Box(
                             Modifier
                                 .fillMaxSize()
-                                .then(if (floatingBar || slimBar || glassNavigationBar) Modifier.clipToBounds() else Modifier)
-                                .layerBackdrop(liquidGlassBackdrop),
+                                .then(if (floatingBar || slimBar || glassNavigationBar) Modifier.clipToBounds() else Modifier),
                         ) {
                             // Custom navigation layouts use the same content color as a Material surface.
                             CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
@@ -487,7 +480,6 @@ fun <T> AdaptiveNavigationScaffold(
                         )
                     }
                 }
-            }
         }
     }
 }
