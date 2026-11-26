@@ -150,6 +150,9 @@ import com.metrolist.shared.ui.components.CrossfadeArtwork
 import com.metrolist.shared.ui.components.LiveBadge
 import com.metrolist.shared.ui.components.MiniPlayerActions
 import com.metrolist.shared.ui.components.PlayerSheetSurface
+import com.metrolist.shared.ui.components.playerLiquidGlass
+import com.metrolist.shared.ui.components.playerLiquidGlassContainerColor
+import com.metrolist.shared.ui.components.playerLiquidGlassEnabled
 import com.metrolist.shared.ui.components.focusOutline
 import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -636,11 +639,12 @@ internal fun MiniPlayerCard(
     val nextLabel = stringResource(Res.string.next)
     val isTv = LocalIsTv.current
     val artworkUrl = currentSong.previewThumbnailUrl
+    val liquidGlassEnabled = playerLiquidGlassEnabled()
     val useBlurMiniPlayer =
-        Settings.shared.miniPlayerBackgroundStyle == "BLURRED_ARTWORK" && artworkUrl != null
+        Settings.shared.miniPlayerBackgroundStyle == "BLURRED_ARTWORK" && artworkUrl != null && !liquidGlassEnabled
     val useGradientMiniPlayer =
-        Settings.shared.miniPlayerBackgroundStyle == "GRADIENT" && artworkUrl != null
-    val useSolidBlackMiniPlayer = Settings.shared.miniPlayerBackgroundStyle == "SOLID_BLACK"
+        Settings.shared.miniPlayerBackgroundStyle == "GRADIENT" && artworkUrl != null && !liquidGlassEnabled
+    val useSolidBlackMiniPlayer = Settings.shared.miniPlayerBackgroundStyle == "SOLID_BLACK" && !liquidGlassEnabled
     val context = LocalContext.current
     var gradientColors by remember(artworkUrl) { mutableStateOf<List<Color>>(emptyList()) }
     LaunchedEffect(artworkUrl, useGradientMiniPlayer, active) {
@@ -657,9 +661,9 @@ internal fun MiniPlayerCard(
                 }
         }
     }
-    val backgroundColor = if (useSolidBlackMiniPlayer) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val backgroundColor = if (liquidGlassEnabled) Color.Transparent else if (useSolidBlackMiniPlayer) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     val contentColor =
-        if (useSolidBlackMiniPlayer || useGradientMiniPlayer || useBlurMiniPlayer) Color.White else MaterialTheme.colorScheme.onSurface
+        if (liquidGlassEnabled) MaterialTheme.colorScheme.onSurface else if (useSolidBlackMiniPlayer || useGradientMiniPlayer || useBlurMiniPlayer) Color.White else MaterialTheme.colorScheme.onSurface
     val secondaryContentColor = contentColor.copy(alpha = 0.7f)
     val buttonBorderColor = contentColor.copy(alpha = 0.3f)
     val interactionSource = remember { MutableInteractionSource() }
@@ -1234,7 +1238,7 @@ private fun VintageMiniPlayerContent(
 
         IconButton(
             onClick = onTogglePlayPause,
-            modifier = Modifier.testTag("mini_player_play").tvFocusHighlight(CircleShape, scale = 1f),
+            modifier = Modifier.testTag("mini_player_play").tvFocusHighlight(CircleShape, scale = 1f).playerLiquidGlass(CircleShape),
             shapes = IconButtonDefaults.shapes(),
         ) {
             if (isPlaybackLoading) {
@@ -1274,10 +1278,10 @@ private fun VintageMiniPlayerContent(
             enabled = canSkipNext,
             colors =
                 IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer),
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 ),
-            modifier = Modifier.testTag("mini_player_skip_next").tvFocusHighlight(CircleShape, scale = 1f),
+            modifier = Modifier.testTag("mini_player_skip_next").tvFocusHighlight(CircleShape, scale = 1f).playerLiquidGlass(CircleShape),
             shapes = IconButtonDefaults.shapes(),
         ) {
             Icon(
