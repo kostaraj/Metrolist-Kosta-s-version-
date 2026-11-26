@@ -146,6 +146,8 @@ import com.metrolist.shared.ui.LocalIsTv
 import com.metrolist.shared.ui.components.CrossfadeArtwork
 import com.metrolist.shared.ui.components.PlayerConnectedButtonGroup
 import com.metrolist.shared.ui.components.PlayerLikeShareButtons
+import com.metrolist.shared.ui.components.playerLiquidGlass
+import com.metrolist.shared.ui.components.playerLiquidGlassContainerColor
 import com.metrolist.shared.ui.components.PlayerPrimaryControls
 import com.metrolist.shared.ui.components.VintageAudioVideoModeSwitcher
 import com.metrolist.shared.ui.components.VintageClassicActionButtons
@@ -1666,12 +1668,13 @@ private fun FocusedPlayerActionIconButton(
         interactionSource = interactionSource,
         colors =
             IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
+                containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.primary),
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
         modifier =
             Modifier
                 .size(48.dp)
+                .playerLiquidGlass(shape, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                 .focusedPlayerBorder(shape, color = MaterialTheme.colorScheme.onPrimary, borderWidth = 3.dp),
         content = content,
     )
@@ -1729,6 +1732,7 @@ internal fun PlayerActionRow(
                             Modifier
                                 .animateWidth(expandInteractionSource, 12.dp)
                                 .size(width = 48.dp, height = 40.dp)
+                                .playerLiquidGlass(RoundedCornerShape(20.dp))
                                 .semantics {
                                     contentDescription = if (isLyricsExpanded) collapseDescription else expandDescription
                                 },
@@ -1769,6 +1773,7 @@ internal fun PlayerActionRow(
                             Modifier
                                 .animateWidth(menuInteractionSource, 12.dp)
                                 .size(width = 48.dp, height = 40.dp)
+                                .playerLiquidGlass(RoundedCornerShape(20.dp))
                                 .semantics { contentDescription = moreLyricsOptionsDescription }
                                 .navigationPopupSource(),
                     ) {
