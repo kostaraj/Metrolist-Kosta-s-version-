@@ -1444,11 +1444,7 @@ fun MetrolistApp(
                                             },
                                         ),
                             ) {
-                                Column(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .then(if (liquidGlassActive) Modifier.layerBackdrop(liquidGlassBackdrop) else Modifier),
-                                ) {
+                                Column(Modifier.fillMaxSize()) {
                                     PlaylistImportProgressCard()
                                     Scaffold(
                                         containerColor = Color.Transparent,
@@ -1620,7 +1616,7 @@ fun MetrolistApp(
                                                                 // Refresh the recording if the capture region moves or is resized.
                                                                 liquidGlassBackdropRevision.longValue++
                                                             }
-                                                            
+                                                            .layerBackdrop(liquidGlassBackdrop)
                                                     } else {
                                                         Modifier
                                                     },
