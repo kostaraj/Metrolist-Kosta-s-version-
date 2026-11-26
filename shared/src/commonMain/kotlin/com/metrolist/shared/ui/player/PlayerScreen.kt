@@ -216,6 +216,7 @@ import com.metrolist.shared.ui.components.images.AsyncImage
 import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.playerControlBlend
+import com.metrolist.shared.ui.components.playerLiquidGlassContainerColor
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
 import com.metrolist.shared.ui.components.sheetBackContent
@@ -1454,12 +1455,12 @@ fun PlayerScreen(
                                                                         contentPadding = PaddingValues(0.dp),
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
-                                                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                                                containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
                                                                                 contentColor = textBackgroundColor,
-                                                                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                                                                checkedContainerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.primary),
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
-                                                                                    MaterialTheme.colorScheme.surfaceVariant,
+                                                                                    playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
                                                                                 disabledContentColor = textBackgroundColor,
                                                                             ),
                                                                         modifier =
@@ -1534,12 +1535,12 @@ fun PlayerScreen(
                                                                         contentPadding = PaddingValues(0.dp),
                                                                         colors =
                                                                             ToggleButtonDefaults.colors(
-                                                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                                                containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
                                                                                 contentColor = textBackgroundColor,
-                                                                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                                                                checkedContainerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.primary),
                                                                                 checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                                 disabledContainerColor =
-                                                                                    MaterialTheme.colorScheme.surfaceVariant,
+                                                                                    playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
                                                                                 disabledContentColor = textBackgroundColor,
                                                                             ),
                                                                         modifier =
@@ -1637,7 +1638,7 @@ fun PlayerScreen(
                                                         shapes = IconButtonDefaults.shapes(shape = CircleShape),
                                                         colors =
                                                             IconButtonDefaults.filledIconButtonColors(
-                                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                                containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.surfaceVariant),
                                                                 contentColor = textBackgroundColor,
                                                             ),
                                                         modifier =
@@ -1670,11 +1671,9 @@ fun PlayerScreen(
                                                                 colors =
                                                                     IconButtonDefaults.filledIconButtonColors(
                                                                         containerColor =
-                                                                            if (castState.isConnected) {
-                                                                                MaterialTheme.colorScheme.primary
-                                                                            } else {
-                                                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                                                            },
+                                                                            playerLiquidGlassContainerColor(
+                                                                                if (castState.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                                            ),
                                                                         contentColor =
                                                                             if (castState.isConnected) {
                                                                                 MaterialTheme.colorScheme.onPrimary
