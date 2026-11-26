@@ -704,7 +704,13 @@ fun PlayerScreen(
     LaunchedEffect(currentSong?.appleMusicAnimatedCoverUrl) {
         canvasLayers.failed = canvasLayers.failed.filterNot { it.first == CanvasContentSource.APPLE_MUSIC.name }.toSet()
     }
-    val playerBackground = Settings.shared.playerBackgroundStyle
+    val selectedPlayerBackground = Settings.shared.playerBackgroundStyle
+    val canvasFallbackBackground =
+        Settings.shared.lyricsCanvasFallbackBackgroundStyle
+            .takeIf { it != PlayerBackgroundStyle.BLURRED_CANVAS } ?: PlayerBackgroundStyle.BLURRED_ARTWORK
+    // Blurred Canvas is a lyrics-viewer-only effect; the rest of the player uses the chosen fallback.
+    val playerBackground =
+        if (selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS) canvasFallbackBackground else selectedPlayerBackground
     val useRoundedRectPlayButton = Settings.shared.useRoundedRectPlayButton
     val playPauseFocusRequester = remember { FocusRequester() }
     val showControlsInFullscreen = !Settings.shared.lyricsHideStatusBarInFullscreen
@@ -1021,15 +1027,31 @@ fun PlayerScreen(
                                 )
                             } else if (uiState.isLyricsVisible) {
                                 LyricsPlayerBackground(
-                                    playerBackground = playerBackground,
+                                    playerBackground = selectedPlayerBackground,
+                                    fallbackBackground = playerBackground,
                                     thumbnailUrl = currentSong?.displayThumbnail,
                                     backgroundColor = backgroundColor,
                                     gradientColorStops = gradientColorStops,
                                     alpha = 1f,
                                     artworkCrossfade = artworkCrossfade,
+                                    canvasContent =
+                                        currentCanvasLayer?.takeIf {
+                                            selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && artworkAllowedOnNetwork
+                                        }?.let { layer ->
+                                            { canvasModifier ->
+                                                canvasLayers.Render(
+                                                    current = layer,
+                                                    playing = uiState.isPlaying,
+                                                    modifier = canvasModifier,
+                                                    onError = { failedLayer ->
+                                                        viewModel.retryMusicVideoCanvas(failedLayer.songId, failedLayer.url)
+                                                    },
+                                                )
+                                            }
+                                        },
                                 )
                             }
-                            if (playerBackground != PlayerBackgroundStyle.SOLID) {
+                            if (playerBackground != PlayerBackgroundStyle.SOLID && selectedPlayerBackground != PlayerBackgroundStyle.BLURRED_CANVAS) {
                                 val hasArtwork =
                                     playerBackground == PlayerBackgroundStyle.BLURRED_ARTWORK ||
                                         playerBackground == PlayerBackgroundStyle.LIQUID
