@@ -339,6 +339,7 @@ class Settings(
 
     var miniplayerFocusMode by preference(false)
     var miniPlayerBackgroundStyle by preference("DEFAULT")
+    var miniPlayerLiquidGlassEnabled by preference(false)
     var playerThumbnailStyle by preference(PlayerThumbnailStyle.COMPACT)
     var castEnabled by preference(CastEnabledKey, true)
     var showPlayerCastButton by preference(ShowPlayerCastButtonKey, true)
