@@ -1192,6 +1192,8 @@
     <string name="active_lyrics_alignment">Active lyric line alignment</string>
     <string name="lyrics_alignment">Lyrics alignment</string>
     <!-- Translators: Label for behavior in the lyrics. -->
+    <string name="lyrics_liquid_glass_fullscreen_canvas_only">Liquid Glass only with fullscreen canvas</string>
+    <string name="lyrics_liquid_glass_fullscreen_canvas_only_desc">Only use Liquid Glass in the lyrics player when a fullscreen canvas is available. The global Liquid Glass setting must also be enabled.</string>
     <string name="lyrics_behavior">Lyrics behavior</string>
     <!-- Translators: Label for source preference in the lyrics. -->
     <string name="lyrics_source_preference">Manual lyrics sources</string>
