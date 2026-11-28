@@ -539,14 +539,42 @@ class LyricsRepository(
                         for (result in results) {
                             val document = LyricsUtils.parseMlxDocument(result.lyrics)
                             val parsed = document?.lines ?: LyricsUtils.parseLyrics(result.lyrics)
-                            if (provider != LyricsProvider.USER && !usableProviderLyrics(parsed)) continue
+                            val timingKind = lyricsTimingKind(parsed)
+                            val sourceName = lyricsProviderLabel(result.provider, document) ?: result.provider
+                            if (provider != LyricsProvider.USER && !usableProviderLyrics(parsed)) {
+                                PlaybackEventLog.warn(
+                                    PlaybackEventKind.LYRICS,
+                                    "Lyrics provider search result rejected.",
+                                    videoId = videoId,
+                                    details = mapOf(
+                                        "provider" to provider.name,
+                                        "source" to sourceName,
+                                        "reason" to "empty_or_placeholder",
+                                        "parsedLines" to parsed.size.toString(),
+                                        "timingKind" to timingKind.name,
+                                    ),
+                                )
+                                continue
+                            }
 
+                            PlaybackEventLog.debug(
+                                PlaybackEventKind.LYRICS,
+                                "Lyrics provider search result accepted.",
+                                videoId = videoId,
+                                details = mapOf(
+                                    "provider" to provider.name,
+                                    "source" to sourceName,
+                                    "parsedLines" to parsed.size.toString(),
+                                    "wordCount" to parsed.sumOf { it.words?.size ?: 0 }.toString(),
+                                    "timingKind" to timingKind.name,
+                                ),
+                            )
                             send(
                                 LyricsProviderResult(
                                     provider = provider,
-                                    providerName = lyricsProviderLabel(result.provider, document) ?: result.provider,
+                                    providerName = sourceName,
                                     lyrics = result.lyrics,
-                                    timingKind = lyricsTimingKind(parsed),
+                                    timingKind = timingKind,
                                     song =
                                         MlxSong(
                                             title = document?.song?.title?.takeIf(String::isNotBlank) ?: title,
