@@ -122,6 +122,12 @@ internal fun SettingsUiRegistryBuilder.registerLyricsSettings(host: SharedSettin
                 checked = settings.lyricsAutoScroll,
             ) { settings.lyricsAutoScroll = it }
             switch(
+                id = "lyricsLiquidGlassOnlyWithFullscreenCanvas",
+                title = stringResource(Res.string.lyrics_liquid_glass_fullscreen_canvas_only),
+                description = stringResource(Res.string.lyrics_liquid_glass_fullscreen_canvas_only_desc),
+                checked = settings.lyricsLiquidGlassOnlyWithFullscreenCanvas,
+            ) { settings.lyricsLiquidGlassOnlyWithFullscreenCanvas = it }
+            switch(
                 id = "showLyricsOnPlayer",
                 title = stringResource(Res.string.lyrics_show_on_player),
                 description = stringResource(Res.string.lyrics_show_on_player_desc),
