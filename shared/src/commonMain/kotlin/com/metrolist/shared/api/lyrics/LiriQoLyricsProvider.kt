@@ -177,9 +177,22 @@ class LiriQoLyricsProvider(
                         }.readLyricsText(MAX_RESPONSE_BYTES)
                 } catch (error: CancellationException) {
                     throw error
-                } catch (_: Exception) {
+                } catch (error: Exception) {
+                    PlaybackEventLog.warn(
+                        PlaybackEventKind.LYRICS,
+                        "LiriQo shared API request failed.",
+                        details = mapOf("errorType" to (error::class.simpleName ?: "Exception")),
+                    )
                     null
                 }
+
+            if (response != null) {
+                PlaybackEventLog.debug(
+                    PlaybackEventKind.LYRICS,
+                    "LiriQo shared API response received.",
+                    details = mapOf("responseLength" to response.length.toString()),
+                )
+            }
 
             // Cache misses too, so all eleven providers still share a single failed lookup.
             responseCache[key] = CachedResponse(response, TimeSource.Monotonic.markNow())
