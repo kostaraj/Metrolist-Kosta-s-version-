@@ -16,6 +16,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
@@ -671,6 +672,21 @@ fun PlayerScreen(
             Settings.shared.animatedCoverResolution,
             prefersTallCover,
         ) { if (artworkAllowedOnNetwork) canvasLayers.select(currentSong, platform, preferTall = prefersTallCover) else null }
+    val canvasBlurRadius by animateDpAsState(
+        targetValue = if (uiState.isLyricsVisible) 18.dp else 0.dp,
+        animationSpec = tween(350),
+        label = "lyricsCanvasBlur",
+    )
+    val canvasRenderContent by rememberUpdatedState<@Composable (CanvasRenderSlot) -> Unit> { slot ->
+        canvasLayers.Render(
+            current = currentCanvasLayer,
+            playing = slot.playing,
+            modifier = slot.modifier.blur(canvasBlurRadius),
+            onFrame = slot.onFrame,
+            onError = { layer -> viewModel.retryMusicVideoCanvas(layer.songId, layer.url) },
+        )
+    }
+    val canvasRenderer = remember { movableContentOf<CanvasRenderSlot> { slot -> canvasRenderContent(slot) } }
     val canRenderCanvasThumbnail =
         Settings.shared.isCanvasEnabled && currentCanvasLayer != null && currentCanvasLayer.source != CanvasContentSource.APPLE_MUSIC
     val isArtworkCover = currentCanvasLayer?.source == CanvasContentSource.APPLE_MUSIC
@@ -1047,14 +1063,7 @@ fun PlayerScreen(
                                             selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && artworkAllowedOnNetwork
                                         }?.let { layer ->
                                             { canvasModifier: Modifier ->
-                                                canvasLayers.Render(
-                                                    current = layer,
-                                                    playing = uiState.isPlaying,
-                                                    modifier = canvasModifier,
-                                                    onError = { failedLayer ->
-                                                        viewModel.retryMusicVideoCanvas(failedLayer.songId, failedLayer.url)
-                                                    },
-                                                )
+                                                canvasRenderer(CanvasRenderSlot(canvasModifier, uiState.isPlaying))
                                             }
                                         },
                                 )
@@ -1105,13 +1114,7 @@ fun PlayerScreen(
                                             canvasContent =
                                                 if (renderAnimatedCover && !uiState.isLyricsVisible && isArtworkCover) {
                                                     { modifier, onFrame ->
-                                                        canvasLayers.Render(
-                                                            current = currentCanvasLayer,
-                                                            playing = true,
-                                                            onError = { layer -> viewModel.retryMusicVideoCanvas(layer.songId, layer.url) },
-                                                            modifier = modifier,
-                                                            onFrame = onFrame,
-                                                        )
+                                                        canvasRenderer(CanvasRenderSlot(modifier, true, onFrame))
                                                     }
                                                 } else {
                                                     null
@@ -1161,12 +1164,7 @@ fun PlayerScreen(
 
                                 if (canRenderCanvasThumbnail && renderAnimatedCover && !showVideoSurface) {
                                     Box(Modifier.fillMaxSize()) {
-                                        canvasLayers.Render(
-                                            current = currentCanvasLayer,
-                                            playing = true,
-                                            onError = { layer -> viewModel.retryMusicVideoCanvas(layer.songId, layer.url) },
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
+                                        canvasRenderer(CanvasRenderSlot(Modifier.fillMaxSize(), true))
                                         if (usesCanvasThumbnail) {
                                             Box(
                                                 Modifier
@@ -2526,5 +2524,11 @@ private fun FullscreenBackgroundBounds(
 ) {
     content(bounds.value)
 }
+
+private data class CanvasRenderSlot(
+    val modifier: Modifier,
+    val playing: Boolean,
+    val onFrame: ((androidx.compose.ui.graphics.ImageBitmap?) -> Unit)? = null,
+)
 
 private val MinPortraitPlayerHeight = 420.dp
