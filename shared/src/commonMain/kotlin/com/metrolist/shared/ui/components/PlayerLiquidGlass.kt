@@ -45,7 +45,7 @@ fun Modifier.playerLiquidGlass(
 
 @Composable
 fun playerLiquidGlassEnabled(): Boolean =
-    Settings.shared.liquidGlassEnabled && LocalLiquidGlassBackdrop.current != null
+    Settings.shared.liquidGlassEnabled && LocalLiquidGlassBackdrop.current != null && LocalLyricsGlassCanvasAvailable.current
 
 @Composable
 fun playerLiquidGlassContainerColor(fallbackColor: Color): Color =
