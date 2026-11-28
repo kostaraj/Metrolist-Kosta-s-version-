@@ -1062,6 +1062,7 @@
     <string name="app_font_atkinson_hyperlegible_next" translatable="false">Atkinson Hyperlegible Next</string>
     <!-- Translators: Option or section label for mini player in the Appearance settings. -->
     <string name="appearance_mini_player">Mini player</string>
+    <string name="mini_player_liquid_glass_description">Use Liquid Glass on the mini player independently of the global Liquid Glass setting.</string>
     <!-- Translators: Option or section label for mini player type in the Appearance settings. -->
     <string name="appearance_mini_player_type">Mini player type</string>
     <!-- Translators: Option or section label for player in the Appearance settings. -->
