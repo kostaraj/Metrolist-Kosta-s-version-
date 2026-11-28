@@ -957,7 +957,7 @@ fun PlayerScreen(
             val crossfadeNextArtworkUrl = artworkCrossfade.nextArtworkUrl
             val artworkCrossfadeProgress = artworkCrossfade.progressProvider
 
-            val canvasVisible = artworkAllowedOnNetwork && contentActive && !showVideoSurface && !uiState.isLyricsVisible
+            val canvasVisible = artworkAllowedOnNetwork && contentActive && !showVideoSurface
             DisposableEffect(viewModel, canvasVisible) {
                 viewModel.setCanvasVisible(canvasVisible)
                 onDispose { viewModel.setCanvasVisible(false) }
