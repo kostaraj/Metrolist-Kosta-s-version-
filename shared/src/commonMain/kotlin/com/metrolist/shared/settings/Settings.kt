@@ -456,6 +456,7 @@ class Settings(
     var showLyricsOnPlayer by preference(ShowLyricsOnPlayerKey, false)
     var lyricsActiveByRealTiming by preference(LyricsActiveByRealTimingKey, false)
     var lyricsProgressiveBlur by preference(LyricsProgressiveBlurKey, false)
+    var lyricsLiquidGlassOnlyWithFullscreenCanvas by preference(false)
 
     var lyricsTextPosition by preference("CENTER")
     var activeLyricsTextPosition by preference(ActiveLyricsTextPositionKey, "CENTER")
