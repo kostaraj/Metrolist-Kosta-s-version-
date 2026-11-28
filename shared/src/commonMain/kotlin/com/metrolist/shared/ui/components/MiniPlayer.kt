@@ -171,7 +171,7 @@ fun MiniPlayer(
     val isVideoSong = song.isVideoSong
     val cornerRadius = if (isModern) modernMiniPlayerHeight(LocalDensity.current) / 2 else 16.dp
 
-    val liquidGlassEnabled = playerLiquidGlassEnabled()
+    val liquidGlassEnabled = playerLiquidGlassEnabled(Settings.shared.miniPlayerLiquidGlassEnabled)
     val bgStyle = Settings.shared.miniPlayerBackgroundStyle
     val useSolidBlack = bgStyle == "SOLID_BLACK" && !liquidGlassEnabled
     val useBlur = bgStyle == "BLURRED_ARTWORK" && song.thumbnail != null && !liquidGlassEnabled
@@ -243,7 +243,7 @@ fun MiniPlayer(
                             change.consume()
                         },
                     )
-                }.playerLiquidGlass(RoundedCornerShape(cornerRadius)),
+                }.playerLiquidGlass(RoundedCornerShape(cornerRadius), enabled = Settings.shared.miniPlayerLiquidGlassEnabled),
         onClick = onExpand,
         cornerRadius = cornerRadius,
         elevation = 8.dp,
@@ -480,7 +480,7 @@ fun MiniPlayer(
                                 onTogglePlay()
                             },
                             enabled = playbackEnabled,
-                            modifier = Modifier.playerLiquidGlass(CircleShape),
+                            modifier = Modifier.playerLiquidGlass(CircleShape, enabled = Settings.shared.miniPlayerLiquidGlassEnabled),
                             shapes = IconButtonDefaults.shapes(),
                         ) {
                             if (isLoading && active) {
@@ -503,7 +503,7 @@ fun MiniPlayer(
                             enabled = canSkipNext,
                             colors =
                                 IconButtonDefaults.iconButtonColors(
-                                    containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer),
+                                    containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer, Settings.shared.miniPlayerLiquidGlassEnabled),
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 ),
                             modifier = Modifier.playerLiquidGlass(CircleShape),
