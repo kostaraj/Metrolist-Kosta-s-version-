@@ -1682,7 +1682,7 @@ fun PlayerScreen(
                                                                                 textBackgroundColor
                                                                             },
                                                                     ),
-                                                                modifier = Modifier.size(36.dp).playerControlBlend().playerLiquidGlass(RoundedCornerShape(12.dp)),
+                                                                modifier = Modifier.size(36.dp).playerControlBlend().playerLiquidGlass(CircleShape),
                                                             ) {
                                                                 Icon(
                                                                     imageVector =
