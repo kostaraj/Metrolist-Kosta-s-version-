@@ -438,7 +438,7 @@ private fun ExpressiveMiniButton(
                 .tvFocusHighlight(CircleShape, scale = 1f)
                 .clip(CircleShape)
                 .playerLiquidGlass(CircleShape, background.copy(alpha = 0.32f), enabled = Settings.shared.miniPlayerLiquidGlassEnabled)
-                .background(if (playerLiquidGlassEnabled()) Color.Transparent else background)
+                .background(if (playerLiquidGlassEnabled(Settings.shared.miniPlayerLiquidGlassEnabled)) Color.Transparent else background)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
