@@ -147,7 +147,7 @@ class LiriQoLyricsProvider(
                 "returnedSourceIds" to returnedSourceIds.joinToString(",").ifBlank { "none" },
                 "matchingTrackCount" to sourceCandidates.size.toString(),
                 "parsedResultCount" to parsedResults.size.toString(),
-                "timingKind" to parsedResults.firstOrNull()?.let { timingKind(it.lyrics).name } ?: "none",
+                "timingKind" to (parsedResults.firstOrNull()?.let { timingKind(it.lyrics).name } ?: "none"),
             ),
         )
         return parsedResults
