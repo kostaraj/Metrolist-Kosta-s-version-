@@ -889,6 +889,12 @@ internal fun SettingsUiRegistryBuilder.registerAppearanceSettings(host: SharedSe
             tone = SettingsTone.ROSE,
         ) {
             group("style", stringResource(Res.string.appearance_style)) {
+                switch(
+                    id = "miniPlayerLiquidGlassEnabled",
+                    title = stringResource(Res.string.appearance_liquid_glass),
+                    description = stringResource(Res.string.mini_player_liquid_glass_description),
+                    checked = settings.miniPlayerLiquidGlassEnabled,
+                ) { settings.miniPlayerLiquidGlassEnabled = it }
                 choice(
                     id = "miniPlayerType",
                     title = stringResource(Res.string.appearance_mini_player_type),
