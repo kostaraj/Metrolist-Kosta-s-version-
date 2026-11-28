@@ -2,6 +2,7 @@ package com.metrolist.shared.ui.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -14,6 +15,8 @@ import com.kyant.backdrop.highlight.Highlight
 import com.metrolist.shared.settings.Settings
 import com.metrolist.shared.ui.navigation.LocalLiquidGlassBackdrop
 
+val LocalLyricsGlassCanvasAvailable = compositionLocalOf { true }
+
 /**
  * Uses the app's captured backdrop and the same lens configuration as the liquid-glass navigation.
  * When the setting is disabled or no backdrop is available, the original control surface is retained.
@@ -24,7 +27,7 @@ fun Modifier.playerLiquidGlass(
     surfaceColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f),
 ): Modifier {
     val backdrop = LocalLiquidGlassBackdrop.current
-    if (backdrop == null || !Settings.shared.liquidGlassEnabled) return this
+    if (backdrop == null || !Settings.shared.liquidGlassEnabled || !LocalLyricsGlassCanvasAvailable.current) return this
 
     return drawBackdrop(
         backdrop = backdrop,
