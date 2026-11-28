@@ -70,9 +70,32 @@ class LiriQoLyricsProvider(
         val sourceId = sourceId(provider) ?: return emptyList()
         if (title.isBlank()) return emptyList()
 
-        val response = responseFor(title, artist, duration, album) ?: return emptyList()
-        val root = runCatching { json.parseToJsonElement(response).jsonObject }.getOrNull() ?: return emptyList()
-        if (root["error"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) return emptyList()
+        val response = responseFor(title, artist, duration, album)
+        if (response == null) {
+            PlaybackEventLog.warn(
+                PlaybackEventKind.LYRICS,
+                "LiriQo provider lookup returned no response.",
+                details = mapOf("provider" to provider.name, "sourceId" to sourceId, "outcome" to "empty_or_request_failed"),
+            )
+            return emptyList()
+        }
+        val root = runCatching { json.parseToJsonElement(response).jsonObject }.getOrNull()
+        if (root == null) {
+            PlaybackEventLog.warn(
+                PlaybackEventKind.LYRICS,
+                "LiriQo response could not be parsed.",
+                details = mapOf("provider" to provider.name, "sourceId" to sourceId, "responseLength" to response.length.toString()),
+            )
+            return emptyList()
+        }
+        if (root["error"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true) {
+            PlaybackEventLog.warn(
+                PlaybackEventKind.LYRICS,
+                "LiriQo API returned an error.",
+                details = mapOf("provider" to provider.name, "sourceId" to sourceId, "apiErrorPresent" to "true"),
+            )
+            return emptyList()
+        }
 
         val metadata = root["metadata"] as? JsonObject
         val primary = root["primary"] as? JsonObject
@@ -90,6 +113,7 @@ class LiriQoLyricsProvider(
                 ).joinToString("|")
             }
 
+        val returnedSourceIds = candidates.mapNotNull { it.string("provider") }.distinct().sorted()
         val sourceCandidates = candidates.filter { it.string("provider") == sourceId }
         // Some upstreams expose a separate line-synced rendition alongside syllable
         // timings. Keep it as a temporary alignment reference, never as the returned lyric.
@@ -100,17 +124,33 @@ class LiriQoLyricsProvider(
             .firstOrNull()
             .orEmpty()
 
-        return sourceCandidates
-            .asSequence()
-            .flatMap { track -> parseTrackVariants(track, title, artist, metadata, lineBoundaryReference).asSequence() }
-            .distinctBy { it.lyrics to it.provider }
-            .sortedByDescending { result ->
-                when (timingKind(result.lyrics)) {
-                    LyricsTimingKind.WORD_SYNCED -> 3
-                    LyricsTimingKind.LINE_SYNCED -> 2
-                    LyricsTimingKind.UNSYNCED -> 1
-                }
-            }.take(1).toList()
+        val parsedResults =
+            sourceCandidates
+                .asSequence()
+                .flatMap { track -> parseTrackVariants(track, title, artist, metadata, lineBoundaryReference).asSequence() }
+                .distinctBy { it.lyrics to it.provider }
+                .sortedByDescending { result ->
+                    when (timingKind(result.lyrics)) {
+                        LyricsTimingKind.WORD_SYNCED -> 3
+                        LyricsTimingKind.LINE_SYNCED -> 2
+                        LyricsTimingKind.UNSYNCED -> 1
+                    }
+                }.take(1).toList()
+
+        PlaybackEventLog.info(
+            PlaybackEventKind.LYRICS,
+            "LiriQo provider response inspected.",
+            details = mapOf(
+                "provider" to provider.name,
+                "sourceId" to sourceId,
+                "responseTrackCount" to candidates.size.toString(),
+                "returnedSourceIds" to returnedSourceIds.joinToString(",").ifBlank { "none" },
+                "matchingTrackCount" to sourceCandidates.size.toString(),
+                "parsedResultCount" to parsedResults.size.toString(),
+                "timingKind" to parsedResults.firstOrNull()?.let { timingKind(it.lyrics).name } ?: "none",
+            ),
+        )
+        return parsedResults
     }
 
     private suspend fun responseFor(
