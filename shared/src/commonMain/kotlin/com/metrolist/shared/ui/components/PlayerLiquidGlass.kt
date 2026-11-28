@@ -25,9 +25,10 @@ val LocalLyricsGlassCanvasAvailable = compositionLocalOf { true }
 fun Modifier.playerLiquidGlass(
     shape: Shape,
     surfaceColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f),
+    enabled: Boolean = Settings.shared.liquidGlassEnabled,
 ): Modifier {
     val backdrop = LocalLiquidGlassBackdrop.current
-    if (backdrop == null || !Settings.shared.liquidGlassEnabled || !LocalLyricsGlassCanvasAvailable.current) return this
+    if (backdrop == null || !enabled || !LocalLyricsGlassCanvasAvailable.current) return this
 
     return drawBackdrop(
         backdrop = backdrop,
@@ -44,9 +45,12 @@ fun Modifier.playerLiquidGlass(
 }
 
 @Composable
-fun playerLiquidGlassEnabled(): Boolean =
-    Settings.shared.liquidGlassEnabled && LocalLiquidGlassBackdrop.current != null && LocalLyricsGlassCanvasAvailable.current
+fun playerLiquidGlassEnabled(enabled: Boolean = Settings.shared.liquidGlassEnabled): Boolean =
+    enabled && LocalLiquidGlassBackdrop.current != null && LocalLyricsGlassCanvasAvailable.current
 
 @Composable
-fun playerLiquidGlassContainerColor(fallbackColor: Color): Color =
-    if (playerLiquidGlassEnabled()) Color.Transparent else fallbackColor
+fun playerLiquidGlassContainerColor(
+    fallbackColor: Color,
+    enabled: Boolean = Settings.shared.liquidGlassEnabled,
+): Color =
+    if (playerLiquidGlassEnabled(enabled)) Color.Transparent else fallbackColor
