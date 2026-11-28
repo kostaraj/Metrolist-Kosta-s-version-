@@ -131,7 +131,7 @@ private fun <T> FloatingNavigationBar(
                 shape = { CircleShape },
                 effects = {
                     colorControls(saturation = 1.4f)
-                    blur(8.dp.toPx())
+                    blur(2.dp.toPx())
                     lens(23.dp.toPx(), 64.dp.toPx(), depthEffect = false)
                 },
                 highlight = { Highlight.Default },
