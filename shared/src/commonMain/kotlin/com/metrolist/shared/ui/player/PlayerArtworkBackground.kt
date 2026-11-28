@@ -161,9 +161,9 @@ internal fun LyricsPlayerBackground(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            scaleX = 1.04f
-                            scaleY = 1.04f
-                        }.blur(8.dp),
+                            scaleX = 1.08f
+                            scaleY = 1.08f
+                        },
                 )
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.14f)),
