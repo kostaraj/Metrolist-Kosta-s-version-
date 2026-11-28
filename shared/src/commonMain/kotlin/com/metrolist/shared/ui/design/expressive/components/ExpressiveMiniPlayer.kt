@@ -206,11 +206,11 @@ fun ExpressiveMiniPlayer(
                     } else {
                         Modifier
                     },
-                ).playerLiquidGlass(RoundedCornerShape(ExpressiveMiniPlayerCornerRadius)),
+                ).playerLiquidGlass(RoundedCornerShape(ExpressiveMiniPlayerCornerRadius), enabled = Settings.shared.miniPlayerLiquidGlassEnabled),
         onClick = onExpand,
         cornerRadius = ExpressiveMiniPlayerCornerRadius,
         expressive = true,
-        color = if (playerLiquidGlassEnabled()) Color.Transparent else containerColor,
+        color = if (playerLiquidGlassEnabled(Settings.shared.miniPlayerLiquidGlassEnabled)) Color.Transparent else containerColor,
         elevation = 3.dp,
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 10.dp, end = 12.dp)) {
@@ -437,7 +437,7 @@ private fun ExpressiveMiniButton(
                 .size(36.dp)
                 .tvFocusHighlight(CircleShape, scale = 1f)
                 .clip(CircleShape)
-                .playerLiquidGlass(CircleShape, background.copy(alpha = 0.32f))
+                .playerLiquidGlass(CircleShape, background.copy(alpha = 0.32f), enabled = Settings.shared.miniPlayerLiquidGlassEnabled)
                 .background(if (playerLiquidGlassEnabled()) Color.Transparent else background)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
