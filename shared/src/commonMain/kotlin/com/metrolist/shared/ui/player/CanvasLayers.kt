@@ -1,7 +1,5 @@
 package com.metrolist.shared.ui.player
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -137,10 +135,9 @@ internal class CanvasLayers {
             ).distinctBy { it.key }.forEach { layer ->
                 key(layer.key) {
                     DisposableEffect(Unit) { onDispose { ready = ready - layer.key } }
-                    val fade by animateFloatAsState(
-                        if (layer.key in ready && (layer.key == current?.key || layer.key == retained?.key)) 1f else 0f,
-                        tween(CANVAS_CROSSFADE_DURATION_MS),
-                    )
+                    // The active canvas is moved between player and lyrics layouts.
+                    // Do not fade it from zero on reparent: that exposes the static artwork underneath.
+                    val fade = if (layer.key in ready && (layer.key == current?.key || layer.key == retained?.key)) 1f else 0f
                     AnimatedCoverVideo(
                         url = layer.url,
                         cacheKey = layer.cacheKey,
