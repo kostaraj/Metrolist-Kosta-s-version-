@@ -243,7 +243,7 @@ fun MiniPlayer(
                             change.consume()
                         },
                     )
-                },
+                }.playerLiquidGlass(RoundedCornerShape(cornerRadius)),
         onClick = onExpand,
         cornerRadius = cornerRadius,
         elevation = 8.dp,
