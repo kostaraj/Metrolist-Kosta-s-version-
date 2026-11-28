@@ -218,6 +218,7 @@ import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.playerLiquidGlassContainerColor
+import com.metrolist.shared.ui.components.LocalLyricsGlassCanvasAvailable
 import com.metrolist.shared.ui.components.playerLiquidGlass
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
@@ -875,7 +876,14 @@ fun PlayerScreen(
             }
         }
 
-    CompositionLocalProvider(LocalPlayerImmersiveMode provides shouldHideSystemBars) {
+    CompositionLocalProvider(
+        LocalPlayerImmersiveMode provides shouldHideSystemBars,
+        LocalLyricsGlassCanvasAvailable provides (
+            !uiState.isLyricsVisible ||
+                !Settings.shared.lyricsLiquidGlassOnlyWithFullscreenCanvas ||
+                (selectedPlayerBackground == PlayerBackgroundStyle.BLURRED_CANVAS && usesCanvasThumbnail && artworkAllowedOnNetwork)
+        ),
+    ) {
         BoxWithConstraints(
             modifier =
                 modifier
