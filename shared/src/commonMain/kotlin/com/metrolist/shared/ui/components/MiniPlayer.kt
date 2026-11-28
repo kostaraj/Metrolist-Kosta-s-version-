@@ -506,7 +506,7 @@ fun MiniPlayer(
                                     containerColor = playerLiquidGlassContainerColor(MaterialTheme.colorScheme.secondaryContainer, Settings.shared.miniPlayerLiquidGlassEnabled),
                                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 ),
-                            modifier = Modifier.playerLiquidGlass(CircleShape),
+                            modifier = Modifier.playerLiquidGlass(CircleShape, enabled = Settings.shared.miniPlayerLiquidGlassEnabled),
                             shapes = IconButtonDefaults.shapes(),
                         ) {
                             Icon(
