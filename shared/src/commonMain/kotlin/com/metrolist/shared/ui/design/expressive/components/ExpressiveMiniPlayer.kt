@@ -205,7 +205,7 @@ fun ExpressiveMiniPlayer(
                     } else {
                         Modifier
                     },
-                ),
+                ).playerLiquidGlass(RoundedCornerShape(ExpressiveMiniPlayerCornerRadius)),
         onClick = onExpand,
         cornerRadius = ExpressiveMiniPlayerCornerRadius,
         expressive = true,
