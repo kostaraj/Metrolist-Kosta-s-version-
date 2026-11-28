@@ -164,8 +164,34 @@ internal fun LyricsPlayerBackground(
                             scaleY = 1.08f
                         },
                 )
+                // A GPU-backed gradient shader keeps the moving canvas legible beneath lyrics
+                // without flattening the whole image with a heavy uniform scrim.
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.14f)),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .drawBehind {
+                                drawRect(
+                                    Brush.verticalGradient(
+                                        colorStops =
+                                            arrayOf(
+                                                0.0f to Color.Black.copy(alpha = 0.16f),
+                                                0.28f to Color.Black.copy(alpha = 0.10f),
+                                                0.52f to Color.Black.copy(alpha = 0.22f),
+                                                0.76f to Color.Black.copy(alpha = 0.38f),
+                                                1.0f to Color.Black.copy(alpha = 0.56f),
+                                            ),
+                                    ),
+                                )
+                                drawRect(
+                                    Brush.radialGradient(
+                                        0.0f to Color.Transparent,
+                                        1.0f to Color.Black.copy(alpha = 0.18f),
+                                        center = center,
+                                        radius = size.maxDimension * 0.82f,
+                                    ),
+                                )
+                            },
                 )
             }
             return
