@@ -217,6 +217,7 @@ import com.metrolist.shared.ui.components.lyrics.LyricsContrastScrim
 import com.metrolist.shared.ui.components.lyrics.LyricsOffsetEditor
 import com.metrolist.shared.ui.components.playerControlBlend
 import com.metrolist.shared.ui.components.playerLiquidGlassContainerColor
+import com.metrolist.shared.ui.components.playerLiquidGlass
 import com.metrolist.shared.ui.components.rememberBottomSheetState
 import com.metrolist.shared.ui.components.rememberTrackMarquee
 import com.metrolist.shared.ui.components.sheetBackContent
@@ -1424,7 +1425,7 @@ fun PlayerScreen(
                                                                 hapticManager.perform(HapticEvent.PRESS)
                                                                 playerConnection?.setVideoMode(true)
                                                             },
-                                                            modifier = Modifier.playerControlBlend(),
+                                                            modifier = Modifier.playerControlBlend().playerLiquidGlass(RoundedCornerShape(12.dp)),
                                                         )
                                                     }
 
@@ -1469,7 +1470,7 @@ fun PlayerScreen(
                                                                                     width = 46.dp,
                                                                                     height = 40.dp,
                                                                                 ).animateWidth(interactionSource, 12.dp)
-                                                                                .playerControlBlend(),
+                                                                                .playerControlBlend().playerLiquidGlass(RoundedCornerShape(12.dp)),
                                                                     ) {
                                                                         if (isResolvingToSong && LocalPlayerContentActive.current) {
                                                                             LoadingIndicator(
@@ -1549,7 +1550,7 @@ fun PlayerScreen(
                                                                                     width = 46.dp,
                                                                                     height = 40.dp,
                                                                                 ).animateWidth(interactionSource, 12.dp)
-                                                                                .playerControlBlend(),
+                                                                                .playerControlBlend().playerLiquidGlass(RoundedCornerShape(12.dp)),
                                                                     ) {
                                                                         if (isResolvingToVideo && LocalPlayerContentActive.current) {
                                                                             LoadingIndicator(
@@ -1645,7 +1646,7 @@ fun PlayerScreen(
                                                             Modifier
                                                                 .align(Alignment.CenterStart)
                                                                 .size(36.dp)
-                                                                .playerControlBlend(),
+                                                                .playerControlBlend().playerLiquidGlass(CircleShape),
                                                     ) {
                                                         Icon(
                                                             imageVector = MetrolistIcons.Outlined.KeyboardArrowDown,
@@ -1681,7 +1682,7 @@ fun PlayerScreen(
                                                                                 textBackgroundColor
                                                                             },
                                                                     ),
-                                                                modifier = Modifier.size(36.dp).playerControlBlend(),
+                                                                modifier = Modifier.size(36.dp).playerControlBlend().playerLiquidGlass(RoundedCornerShape(12.dp)),
                                                             ) {
                                                                 Icon(
                                                                     imageVector =
