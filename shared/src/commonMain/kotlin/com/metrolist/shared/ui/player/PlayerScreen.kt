@@ -675,14 +675,14 @@ fun PlayerScreen(
         ) { if (artworkAllowedOnNetwork) canvasLayers.select(currentSong, platform, preferTall = prefersTallCover) else null }
     val canvasBlurRadius by animateDpAsState(
         targetValue = if (uiState.isLyricsVisible) 18.dp else 0.dp,
-        animationSpec = tween(350),
+        animationSpec = tween(650),
         label = "lyricsCanvasBlur",
     )
     val canvasRenderContent by rememberUpdatedState<@Composable (CanvasRenderSlot) -> Unit> { slot ->
         canvasLayers.Render(
             current = currentCanvasLayer,
             playing = slot.playing,
-            modifier = slot.modifier.blur(canvasBlurRadius),
+            modifier = slot.modifier.blur(canvasBlurRadius, edgeTreatment = BlurredEdgeTreatment.Unbounded),
             onFrame = slot.onFrame,
             onError = { layer -> viewModel.retryMusicVideoCanvas(layer.songId, layer.url) },
         )
